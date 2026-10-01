@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "sortie-bebe-v4";
+const VERSION = "sortie-bebe-v7";
 const FILES = [
   "./",
   "./index.html",
@@ -37,6 +37,8 @@ self.addEventListener("activate", (e) => {
 // Cache first: instant and offline. Page navigations fall back to the cached index.
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
+  // Other sites (the weather) go straight to the network, never cached.
+  if (new URL(e.request.url).origin !== self.location.origin) return;
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((hit) =>
       hit || fetch(e.request).catch(() =>
