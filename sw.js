@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "sortie-bebe-v1";
+const VERSION = "sortie-bebe-v2";
 const FILES = [
   "./",
   "./index.html",
@@ -11,6 +11,7 @@ const FILES = [
   "./apple-touch-icon.png",
   "./fonts/bricolage-grotesque-latin-600-normal.woff2",
   "./fonts/bricolage-grotesque-latin-800-normal.woff2",
+  "./fonts/ubuntu-latin-500-normal.woff2",
   "./fonts/atkinson-hyperlegible-latin-400-normal.woff2",
   "./fonts/atkinson-hyperlegible-latin-700-normal.woff2"
 ];
