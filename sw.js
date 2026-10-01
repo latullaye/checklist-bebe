@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "sortie-bebe-v12";
+const VERSION = "sortie-bebe-v13";
 const FILES = [
   "./",
   "./index.html",
