@@ -125,6 +125,18 @@ h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .allset { text-align: center; padding: 18px 12px; border-radius: 14px; background: var(--surface); border: 1px solid var(--line); }
 .allset strong { display: block; font-family: var(--font-display); font-size: 1.3rem; color: var(--accent); }
 .allset span { color: var(--muted); font-size: 0.85rem; }
+/* Celebration when the last item is checked */
+.allset.party { position: relative; overflow: visible; animation: party-in .6s cubic-bezier(.3,1.6,.5,1); }
+.allset.party strong { animation: wiggle .7s .5s ease-in-out 2; }
+.confetti { position: absolute; left: 50%; top: 40%; width: 8px; height: 12px; border-radius: 2px; pointer-events: none; opacity: 0;
+  animation: confetti 1.3s cubic-bezier(.15,.7,.4,1) forwards; animation-delay: var(--d); }
+@keyframes party-in { 0% { opacity: 0; transform: scale(.6); } 100% { opacity: 1; transform: none; } }
+@keyframes wiggle { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-3deg) scale(1.05); } 75% { transform: rotate(3deg) scale(1.05); } }
+@keyframes confetti {
+  0% { opacity: 1; transform: translate(-50%, -50%) rotate(0); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--x)), calc(-50% + var(--y))) rotate(var(--r)); }
+}
+@media (prefers-reduced-motion: reduce) { .allset.party, .allset.party strong { animation: none; } .confetti { display: none; } }
 
 footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 4px; }
 .msg { color: var(--muted); font-size: 0.85rem; }
@@ -277,11 +289,64 @@ function chip(leaf, prefix) {
     } else {
       pending.add(leaf.id); state[leaf.id] = 1; save();
       b.classList.add("checking");
-      updateCounts(true);
+      if (updateCounts(true) === total) {
+        // Last one: celebrate now, while we're still inside the tap (iPhone only plays sound then)
+        celebrate();
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(flush, reduced ? 0 : 450);
+        return;
+      }
     }
     armIdle();
   });
   return b;
+}
+
+// Celebration: chime + a cheerful spoken line, then confetti when the "all set" card appears.
+let party = false, audio = null;
+function chime() {
+  try {
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    const t0 = audio.currentTime + 0.02;
+    [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { // C E G C
+      const o = audio.createOscillator(), g = audio.createGain(), t = t0 + i * 0.11;
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.25, t + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (i === 3 ? 0.9 : 0.3));
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 1);
+    });
+  } catch (e) {}
+}
+function cheer() {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance("Prêt pour l'aventure avec Thomas !");
+    const voices = synth.getVoices();
+    const v = voices.find(v => v.lang === "fr-CA") || voices.find(v => v.lang && v.lang.startsWith("fr"));
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : "fr-CA"; u.rate = 1.05; u.pitch = 1.35;
+    synth.speak(u);
+  } catch (e) {}
+}
+function celebrate() {
+  party = true;
+  chime(); cheer();
+  try { if (navigator.vibrate) navigator.vibrate([30, 60, 30, 60, 80]); } catch (e) {}
+}
+function confetti(card) {
+  if (reduced || !card) return;
+  const colors = ["var(--accent)", "#f4b942", "#ef7b6c", "#7cc68d", "#8fa8f0"];
+  for (let i = 0; i < 28; i++) {
+    const c = document.createElement("i"); c.className = "confetti";
+    const a = Math.random() * Math.PI * 2, d = 70 + Math.random() * 90;
+    c.style.cssText = `background:${colors[i % colors.length]};--x:${Math.cos(a) * d * 1.6}px;--y:${Math.sin(a) * d - 30}px;--r:${(Math.random() * 720 - 360) | 0}deg;--d:${(Math.random() * 0.15).toFixed(2)}s`;
+    card.appendChild(c);
+  }
+  setTimeout(() => card.querySelectorAll(".confetti").forEach(c => c.remove()), 1800);
 }
 
 const todo = document.getElementById("todo");
@@ -330,8 +395,10 @@ function render() {
   leaves.forEach(l => { if (state[l.id]) { done++; doneList.appendChild(chip(l, "d-")); } });
 
   if (done === total) {
-    todo.innerHTML = `<div class="allset"><strong>Tout est prêt.</strong><span>Bonne sortie avec Thomas !</span></div>`;
+    todo.innerHTML = `<div class="allset${party ? " party" : ""}"><strong>Prêt pour l'aventure avec Thomas !</strong><span>Tout est dans le sac. Bonne sortie !</span></div>`;
+    if (party) { window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); confetti(todo.firstChild); }
   }
+  party = false;
   document.getElementById("doneSec").hidden = done === 0;
   document.getElementById("doneCount").textContent = done;
   updateCounts(false);
