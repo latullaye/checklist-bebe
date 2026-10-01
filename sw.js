@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "sortie-bebe-v2";
+const VERSION = "sortie-bebe-v3";
 const FILES = [
   "./",
   "./index.html",
@@ -17,7 +17,13 @@ const FILES = [
 ];
 
 self.addEventListener("install", (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: "reload" skips the browser's HTTP cache, which GitHub Pages keeps for 10 min:
+  // without it, the new copy could be filled with the old files.
+  e.waitUntil(
+    caches.open(VERSION)
+      .then((c) => c.addAll(FILES.map((f) => new Request(f, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener("activate", (e) => {
