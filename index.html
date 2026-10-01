@@ -13,6 +13,7 @@
 <style>
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 600; font-display: block; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: block; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
+@font-face { font-family: "Ubuntu"; font-weight: 500; font-display: block; src: url(fonts/ubuntu-latin-500-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
 html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
@@ -44,8 +45,10 @@ html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-s
 * { box-sizing: border-box; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; }
 .wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; }
-h1 { font-family: var(--font-display); font-weight: 800; font-size: 1.55rem; line-height: 1.05; margin: 0; text-wrap: balance; letter-spacing: -0.01em; }
+header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.title { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.title img { width: 26px; height: 26px; border-radius: 6px; flex: none; }
+h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 1.1rem; line-height: 1.2; margin: 0; text-wrap: balance; }
 .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
 .count { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count b { color: var(--accent); font-weight: 800; font-size: 1.25rem; }
@@ -123,7 +126,10 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 
 <div class="wrap">
   <header>
-    <h1>Avant de sortir avec Thomas</h1>
+    <div class="title">
+      <img src="icon-192.png" alt="">
+      <h1>Avant de sortir avec Thomas</h1>
+    </div>
     <div class="side">
       <div class="count"><b id="done">0</b>/<span id="total">0</span></div>
       <button class="reset" id="reset" type="button">Réinitialiser</button>
