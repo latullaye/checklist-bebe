@@ -52,9 +52,10 @@ header { display: flex; align-items: center; justify-content: space-between; gap
 h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 1.1rem; line-height: 1.2; margin: 0; text-wrap: balance; }
 .side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
 .meta { display: flex; align-items: baseline; gap: 10px; }
-.wx { display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.wx { text-decoration: none; -webkit-tap-highlight-color: transparent; display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wx[hidden] { display: none; }
 .wx svg { width: 18px; height: 18px; align-self: center; }
+.wx small { font-size: 0.75rem; font-weight: 600; margin-left: 4px; opacity: 0.85; }
 .count { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count b { color: var(--accent); font-weight: 800; font-size: 1.25rem; }
 .bar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
@@ -137,7 +138,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
     </div>
     <div class="side">
       <div class="meta">
-        <span class="wx" id="wx" role="img" hidden></span>
+        <a class="wx" id="wx" target="_blank" rel="noopener" hidden></a>
         <div class="count"><b id="done">0</b>/<span id="total">0</span></div>
       </div>
       <button class="reset" id="reset" type="button">Réinitialiser</button>
@@ -375,13 +376,31 @@ function wxKind(code, day) {
   if (code <= 77 || code === 85 || code === 86) return ["snow", "Neige"];
   return ["storm", "Orage"];
 }
+const WX_UNTIL = 18; // min/max cover now -> 18 h, then hide
+// Min and max from now until 18 h, local time at the forecast spot. null after 18 h.
+function wxRange(w) {
+  if (!w.hours) return null;
+  const local = new Date(Date.now() + w.offset * 1000).toISOString(); // UTC fields = local time there
+  const today = local.slice(0, 10), hour = +local.slice(11, 13);
+  if (hour >= WX_UNTIL) return null;
+  const temps = w.hours
+    .filter(([time]) => time.slice(0, 10) === today && +time.slice(11, 13) >= hour && +time.slice(11, 13) <= WX_UNTIL)
+    .map(([, temp]) => temp);
+  if (!temps.length) return null;
+  temps.push(w.temp);
+  return [Math.round(Math.min(...temps)), Math.round(Math.max(...temps))];
+}
 function showWx(w) {
   const el = document.getElementById("wx");
   const [icon, label] = wxKind(w.code, w.day);
   const t = Math.round(w.temp);
-  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${WX_PATHS[icon]}"/></svg>${t}°`;
-  el.setAttribute("aria-label", `${label}, ${t} degrés`);
-  el.title = `${label}, ${t} °C`;
+  const range = wxRange(w);
+  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${WX_PATHS[icon]}"/></svg>${t}°`
+    + (range ? `<small>↓${range[0]}° ↑${range[1]}°</small>` : "");
+  const desc = `${label}, ${t} degrés` + (range ? `, minimum ${range[0]}, maximum ${range[1]} d'ici ${WX_UNTIL} h` : "");
+  el.setAttribute("aria-label", desc + ". Ouvrir The Weather Channel");
+  el.title = desc;
+  el.href = w.lat != null ? `https://weather.com/fr-CA/temps/aujour/l/${w.lat},${w.lon}` : "https://weather.com/fr-CA/temps/aujour";
   el.hidden = false;
 }
 let wx = null;
@@ -392,11 +411,15 @@ function refreshWx() {
   if (wxBusy || !navigator.geolocation || (wx && Date.now() - wx.at < WX_MAX_AGE)) return;
   wxBusy = true;
   navigator.geolocation.getCurrentPosition((pos) => {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat.toFixed(2)}&longitude=${lon.toFixed(2)}&current=temperature_2m,weather_code,is_day&timezone=auto`)
+    const lat = pos.coords.latitude.toFixed(2), lon = pos.coords.longitude.toFixed(2);
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&hourly=temperature_2m&forecast_days=1&timezone=auto`)
       .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => {
-        wx = { temp: d.current.temperature_2m, code: d.current.weather_code, day: d.current.is_day === 1, at: Date.now() };
+        wx = {
+          temp: d.current.temperature_2m, code: d.current.weather_code, day: d.current.is_day === 1,
+          hours: d.hourly.time.map((time, i) => [time, d.hourly.temperature_2m[i]]),
+          offset: d.utc_offset_seconds, lat, lon, at: Date.now()
+        };
         try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch (e) {}
         showWx(wx);
       })
@@ -405,7 +428,11 @@ function refreshWx() {
   }, () => { wxBusy = false; }, { maximumAge: WX_MAX_AGE, timeout: 15000 });
 }
 refreshWx();
-document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refreshWx(); });
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState !== "visible") return;
+  if (wx && typeof wx.temp === "number") showWx(wx); // min/max window moves with the clock
+  refreshWx();
+});
 
 if ("serviceWorker" in navigator) {
   // Already controlled = this is an update: reload once so the new version shows right away.
