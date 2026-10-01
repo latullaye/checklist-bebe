@@ -434,7 +434,8 @@ function showWx(w) {
   const desc = `${label}, ${t} degrés` + (range ? `, minimum ${range[0]}, maximum ${range[1]} d'ici ${WX_UNTIL} h` : "");
   el.setAttribute("aria-label", desc + ". Ouvrir The Weather Channel");
   el.title = desc;
-  el.href = w.lat != null ? `https://weather.com/fr-CA/temps/aujour/l/${w.lat},${w.lon}` : "https://weather.com/fr-CA/temps/aujour";
+  // unit=m: metric (°C, km/h) whatever weather.com remembers on the phone.
+  el.href = (w.lat != null ? `https://weather.com/fr-CA/temps/aujour/l/${w.lat},${w.lon}` : "https://weather.com/fr-CA/temps/aujour") + "?unit=m";
   el.hidden = false;
   showAlerts(w, el.href);
 }
