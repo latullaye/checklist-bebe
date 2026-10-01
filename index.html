@@ -58,10 +58,11 @@ h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 
 .wx small { font-size: 0.75rem; font-weight: 600; margin-left: 4px; opacity: 0.85; }
 .count { font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .count b { color: var(--accent); font-weight: 800; font-size: 1.25rem; }
-.rain { display: flex; align-items: center; gap: 6px; margin-top: -4px; font-size: 0.85rem; font-weight: 700; color: var(--accent); text-decoration: none; -webkit-tap-highlight-color: transparent; }
-.rain[hidden] { display: none; }
-.rain svg { width: 16px; height: 16px; flex: none; }
-.rain span { font-weight: 400; color: var(--muted); }
+.alerts { display: flex; flex-direction: column; gap: 4px; margin-top: -4px; }
+.alerts:empty { display: none; }
+.alerts a { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: var(--accent); text-decoration: none; -webkit-tap-highlight-color: transparent; }
+.alerts svg { width: 16px; height: 16px; flex: none; }
+.alerts span { font-weight: 400; color: var(--muted); }
 .bar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
 .list { display: flex; flex-direction: column; gap: 12px; }
@@ -148,7 +149,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
       <button class="reset" id="reset" type="button">Réinitialiser</button>
     </div>
   </header>
-  <a class="rain" id="rain" target="_blank" rel="noopener" hidden></a>
+  <div class="alerts" id="alerts"></div>
   <div class="bar"><i id="fill"></i></div>
   <div class="list" id="todo"></div>
   <section class="done" id="doneSec" hidden>
@@ -383,9 +384,11 @@ function wxKind(code, day) {
 }
 const WX_UNTIL = 18; // min/max and rain cover now -> 18 h, then hide
 const RAIN_MIN = 40; // % chance of precipitation that counts as a risk
+const GUST_MIN = 60; // km/h gusts that count as strong wind
 const UMBRELLA = "M22 12a10.06 10.06 1 0 0-20 0Z M12 12v8a2 2 0 0 0 4 0 M12 2v1";
+const WIND = "M12.8 19.6A2 2 0 1 0 14 16H2 M17.5 8a2.5 2.5 0 1 1 2 4H2 M9.8 4.4A2 2 0 1 1 11 8H2";
 // Forecast hours from now until 18 h, local time at the forecast spot. Empty after 18 h.
-// Each hour is [time, temp, rain %, weather code].
+// Each hour is [time, temp, rain %, weather code, gusts km/h].
 function wxWindow(w) {
   if (!w.hours) return [];
   const local = new Date(Date.now() + w.offset * 1000).toISOString(); // UTC fields = local time there
@@ -398,22 +401,28 @@ function wxRange(win, w) {
   const temps = win.map(([, temp]) => temp).concat(w.temp);
   return [Math.round(Math.min(...temps)), Math.round(Math.max(...temps))];
 }
-// First hour with a real chance of rain (or snow), and the peak chance until 18 h.
-function wxRain(win) {
+const isSnow = (code) => (code >= 71 && code <= 77) || code === 85 || code === 86;
+// Rain/snow and strong wind until 18 h: when it starts (first hour over the threshold) and how bad it gets.
+function wxAlerts(win) {
+  const out = [];
+  const when = (time) => time === win[0][0] ? "dès maintenant" : `à ${+time.slice(11, 13)} h`;
   const wet = win.filter(([, , pct]) => pct >= RAIN_MIN);
-  if (!wet.length) return null;
-  const [time, , , code] = wet[0];
-  const snow = (code >= 71 && code <= 77) || code === 85 || code === 86;
-  return { hour: +time.slice(11, 13), now: time === win[0][0], pct: Math.max(...wet.map(([, , pct]) => pct)), what: snow ? "neige" : "pluie" };
+  if (wet.length) {
+    const snow = isSnow(wet[0][3]);
+    out.push([snow ? WX_PATHS.snow : UMBRELLA, `Risque de ${snow ? "neige" : "pluie"} ${when(wet[0][0])}`,
+      `jusqu'à ${Math.max(...wet.map(([, , pct]) => pct))} %`]);
+  }
+  const windy = win.filter(([, , , , gust]) => gust >= GUST_MIN);
+  if (windy.length) {
+    out.push([WIND, `Vents violents ${when(windy[0][0])}`,
+      `rafales jusqu'à ${Math.round(Math.max(...windy.map(([, , , , gust]) => gust)))} km/h`]);
+  }
+  return out;
 }
-function showRain(w, href) {
-  const el = document.getElementById("rain");
-  const r = wxRain(wxWindow(w));
-  el.hidden = !r;
-  if (!r) return;
-  const when = r.now ? "dès maintenant" : `à ${r.hour} h`;
-  el.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${UMBRELLA}"/></svg>Risque de ${r.what} ${when} <span>jusqu'à ${r.pct} %</span>`;
-  el.href = href;
+function showAlerts(w, href) {
+  document.getElementById("alerts").innerHTML = wxAlerts(wxWindow(w)).map(([path, text, detail]) =>
+    `<a href="${href}" target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${path}"/></svg>${text} <span>${detail}</span></a>`
+  ).join("");
 }
 function showWx(w) {
   const el = document.getElementById("wx");
@@ -427,7 +436,7 @@ function showWx(w) {
   el.title = desc;
   el.href = w.lat != null ? `https://weather.com/fr-CA/temps/aujour/l/${w.lat},${w.lon}` : "https://weather.com/fr-CA/temps/aujour";
   el.hidden = false;
-  showRain(w, el.href);
+  showAlerts(w, el.href);
 }
 let wx = null;
 try { wx = JSON.parse(localStorage.getItem(WX_KEY)); } catch (e) {}
@@ -438,12 +447,12 @@ function refreshWx() {
   wxBusy = true;
   navigator.geolocation.getCurrentPosition((pos) => {
     const lat = pos.coords.latitude.toFixed(2), lon = pos.coords.longitude.toFixed(2);
-    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,precipitation_probability,weather_code&forecast_days=1&timezone=auto`)
+    fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,is_day&hourly=temperature_2m,precipitation_probability,weather_code,wind_gusts_10m&forecast_days=1&timezone=auto`)
       .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => {
         wx = {
           temp: d.current.temperature_2m, code: d.current.weather_code, day: d.current.is_day === 1,
-          hours: d.hourly.time.map((time, i) => [time, d.hourly.temperature_2m[i], d.hourly.precipitation_probability[i], d.hourly.weather_code[i]]),
+          hours: d.hourly.time.map((time, i) => [time, d.hourly.temperature_2m[i], d.hourly.precipitation_probability[i], d.hourly.weather_code[i], d.hourly.wind_gusts_10m[i]]),
           offset: d.utc_offset_seconds, lat, lon, at: Date.now()
         };
         try { localStorage.setItem(WX_KEY, JSON.stringify(wx)); } catch (e) {}
