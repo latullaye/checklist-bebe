@@ -67,6 +67,7 @@ h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 
 .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
 .list { display: flex; flex-direction: column; gap: 12px; }
 section { display: flex; flex-direction: column; gap: 6px; }
+[hidden] { display: none !important; }
 h2 { margin: 0; display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
@@ -78,7 +79,10 @@ h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 }
 .chip::before { content: ""; width: 14px; height: 14px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); }
 .chip small { color: var(--muted); font-size: 0.75rem; }
-.chip.opt { border-style: dashed; }
+/* Optional: faded, dashed outline, no fill */
+.chip.opt { background: transparent; color: var(--muted); border-style: dashed;
+  border-color: var(--muted); border-color: color-mix(in srgb, var(--muted) 55%, transparent); }
+.chip.opt::before { border-style: dashed; }
 .group {
   display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px;
   background: var(--group); border: 1px dashed var(--line); border-radius: 14px; padding: 5px 6px 6px;
@@ -181,10 +185,10 @@ const OPT = "facultatif";
 const DATA = [
   ["Repas", [
     ["Biberons de lait maternel", "1 × 150 ml par 3 h"],
-    ["Sac isotherme + bloc réfrigérant"],
+    ["Sac isotherme + bloc réfrigérant", "", OPT],
     ["Formule de secours"],
     ["Tire-lait", "si sortie de 4 h ou plus", OPT],
-    ["Linge à rot"],
+    ["Linge à rot", "", OPT],
     ["Bavoir"]
   ]],
   ["Change", [
@@ -220,9 +224,9 @@ const DATA = [
     ["Carte d'assurance maladie"]
   ]],
   ["Parents", [
-    ["Eau"],
-    ["Collations"],
-    ["Rechange pour nous"]
+    ["Eau", "", OPT],
+    ["Collations", "", OPT],
+    ["Rechange pour nous", "", OPT]
   ]]
 ];
 
@@ -278,9 +282,8 @@ function chip(leaf, prefix) {
   const b = document.createElement("button");
   b.type = "button"; b.className = "chip"; b.id = prefix + leaf.id;
   if (leaf.opt) b.classList.add("opt");
-  const hint = [leaf.hint, leaf.opt && "facultatif"].filter(Boolean).join(" · ");
-  b.innerHTML = `<span>${leaf.label}</span>` + (hint ? ` <small>${hint}</small>` : "");
-  b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label);
+  b.innerHTML = `<span>${leaf.label}</span>` + (leaf.hint ? ` <small>${leaf.hint}</small>` : "");
+  b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label + (leaf.opt ? " (facultatif)" : ""));
   b.addEventListener("click", () => {
     if (flushing) return;
     buzz();
@@ -388,10 +391,13 @@ function render() {
     const h = document.createElement("h2");
     h.innerHTML = `${cat}<span>${catReq.length ? `${catReq.filter(l => state[l.id]).length}/${catReq.length}` : ""}</span>`;
     const wrap = document.createElement("div"); wrap.className = "chips";
+    // Required items first, optional ones at the end of the section
+    const later = [];
     items.forEach((it, ii) => {
       if (Array.isArray(it)) {
         const leaf = leaves.find(l => l.id === `c${ci}-${ii}`);
-        if (!state[leaf.id]) wrap.appendChild(chip(leaf, "t-"));
+        if (state[leaf.id]) return;
+        if (leaf.opt) later.push(leaf); else wrap.appendChild(chip(leaf, "t-"));
       } else {
         const sub = leaves.filter(l => l.id.startsWith(`c${ci}-${ii}-`) && !state[l.id]);
         if (!sub.length) return;
@@ -401,6 +407,7 @@ function render() {
         wrap.appendChild(g);
       }
     });
+    later.forEach(l => wrap.appendChild(chip(l, "t-")));
     sec.append(h, wrap);
     todo.appendChild(sec);
   });
