@@ -78,6 +78,7 @@ h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 }
 .chip::before { content: ""; width: 14px; height: 14px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); }
 .chip small { color: var(--muted); font-size: 0.75rem; }
+.chip.opt { border-style: dashed; }
 .group {
   display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px;
   background: var(--group); border: 1px dashed var(--line); border-radius: 14px; padding: 5px 6px 6px;
@@ -174,13 +175,15 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 </div>
 
 <script>
-// An item is [label, hint] or {group, items:[[label, hint], ...]}
+// An item is [label, hint, OPT?] or {group, items:[[label, hint], ...]}
+// Optional items: shown and checkable, but not needed for "Prêt pour l'aventure".
+const OPT = "facultatif";
 const DATA = [
   ["Repas", [
     ["Biberons de lait maternel", "1 × 150 ml par 3 h"],
     ["Sac isotherme + bloc réfrigérant"],
     ["Formule de secours"],
-    ["Tire-lait"],
+    ["Tire-lait", "si sortie de 4 h ou plus", OPT],
     ["Linge à rot"],
     ["Bavoir"]
   ]],
@@ -197,18 +200,20 @@ const DATA = [
   ]],
   ["Vêtements et confort", [
     ["Rechange complet", "×2"],
-    ["Chapeau"],
+    ["Chapeau", "", OPT],
     ["Lange"],
     ["Suce + attache-suce"],
-    ["Couverture ou chaussettes", "selon météo"],
-    ["Bonnet"],
+    ["Couverture ou chaussettes", "selon météo", OPT],
+    ["Bonnet", "", OPT],
     ["Doudou"],
     ["Livre ou jouet"],
-    ["Anneau de dentition"]
+    ["Anneau de dentition"],
+    ["Pull", "", OPT]
   ]],
   ["Transport", [
-    ["Poussette ou porte-bébé"],
-    ["Ventilateur", "chargé"]
+    ["Poussette"],
+    ["Ventilateur", "chargé", OPT],
+    ["Porte-bébé", "", OPT]
   ]],
   ["Santé et papiers", [
     ["Carnet de santé"],
@@ -225,12 +230,13 @@ const DATA = [
 const leaves = [];
 DATA.forEach(([cat, items], ci) => {
   items.forEach((it, ii) => {
-    if (Array.isArray(it)) leaves.push({ id: `c${ci}-${ii}`, cat: ci, label: it[0], hint: it[1] });
-    else it.items.forEach(([label, hint], si) =>
-      leaves.push({ id: `c${ci}-${ii}-${si}`, cat: ci, group: it.group, label, hint }));
+    if (Array.isArray(it)) leaves.push({ id: `c${ci}-${ii}`, cat: ci, label: it[0], hint: it[1], opt: it[2] === OPT });
+    else it.items.forEach(([label, hint, opt], si) =>
+      leaves.push({ id: `c${ci}-${ii}-${si}`, cat: ci, group: it.group, label, hint, opt: opt === OPT }));
   });
 });
-const total = leaves.length;
+const required = leaves.filter(l => !l.opt);
+const total = required.length; // the counter and "all set" only look at required items
 document.getElementById("total").textContent = total;
 
 const KEY = "sortie-bebe-v2";
@@ -271,7 +277,9 @@ function flush() {
 function chip(leaf, prefix) {
   const b = document.createElement("button");
   b.type = "button"; b.className = "chip"; b.id = prefix + leaf.id;
-  b.innerHTML = `<span>${leaf.label}</span>` + (leaf.hint ? ` <small>${leaf.hint}</small>` : "");
+  if (leaf.opt) b.classList.add("opt");
+  const hint = [leaf.hint, leaf.opt && "facultatif"].filter(Boolean).join(" · ");
+  b.innerHTML = `<span>${leaf.label}</span>` + (hint ? ` <small>${hint}</small>` : "");
   b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label);
   b.addEventListener("click", () => {
     if (flushing) return;
@@ -289,9 +297,10 @@ function chip(leaf, prefix) {
       b.classList.remove("checking");
       updateCounts(false);
     } else {
+      const wasReady = required.every(l => state[l.id]);
       pending.add(leaf.id); state[leaf.id] = 1; save();
       b.classList.add("checking");
-      if (updateCounts(true) === total) {
+      if (updateCounts(true) === total && !wasReady) {
         // Last one: celebrate now, while we're still inside the tap (iPhone only plays sound then)
         celebrate();
         clearTimeout(idleTimer);
@@ -355,7 +364,7 @@ const todo = document.getElementById("todo");
 const doneList = document.getElementById("doneList");
 
 function updateCounts(bump) {
-  const done = leaves.filter(l => state[l.id]).length;
+  const done = required.filter(l => state[l.id]).length;
   const d = document.getElementById("done");
   d.textContent = done;
   document.getElementById("fill").style.width = (done / total * 100) + "%";
@@ -374,9 +383,10 @@ function render() {
     const catLeaves = leaves.filter(l => l.cat === ci);
     const open = catLeaves.filter(l => !state[l.id]);
     if (!open.length) return;
+    const catReq = catLeaves.filter(l => !l.opt);
     const sec = document.createElement("section");
     const h = document.createElement("h2");
-    h.innerHTML = `${cat}<span>${catLeaves.length - open.length}/${catLeaves.length}</span>`;
+    h.innerHTML = `${cat}<span>${catReq.length ? `${catReq.filter(l => state[l.id]).length}/${catReq.length}` : ""}</span>`;
     const wrap = document.createElement("div"); wrap.className = "chips";
     items.forEach((it, ii) => {
       if (Array.isArray(it)) {
@@ -396,8 +406,10 @@ function render() {
   });
   leaves.forEach(l => { if (state[l.id]) { done++; doneList.appendChild(chip(l, "d-")); } });
 
-  if (done === total) {
-    todo.innerHTML = `<div class="allset${party ? " party" : ""}"><strong>Prêt pour l'aventure avec Thomas !</strong><span>Tout est dans le sac. Bonne sortie !</span></div>`;
+  if (required.every(l => state[l.id])) {
+    // All set: the card goes on top; any unchecked optional items stay below it
+    const left = todo.childElementCount;
+    todo.insertAdjacentHTML("afterbegin", `<div class="allset${party ? " party" : ""}"><strong>Prêt pour l'aventure avec Thomas !</strong><span>${left ? "L'essentiel est dans le sac. Le reste est facultatif." : "Tout est dans le sac. Bonne sortie !"}</span></div>`);
     if (party) { window.scrollTo({ top: 0, behavior: reduced ? "auto" : "smooth" }); confetti(todo.firstChild); }
   }
   party = false;
