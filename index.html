@@ -260,7 +260,23 @@ let idleTimer = null, flushing = false;
 const pending = new Set();
 const arrivals = new Set();
 
-function buzz() { try { if (window.AndroidApp) AndroidApp.vibrate(); else if (navigator.vibrate) navigator.vibrate(12); } catch (e) {} }
+// Haptic tap. Android: vibrate(). iPhone (iOS 18+) has no vibrate(), but toggling a
+// native switch control gives a light haptic, so we flip a hidden one.
+let iosSwitch = null;
+if (!navigator.vibrate) {
+  iosSwitch = document.createElement("label");
+  iosSwitch.setAttribute("aria-hidden", "true");
+  iosSwitch.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden";
+  iosSwitch.innerHTML = '<input type="checkbox" switch tabindex="-1">';
+  document.body.appendChild(iosSwitch);
+}
+function buzz() {
+  try {
+    if (window.AndroidApp) AndroidApp.vibrate();
+    else if (navigator.vibrate) navigator.vibrate(12);
+    else if (iosSwitch) iosSwitch.click();
+  } catch (e) {}
+}
 
 function armIdle() {
   clearTimeout(idleTimer);
@@ -289,8 +305,9 @@ function chip(leaf, prefix) {
   b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label + (leaf.opt ? " (facultatif)" : ""));
   b.addEventListener("click", () => {
     if (flushing) return;
-    buzz(); tick();
+    buzz();
     if (prefix === "d-") {
+      tick();
       // Uncheck from the tray: bring it back, highlighted where it lands
       delete state[leaf.id]; save();
       arrivals.add("t-" + leaf.id);
@@ -299,6 +316,7 @@ function chip(leaf, prefix) {
     }
     if (pending.has(leaf.id)) {
       // Undo in place, before it has moved
+      tick();
       pending.delete(leaf.id); delete state[leaf.id]; save();
       b.classList.remove("checking");
       updateCounts(false);
@@ -313,6 +331,9 @@ function chip(leaf, prefix) {
         idleTimer = setTimeout(flush, reduced ? 0 : 450);
         return;
       }
+      // Last required item of its section: coin sound instead of the click
+      const sectionDone = !leaf.opt && required.every(l => l.cat !== leaf.cat || state[l.id]);
+      sectionDone ? coin() : tick();
     }
     armIdle();
   });
@@ -343,9 +364,23 @@ function tick() {
     const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
     src.buffer = clickBuf;
     bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = 0.9;
-    g.gain.value = 0.12;
+    g.gain.value = 0.24;
     src.connect(bp).connect(g).connect(ctx.destination);
     src.start();
+  } catch (e) {}
+}
+// Retro coin pickup (two quick square-wave notes, B5 then E6), same soft level as the click.
+function coin() {
+  try {
+    const ctx = getAudio(), t0 = ctx.currentTime + 0.01;
+    [[987.77, 0, 0.08], [1318.51, 0.08, 0.45]].forEach(([f, at, len]) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = t0 + at;
+      o.type = "square"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.1, t);
+      g.gain.setValueAtTime(0.1, t + Math.min(len, 0.1) - 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t + len + 0.02);
+    });
   } catch (e) {}
 }
 function chime() {
