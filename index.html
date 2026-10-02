@@ -214,7 +214,8 @@ const DATA = [
     ["Pull", "", OPT],
     ["Couverture", "selon météo", OPT],
     ["Chaussettes", "selon météo", OPT],
-    ["Ventilateur", "chargé", OPT]
+    ["Ventilateur", "chargé", OPT],
+    ["Porte-bébé", "", OPT]
   ]],
   ["Santé et papiers", [
     ["Carnet de santé"],
@@ -223,8 +224,7 @@ const DATA = [
   ["Parents", [
     ["Eau", "", OPT],
     ["Collations", "", OPT],
-    ["Rechange pour nous", "", OPT],
-    ["Porte-bébé", "", OPT]
+    ["Rechange pour nous", "", OPT]
   ]]
 ];
 
@@ -289,7 +289,7 @@ function chip(leaf, prefix) {
   b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label + (leaf.opt ? " (facultatif)" : ""));
   b.addEventListener("click", () => {
     if (flushing) return;
-    buzz();
+    buzz(); tick();
     if (prefix === "d-") {
       // Uncheck from the tray: bring it back, highlighted where it lands
       delete state[leaf.id]; save();
@@ -321,10 +321,36 @@ function chip(leaf, prefix) {
 
 // Celebration: chime + a cheerful spoken line, then confetti when the "all set" card appears.
 let party = false, audio = null;
+function getAudio() {
+  if (!audio) {
+    // "ambient": follows the iPhone silent switch and doesn't pause music or podcasts
+    try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) {}
+    audio = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audio.state === "suspended") audio.resume();
+  return audio;
+}
+// Very soft key click, like the iPhone keyboard: a few ms of filtered noise.
+let clickBuf = null;
+function tick() {
+  try {
+    const ctx = getAudio();
+    if (!clickBuf) {
+      clickBuf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 0.03), ctx.sampleRate);
+      const d = clickBuf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.004));
+    }
+    const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+    src.buffer = clickBuf;
+    bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = 0.9;
+    g.gain.value = 0.12;
+    src.connect(bp).connect(g).connect(ctx.destination);
+    src.start();
+  } catch (e) {}
+}
 function chime() {
   try {
-    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
-    if (audio.state === "suspended") audio.resume();
+    getAudio();
     const t0 = audio.currentTime + 0.02;
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => { // C E G C
       const o = audio.createOscillator(), g = audio.createGain(), t = t0 + i * 0.11;
