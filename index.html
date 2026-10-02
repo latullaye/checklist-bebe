@@ -282,9 +282,8 @@ function chip(leaf, prefix) {
   const b = document.createElement("button");
   b.type = "button"; b.className = "chip"; b.id = prefix + leaf.id;
   if (leaf.opt) b.classList.add("opt");
-  const hint = [leaf.hint, leaf.opt && "facultatif"].filter(Boolean).join(" · ");
-  b.innerHTML = `<span>${leaf.label}</span>` + (hint ? ` <small>${hint}</small>` : "");
-  b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label);
+  b.innerHTML = `<span>${leaf.label}</span>` + (leaf.hint ? ` <small>${leaf.hint}</small>` : "");
+  b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label + (leaf.opt ? " (facultatif)" : ""));
   b.addEventListener("click", () => {
     if (flushing) return;
     buzz();
