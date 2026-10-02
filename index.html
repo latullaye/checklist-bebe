@@ -343,7 +343,7 @@ function tick() {
     const src = ctx.createBufferSource(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
     src.buffer = clickBuf;
     bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = 0.9;
-    g.gain.value = 0.12;
+    g.gain.value = 0.24;
     src.connect(bp).connect(g).connect(ctx.destination);
     src.start();
   } catch (e) {}
