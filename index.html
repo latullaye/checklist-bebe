@@ -185,11 +185,11 @@ const OPT = "facultatif";
 const DATA = [
   ["Repas", [
     ["Biberons de lait maternel", "1 × 150 ml par 3 h"],
-    ["Sac isotherme + bloc réfrigérant", "", OPT],
-    ["Formule de secours"],
+    ["Nourrette de formule"],
+    ["Bavoir"],
+    ["Bloc réfrigérant", "", OPT],
     ["Tire-lait", "si sortie de 4 h ou plus", OPT],
-    ["Linge à rot", "", OPT],
-    ["Bavoir"]
+    ["Linge à rot", "", OPT]
   ]],
   ["Change", [
     { group: "Sac à couches", items: [
@@ -204,20 +204,17 @@ const DATA = [
   ]],
   ["Vêtements et confort", [
     ["Rechange complet", "×2"],
-    ["Chapeau", "", OPT],
     ["Lange"],
     ["Suce + attache-suce"],
-    ["Couverture ou chaussettes", "selon météo", OPT],
-    ["Bonnet", "", OPT],
     ["Doudou"],
     ["Livre ou jouet"],
     ["Anneau de dentition"],
-    ["Pull", "", OPT]
-  ]],
-  ["Transport", [
-    ["Poussette"],
-    ["Ventilateur", "chargé", OPT],
-    ["Porte-bébé", "", OPT]
+    ["Chapeau", "", OPT],
+    ["Bonnet", "", OPT],
+    ["Pull", "", OPT],
+    ["Couverture", "selon météo", OPT],
+    ["Chaussettes", "selon météo", OPT],
+    ["Ventilateur", "chargé", OPT]
   ]],
   ["Santé et papiers", [
     ["Carnet de santé"],
@@ -226,24 +223,30 @@ const DATA = [
   ["Parents", [
     ["Eau", "", OPT],
     ["Collations", "", OPT],
-    ["Rechange pour nous", "", OPT]
+    ["Rechange pour nous", "", OPT],
+    ["Porte-bébé", "", OPT]
   ]]
 ];
 
-// Flatten into leaf items with stable ids
+// Each item's id is its label, so items can be added, removed or moved freely
+// without mixing up what is checked.
 const leaves = [];
-DATA.forEach(([cat, items], ci) => {
-  items.forEach((it, ii) => {
-    if (Array.isArray(it)) leaves.push({ id: `c${ci}-${ii}`, cat: ci, label: it[0], hint: it[1], opt: it[2] === OPT });
-    else it.items.forEach(([label, hint, opt], si) =>
-      leaves.push({ id: `c${ci}-${ii}-${si}`, cat: ci, group: it.group, label, hint, opt: opt === OPT }));
-  });
-});
+const leaf = ([label, hint, opt], cat, group) => {
+  const l = { id: label, cat, group, label, hint, opt: opt === OPT };
+  leaves.push(l);
+  return l;
+};
+const CATS = DATA.map(([name, items], ci) => ({
+  name,
+  entries: items.map(it => Array.isArray(it)
+    ? leaf(it, ci)
+    : { group: it.group, items: it.items.map(sub => leaf(sub, ci, it.group)) })
+}));
 const required = leaves.filter(l => !l.opt);
 const total = required.length; // the counter and "all set" only look at required items
 document.getElementById("total").textContent = total;
 
-const KEY = "sortie-bebe-v2";
+const KEY = "sortie-bebe-v3"; // v3: ids are labels (v2 used positions)
 let state = {};
 try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
@@ -382,7 +385,7 @@ function render() {
   clearTimeout(idleTimer); idleTimer = null; pending.clear();
   todo.innerHTML = ""; doneList.innerHTML = "";
   let done = 0;
-  DATA.forEach(([cat, items], ci) => {
+  CATS.forEach(({ name: cat, entries }, ci) => {
     const catLeaves = leaves.filter(l => l.cat === ci);
     const open = catLeaves.filter(l => !state[l.id]);
     if (!open.length) return;
@@ -393,16 +396,15 @@ function render() {
     const wrap = document.createElement("div"); wrap.className = "chips";
     // Required items first, optional ones at the end of the section
     const later = [];
-    items.forEach((it, ii) => {
-      if (Array.isArray(it)) {
-        const leaf = leaves.find(l => l.id === `c${ci}-${ii}`);
-        if (state[leaf.id]) return;
-        if (leaf.opt) later.push(leaf); else wrap.appendChild(chip(leaf, "t-"));
+    entries.forEach(e => {
+      if (!e.items) {
+        if (state[e.id]) return;
+        if (e.opt) later.push(e); else wrap.appendChild(chip(e, "t-"));
       } else {
-        const sub = leaves.filter(l => l.id.startsWith(`c${ci}-${ii}-`) && !state[l.id]);
+        const sub = e.items.filter(l => !state[l.id]);
         if (!sub.length) return;
         const g = document.createElement("div"); g.className = "group";
-        g.innerHTML = `<div class="group-label">${it.group}</div>`;
+        g.innerHTML = `<div class="group-label">${e.group}</div>`;
         sub.forEach(l => g.appendChild(chip(l, "t-")));
         wrap.appendChild(g);
       }
