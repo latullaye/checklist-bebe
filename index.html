@@ -10,11 +10,14 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="common.css">
-<title>Thomas 911</title>
+<title>THOMAS 911</title>
 <style>
 .brand { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
 .brand img { width: 46px; height: 46px; border-radius: 12px; flex: none; }
-.brand h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 1.5rem; line-height: 1.1; margin: 0; }
+/* Name as a logo, emergency-services style: always in capitals, bold italic */
+.brand h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 700; font-style: italic; font-size: 1.6rem; line-height: 1.05;
+  letter-spacing: 0.02em; text-transform: uppercase; margin: 0; }
+.brand h1 span { color: #d9822b; }
 .brand p { margin: 2px 0 0; color: var(--muted); font-size: 0.85rem; }
 .brand p::first-letter { text-transform: uppercase; }
 
@@ -59,7 +62,7 @@
   <header class="brand">
     <img src="icon-192.png" alt="">
     <div>
-      <h1>Thomas 911</h1>
+      <h1 class="logo">THOMAS <span>911</span></h1>
       <p id="today"></p>
     </div>
   </header>

@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v3";
+const VERSION = "thomas911-v4";
 const FILES = [
   "./",
   "./index.html",
@@ -19,6 +19,7 @@ const FILES = [
   "./fonts/bricolage-grotesque-latin-600-normal.woff2",
   "./fonts/bricolage-grotesque-latin-800-normal.woff2",
   "./fonts/ubuntu-latin-500-normal.woff2",
+  "./fonts/ubuntu-latin-700-italic.woff2",
   "./fonts/atkinson-hyperlegible-latin-400-normal.woff2",
   "./fonts/atkinson-hyperlegible-latin-700-normal.woff2"
 ];
