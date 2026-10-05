@@ -8,16 +8,16 @@
   </style>
   <rect id="bg" width="512" height="512" rx="112" fill="#1f6f78"/>
   <g id="art">
-    <!-- THOMAS and 911 told apart by colour -->
+    <!-- THOMAS and 911: same width (textLength), told apart by colour -->
     <g>
       <g fill="#0f4a51" transform="translate(6 6)">
-        <text class="name" x="256" y="186">THOMAS</text>
-        <text class="num" x="256" y="374">911</text>
+        <text class="name" x="256" y="186" textLength="392" lengthAdjust="spacingAndGlyphs">THOMAS</text>
+        <text class="num" x="256" y="374" textLength="408" lengthAdjust="spacingAndGlyphs">911</text>
       </g>
-      <text class="name" x="256" y="186" fill="#fff">THOMAS</text>
-      <text class="num" x="256" y="374" fill="#f4b942">911</text>
+      <text class="name" x="256" y="186" fill="#fff" textLength="392" lengthAdjust="spacingAndGlyphs">THOMAS</text>
+      <text class="num" x="256" y="374" fill="#f4b942" textLength="408" lengthAdjust="spacingAndGlyphs">911</text>
     </g>
-    <path d="M140 408 H372" stroke="#0f4a51" stroke-width="18" stroke-linecap="round" transform="translate(6 6)"/>
-    <path d="M140 408 H372" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+    <path d="M64 408 H448" stroke="#0f4a51" stroke-width="18" stroke-linecap="round" transform="translate(6 6)"/>
+    <path d="M64 408 H448" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
   </g>
 </svg>
