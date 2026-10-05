@@ -150,6 +150,16 @@ function addHeart(out, sr, n, bpm, level) {
     out[i] += level * (thump(t, 58, 40, 1) + thump(t - 0.3, 66, 46, 0.65));
   }
 }
+// Steady motor tones added onto a loop of length n, relative to the noise level.
+// Frequencies are rounded so each tone fits a whole number of cycles in the loop (no click).
+function addTones(out, sr, n, list) {
+  let sum = 0; for (let i = 0; i < n; i++) sum += out[i] * out[i];
+  const rms = Math.sqrt(sum / n);
+  for (const [f, a] of list) {
+    const w = 2 * Math.PI * Math.round(f * n / sr) / n, ph = Math.random() * 6.28;
+    for (let i = 0; i < n; i++) out[i] += a * rms * Math.sin(w * i + ph);
+  }
+}
 // Each sound: loop length (s), an optional period the loop must be a multiple of,
 // noise (stationary, filled with crossfade margin) and periodic parts (exact, added after).
 const SOUNDS = [
@@ -193,7 +203,21 @@ const SOUNDS = [
         const s = ph < 0.35 ? Math.pow(Math.sin(Math.PI / 2 * ph / 0.35), 2) : Math.exp(-(ph - 0.35) * 5);
         x[i] = (0.6 * x[i] + 0.5 * p[i]) * (0.12 + 0.88 * s);
       }
-    } }
+    } },
+  { id: "seche", name: "Sèche-cheveux", desc: "Souffle chaud et régulier, un grand classique", secs: 10,
+    noise: (x, sr) => { for (let i = 0; i < x.length; i++) x[i] = rnd(); highpass(x, sr, 400); lowpass(x, sr, 7000); },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[180, 0.25], [360, 0.18], [540, 0.12], [720, 0.08], [2600, 0.05]]) },
+  { id: "ventilo", name: "Ventilateur", desc: "Souffle doux avec le ronron des pales", secs: 12, period: 1 / 24,
+    noise: (x, sr) => {
+      const p = new Float32Array(x.length); pinkFill(p); lowpass(p, sr, 1500);
+      brownFill(x, sr);
+      const P = Math.round(sr / 24); // blades passing
+      for (let i = 0; i < x.length; i++) x[i] = (0.7 * x[i] + 0.5 * p[i]) * (1 + 0.06 * Math.sin(2 * Math.PI * (i % P) / P));
+    },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[48, 0.12], [100, 0.08]]) },
+  { id: "aspi", name: "Aspirateur", desc: "Bruit fort et constant qui calme les pleurs", secs: 10,
+    noise: (x, sr) => { pinkFill(x); highpass(x, sr, 250); lowpass(x, sr, 9000); },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[150, 0.15], [300, 0.1], [1180, 0.18], [2360, 0.08]]) }
 ];
 const TARGET_RMS = 0.2;
 function buildBuffer(ctx, s) {

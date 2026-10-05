@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <style>
+    @font-face { font-family: "BG"; font-weight: 800; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
+    @font-face { font-family: "BG6"; font-weight: 600; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
+    .num { font-family: "BG"; font-weight: 800; font-size: 236px; letter-spacing: -10px; fill: #fff; }
+    .name { font-family: "BG6"; font-weight: 600; font-size: 70px; letter-spacing: 14px; fill: #bfe3e6; }
+  </style>
+  <rect id="bg" width="512" height="512" rx="112" fill="#1f6f78"/>
+  <g id="art">
+    <text class="name" x="263" y="168" text-anchor="middle">THOMAS</text>
+    <text class="num" x="251" y="356" text-anchor="middle">911</text>
+    <!-- heartbeat line: the "911" for Thomas -->
+    <path d="M92 414 H204 l16 -28 l22 52 l18 -40 l12 16 H420" fill="none" stroke="#f4b942" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+  </g>
+</svg>
