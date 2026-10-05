@@ -10,7 +10,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="common.css">
-<title>Boîte à bruit · THOMAS 911</title>
+<title>Boîte à bruit · THOMAS911</title>
 <style>
 /* Player */
 .player { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 16px 18px; }
@@ -369,7 +369,7 @@ function render() {
   renderStatus();
   if ("mediaSession" in navigator) {
     try {
-      navigator.mediaSession.metadata = new MediaMetadata({ title: s.name, artist: "THOMAS 911", artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] });
+      navigator.mediaSession.metadata = new MediaMetadata({ title: s.name, artist: "THOMAS911", artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] });
       navigator.mediaSession.playbackState = playing ? "playing" : "paused";
     } catch (e) {}
   }

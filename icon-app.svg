@@ -1,21 +1,23 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Source of the app icon. Rendered to PNG in a browser (needs the Ubuntu Bold Italic font). -->
+  <!-- Source of the app icon. Rendered to PNG in a browser (needs the Exo Bold font). -->
   <style>
-    @font-face { font-family: "UBI"; font-weight: 700; font-style: italic; src: url(fonts/ubuntu-latin-700-italic.woff2) format("woff2"); }
-    text { font-family: "UBI"; font-weight: 700; font-style: italic; text-anchor: middle; }
-    .num { font-size: 276px; letter-spacing: -18px; }
-    .name { font-size: 84px; letter-spacing: 3px; }
+    @font-face { font-family: "Exo"; font-weight: 700; src: url(fonts/exo-latin-700-normal.woff2) format("woff2"); }
+    text { font-family: "Exo"; font-weight: 700; text-anchor: middle; }
+    .num { font-size: 226px; letter-spacing: -4px; }
+    .name { font-size: 88px; letter-spacing: 1px; }
   </style>
   <rect id="bg" width="512" height="512" rx="112" fill="#1f6f78"/>
   <g id="art">
-    <!-- drop shadow, TV-title style -->
-    <g fill="#0f4a51" transform="translate(7 7)">
-      <text class="name" x="258" y="176">THOMAS</text>
-      <text class="num" x="250" y="384">911</text>
-      <path d="M150 410 H410 L398 432 H138 Z"/>
+    <!-- Widened like the Soletanche Bachy wordmark; THOMAS and 911 told apart by colour -->
+    <g transform="translate(256 0) scale(1.18 1) translate(-256 0)">
+      <g fill="#0f4a51" transform="translate(6 6)">
+        <text class="name" x="256" y="186">THOMAS</text>
+        <text class="num" x="256" y="374">911</text>
+      </g>
+      <text class="name" x="256" y="186" fill="#fff">THOMAS</text>
+      <text class="num" x="256" y="374" fill="#f4b942">911</text>
     </g>
-    <text class="name" x="258" y="176" fill="#fff">THOMAS</text>
-    <text class="num" x="250" y="384" fill="#f4b942">911</text>
-    <path d="M150 410 H410 L398 432 H138 Z" fill="#fff"/>
+    <path d="M140 408 H372" stroke="#0f4a51" stroke-width="18" stroke-linecap="round" transform="translate(6 6)"/>
+    <path d="M140 408 H372" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
   </g>
 </svg>

@@ -2,7 +2,8 @@
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 600; font-display: block; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
 @font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: block; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
 @font-face { font-family: "Ubuntu"; font-weight: 500; font-display: block; src: url(fonts/ubuntu-latin-500-normal.woff2) format("woff2"); }
-@font-face { font-family: "Ubuntu"; font-weight: 700; font-style: italic; font-display: block; src: url(fonts/ubuntu-latin-700-italic.woff2) format("woff2"); }
+/* Logo font: Exo Bold, widened, close to the Soletanche Bachy wordmark */
+@font-face { font-family: "Exo"; font-weight: 700; font-display: block; src: url(fonts/exo-latin-700-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
 html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
