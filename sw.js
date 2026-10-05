@@ -1,17 +1,25 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "sortie-bebe-v22";
+const VERSION = "thomas911-v7";
 const FILES = [
   "./",
   "./index.html",
+  "./checklist.html",
+  "./bruit.html",
+  "./common.css",
+  "./weather.js",
+  "./app.js",
   "./manifest.webmanifest",
   "./icon-192.png",
+  "./icon-poussette.svg",
+  "./icon-bruit.svg",
   "./icon-512.png",
   "./icon-maskable-512.png",
   "./apple-touch-icon.png",
   "./fonts/bricolage-grotesque-latin-600-normal.woff2",
   "./fonts/bricolage-grotesque-latin-800-normal.woff2",
   "./fonts/ubuntu-latin-500-normal.woff2",
+  "./fonts/exo-2-latin-700-normal.woff2",
   "./fonts/atkinson-hyperlegible-latin-400-normal.woff2",
   "./fonts/atkinson-hyperlegible-latin-700-normal.woff2"
 ];

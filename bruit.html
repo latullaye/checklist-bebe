@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>Boîte à bruit · THOMAS911</title>
+<style>
+/* Player */
+.player { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 16px 18px; }
+.play { position: relative; width: 116px; height: 116px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.play svg { width: 48px; height: 48px; fill: currentColor; stroke: none; }
+.play:active { transform: scale(0.97); }
+/* Soft rings while playing */
+.play::before, .play::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; pointer-events: none; }
+.playing .play::before { animation: ring 2.8s ease-out infinite; }
+.playing .play::after { animation: ring 2.8s 1.4s ease-out infinite; }
+@keyframes ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.45); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .playing .play::before, .playing .play::after { animation: none; } }
+.now-name { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; text-align: center; }
+.status { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: center; min-height: 1.2em; }
+
+/* Sound picker */
+.sounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.snd { font: inherit; text-align: left; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 14px;
+  padding: 10px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.snd b { display: block; font-size: 0.95rem; }
+.snd span { display: block; font-size: 0.75rem; color: var(--muted); margin-top: 2px; line-height: 1.25; }
+.snd[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+.snd[aria-pressed="true"] b { color: var(--accent); }
+
+/* Volume */
+.vol-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.vol-row output { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; min-width: 4.2ch; text-align: right; font-variant-numeric: tabular-nums; }
+.vol-row output.boost { color: #d9822b; }
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 34px; background: transparent; margin: 0; }
+input[type="range"]::-webkit-slider-runnable-track { height: 10px; border-radius: 5px; background: var(--track); }
+input[type="range"]::-moz-range-track { height: 10px; border-radius: 5px; background: var(--track); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 28px; height: 28px; margin-top: -9px; border-radius: 50%;
+  background: var(--surface); border: 3px solid var(--accent); box-shadow: 0 1px 4px rgba(0,0,0,.2); }
+input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 3px solid var(--accent); }
+.ticks { display: flex; justify-content: space-between; font-size: 0.7rem; color: var(--muted); padding: 0 2px; margin-right: calc(4.2ch + 12px); }
+.ticks b { color: #d9822b; font-weight: 700; }
+.hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
+
+/* Timer */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chip { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 999px;
+  padding: 7px 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.check { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 0.95rem; cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); margin: 0; flex: none; }
+.check small { display: block; color: var(--muted); font-size: 0.78rem; }
+
+/* Night screen */
+.dark-btn { font: inherit; font-weight: 700; color: var(--accent); background: var(--surface); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+.night { position: fixed; inset: 0; background: #000; z-index: 10; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 40px; }
+.night p { color: #333; font-size: 0.85rem; margin: 0; }
+details { font-size: 0.82rem; color: var(--muted); }
+details summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+details p { margin: 8px 0 0; line-height: 1.4; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Boîte à bruit</h1>
+  </header>
+
+  <section class="card player" id="player">
+    <button class="play" id="play" type="button" aria-label="Lecture"></button>
+    <div class="now-name" id="nowName"></div>
+    <div class="status" id="status">Prêt</div>
+  </section>
+
+  <section class="card">
+    <div class="label">Son</div>
+    <div class="sounds" id="sounds"></div>
+  </section>
+
+  <section class="card">
+    <div class="label">Volume</div>
+    <div class="vol-row">
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true" style="color:var(--muted)"><path d="M11 5 6 9H2v6h4l5 4V5Z M15.5 8.5a5 5 0 0 1 0 7 M19 5a10 10 0 0 1 0 14"/></svg>
+      <input type="range" id="vol" min="0" max="200" step="5" aria-label="Volume">
+      <output id="volOut" for="vol"></output>
+    </div>
+    <div class="ticks"><span>0</span><span>100 %</span><b>200 %</b></div>
+    <p class="hint">Au-delà de 100 %, le son est amplifié. Pour ses oreilles, garde le téléphone à au moins 2 m de bébé.</p>
+  </section>
+
+  <section class="card">
+    <div class="label">Minuteur</div>
+    <div class="chips" id="timers"></div>
+    <label class="check" id="fadeRow">
+      <input type="checkbox" id="fade">
+      <span>Decrescendo<small>Baisse tout en douceur sur les 10 dernières minutes</small></span>
+    </label>
+  </section>
+
+  <button class="dark-btn" id="darkBtn" type="button">
+    <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Écran noir
+  </button>
+  <p class="hint" style="margin-top:-6px;text-align:center">Pendant la lecture, l'écran reste allumé pour que le son ne coupe pas. L'écran noir évite la lumière dans la chambre.</p>
+
+  <details>
+    <summary>Pourquoi ces sons ?</summary>
+    <p>Dans le ventre, bébé baigne dans un bruit continu, assez fort, rythmé par le cœur de sa mère. Les bruits continus le rappellent et masquent les bruits soudains qui réveillent.</p>
+    <p>Dans une étude sur des nouveau-nés, 16 sur 20 se sont endormis en moins de 5 minutes avec un bruit blanc, contre 5 sur 20 sans (Spencer et coll., <i>Archives of Disease in Childhood</i>, 1990).</p>
+    <p>Le bruit rose et le bruit brun sont des bruits blancs adoucis, avec moins d'aigus. Le « chut-chut » imite le réflexe naturel des parents.</p>
+  </details>
+</div>
+<div class="night" id="night" hidden><p>Touche l'écran pour revenir</p></div>
+
+<script>
+// ---------- Sounds: generated in the browser, looped seamlessly ----------
+const rnd = () => Math.random() * 2 - 1;
+const lowpass = (x, sr, fc) => { const a = Math.exp(-2 * Math.PI * fc / sr); let y = 0; for (let i = 0; i < x.length; i++) x[i] = y = (1 - a) * x[i] + a * y; };
+const highpass = (x, sr, fc) => { const a = Math.exp(-2 * Math.PI * fc / sr); let y = 0; for (let i = 0; i < x.length; i++) { y = (1 - a) * x[i] + a * y; x[i] -= y; } };
+function pinkFill(x) {
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < x.length; i++) {
+    const w = rnd();
+    b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.969 * b2 + w * 0.153852;
+    b3 = 0.8665 * b3 + w * 0.3104856; b4 = 0.55 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.016898;
+    x[i] = b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362; b6 = w * 0.115926;
+  }
+}
+function brownFill(x, sr) {
+  let b = 0;
+  for (let i = 0; i < x.length; i++) { b = (b + 0.02 * rnd()) / 1.02; x[i] = b * 3.5; }
+  highpass(x, sr, 20);
+}
+// Heartbeat "lub-dub" added onto a loop of length n (whole number of beats).
+function addHeart(out, sr, n, bpm, level) {
+  const P = Math.round(60 / bpm * sr);
+  const thump = (t, f0, f1, a) => t < 0 || t > 0.3 ? 0 :
+    a * Math.sin(2 * Math.PI * (f0 * t - (f0 - f1) * t * t / 0.6)) * Math.exp(-t / 0.055) * (1 - Math.exp(-t / 0.004));
+  for (let i = 0; i < n; i++) {
+    const t = (i % P) / sr;
+    out[i] += level * (thump(t, 58, 40, 1) + thump(t - 0.3, 66, 46, 0.65));
+  }
+}
+// Steady motor tones added onto a loop of length n, relative to the noise level.
+// Frequencies are rounded so each tone fits a whole number of cycles in the loop (no click).
+function addTones(out, sr, n, list) {
+  let sum = 0; for (let i = 0; i < n; i++) sum += out[i] * out[i];
+  const rms = Math.sqrt(sum / n);
+  for (const [f, a] of list) {
+    const w = 2 * Math.PI * Math.round(f * n / sr) / n, ph = Math.random() * 6.28;
+    for (let i = 0; i < n; i++) out[i] += a * rms * Math.sin(w * i + ph);
+  }
+}
+// Each sound: loop length (s), an optional period the loop must be a multiple of,
+// noise (stationary, filled with crossfade margin) and periodic parts (exact, added after).
+const SOUNDS = [
+  { id: "blanc", name: "Bruit blanc", desc: "Le classique, masque les bruits de la maison", secs: 12,
+    noise: (x) => { for (let i = 0; i < x.length; i++) x[i] = rnd(); } },
+  { id: "rose", name: "Bruit rose", desc: "Plus doux et plus grave que le blanc", secs: 12, noise: pinkFill },
+  { id: "brun", name: "Bruit brun", desc: "Grave et enveloppant, comme un grondement", secs: 12, noise: brownFill },
+  { id: "chut", name: "Chut-chut", desc: "Le « chhh » rythmé des parents", secs: 9, period: 0.9,
+    noise: (x, sr) => {
+      pinkFill(x); highpass(x, sr, 1400); lowpass(x, sr, 6500);
+      const P = Math.round(0.9 * sr);
+      for (let i = 0; i < x.length; i++) { const p = (i % P) / P; x[i] *= p < 0.62 ? Math.pow(Math.sin(Math.PI * p / 0.62), 0.6) : 0.05; }
+    } },
+  { id: "coeur", name: "Battements de cœur", desc: "Un cœur calme, comme contre maman", secs: 11, period: 60 / 66, peak: true,
+    noise: (x, sr) => { brownFill(x, sr); lowpass(x, sr, 300); for (let i = 0; i < x.length; i++) x[i] *= 0.08; },
+    periodic: (out, sr, n) => addHeart(out, sr, n, 66, 1) },
+  { id: "ventre", name: "Ventre de maman", desc: "Sons étouffés et cœur, comme dans le ventre", secs: 11, period: 60 / 66,
+    noise: (x, sr) => {
+      brownFill(x, sr); lowpass(x, sr, 450); lowpass(x, sr, 450);
+      const P = Math.round(60 / 66 * sr); // blood "whoosh" with each beat
+      for (let i = 0; i < x.length; i++) { const t = (i % P) / sr; x[i] *= 0.7 + 0.5 * Math.exp(-Math.pow((t - 0.12) / 0.12, 2)); }
+    },
+    periodic: (out, sr, n) => addHeart(out, sr, n, 66, 0.12) },
+  { id: "pluie", name: "Pluie", desc: "Pluie régulière sur le toit", secs: 14,
+    noise: (x, sr) => {
+      pinkFill(x); highpass(x, sr, 500);
+      const drop = Math.round(0.004 * sr);
+      for (let i = 0; i < x.length - drop; i++) if (Math.random() < 40 / sr) {
+        const a = 0.6 + Math.random() * 1.6;
+        for (let k = 0; k < drop; k++) x[i + k] += a * rnd() * Math.exp(-k / (0.0012 * sr));
+      }
+      lowpass(x, sr, 9000);
+    } },
+  { id: "vagues", name: "Vagues", desc: "Ressac lent pour ralentir le rythme", secs: 18, period: 9,
+    noise: (x, sr) => {
+      const p = new Float32Array(x.length); pinkFill(p); lowpass(p, sr, 2500);
+      brownFill(x, sr);
+      const P = Math.round(9 * sr);
+      for (let i = 0; i < x.length; i++) {
+        const ph = (i % P) / P;
+        const s = ph < 0.35 ? Math.pow(Math.sin(Math.PI / 2 * ph / 0.35), 2) : Math.exp(-(ph - 0.35) * 5);
+        x[i] = (0.6 * x[i] + 0.5 * p[i]) * (0.12 + 0.88 * s);
+      }
+    } },
+  { id: "seche", name: "Sèche-cheveux", desc: "Souffle chaud et régulier, un grand classique", secs: 10,
+    noise: (x, sr) => { for (let i = 0; i < x.length; i++) x[i] = rnd(); highpass(x, sr, 400); lowpass(x, sr, 7000); },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[180, 0.25], [360, 0.18], [540, 0.12], [720, 0.08], [2600, 0.05]]) },
+  { id: "ventilo", name: "Ventilateur", desc: "Souffle doux avec le ronron des pales", secs: 12, period: 1 / 24,
+    noise: (x, sr) => {
+      const p = new Float32Array(x.length); pinkFill(p); lowpass(p, sr, 1500);
+      brownFill(x, sr);
+      const P = Math.round(sr / 24); // blades passing
+      for (let i = 0; i < x.length; i++) x[i] = (0.7 * x[i] + 0.5 * p[i]) * (1 + 0.06 * Math.sin(2 * Math.PI * (i % P) / P));
+    },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[48, 0.12], [100, 0.08]]) },
+  { id: "aspi", name: "Aspirateur", desc: "Bruit fort et constant qui calme les pleurs", secs: 10,
+    noise: (x, sr) => { pinkFill(x); highpass(x, sr, 250); lowpass(x, sr, 9000); },
+    periodic: (out, sr, n) => addTones(out, sr, n, [[150, 0.15], [300, 0.1], [1180, 0.18], [2360, 0.08]]) }
+];
+const TARGET_RMS = 0.2;
+function buildBuffer(ctx, s) {
+  const sr = ctx.sampleRate;
+  const n = s.period ? Math.round(s.period * sr) * Math.max(1, Math.round(s.secs / s.period)) : Math.round(s.secs * sr);
+  const F = Math.round(0.3 * sr); // crossfade so the loop point can't be heard
+  const x = new Float32Array(n + F);
+  s.noise(x, sr);
+  for (let i = 0; i < F; i++) { const a = i / F; x[i] = x[i] * Math.sqrt(a) + x[n + i] * Math.sqrt(1 - a); }
+  const out = x.subarray(0, n);
+  if (s.periodic) s.periodic(out, sr, n);
+  let sum = 0, peak = 0;
+  for (let i = 0; i < n; i++) { sum += out[i] * out[i]; peak = Math.max(peak, Math.abs(out[i])); }
+  const k = s.peak ? 0.8 / peak : TARGET_RMS / Math.sqrt(sum / n);
+  const buf = ctx.createBuffer(1, n, sr);
+  const d = buf.getChannelData(0);
+  for (let i = 0; i < n; i++) d[i] = out[i] * k;
+  return buf;
+}
+
+// ---------- Audio engine ----------
+// source → volume (0–2) → decrescendo (0–1) → soft limiter → speakers
+let ctx = null, volG, fadeG, src = null, srcG = null;
+const buffers = {};
+function ensureAudio() {
+  if (ctx) return;
+  // "playback": keeps playing even with the iPhone silent switch on
+  try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  volG = ctx.createGain(); fadeG = ctx.createGain();
+  const pre = ctx.createGain(); pre.gain.value = 1 / 3;
+  const shaper = ctx.createWaveShaper(); // tanh: loud boosts saturate softly instead of crackling
+  const curve = new Float32Array(2048);
+  for (let i = 0; i < curve.length; i++) curve[i] = Math.tanh(3 * (i / (curve.length - 1) * 2 - 1));
+  shaper.curve = curve; shaper.oversample = "2x";
+  volG.connect(fadeG).connect(pre).connect(shaper).connect(ctx.destination);
+  volG.gain.value = settings.vol / 100;
+}
+function startSource(id) {
+  const s = SOUNDS.find((x) => x.id === id);
+  if (!buffers[id]) buffers[id] = buildBuffer(ctx, s);
+  const old = src, oldG = srcG, t = ctx.currentTime;
+  src = ctx.createBufferSource(); src.buffer = buffers[id]; src.loop = true;
+  srcG = ctx.createGain(); srcG.gain.setValueAtTime(0, t); srcG.gain.linearRampToValueAtTime(1, t + 0.4);
+  src.connect(srcG).connect(volG); src.start();
+  if (old) { oldG.gain.setValueAtTime(oldG.gain.value, t); oldG.gain.linearRampToValueAtTime(0, t + 0.4); old.stop(t + 0.45); }
+}
+function stopSource() {
+  if (!src) return;
+  const t = ctx.currentTime;
+  srcG.gain.setValueAtTime(srcG.gain.value, t); srcG.gain.linearRampToValueAtTime(0, t + 0.25);
+  src.stop(t + 0.3); src = null; srcG = null;
+}
+
+// ---------- Settings ----------
+const SKEY = "thomas911-bruit";
+let settings = { sound: "blanc", vol: 80, timer: 0, fade: true };
+try { Object.assign(settings, JSON.parse(localStorage.getItem(SKEY)) || {}); } catch (e) {}
+const saveSettings = () => { try { localStorage.setItem(SKEY, JSON.stringify(settings)); } catch (e) {} };
+const TIMERS = [0, 15, 30, 45, 60, 90, 120];
+const FADE = 10 * 60; // decrescendo length, seconds
+
+// ---------- Playback, timer and decrescendo ----------
+let playing = false, remaining = null, endAt = 0, uiTimer = null, lock = null;
+const $ = (id) => document.getElementById(id);
+
+function fadeValue(r) { return settings.fade && r < FADE ? Math.pow(Math.max(r, 0) / FADE, 2) : 1; }
+// Schedule the fade in the audio clock, so it still happens if the page is throttled.
+function scheduleFade() {
+  if (!ctx) return;
+  const t = ctx.currentTime, g = fadeG.gain;
+  g.cancelScheduledValues(t);
+  if (!playing || !settings.timer) { g.setValueAtTime(1, t); return; }
+  const r = Math.max((endAt - Date.now()) / 1000, 0);
+  g.setValueAtTime(fadeValue(r), t);
+  if (settings.fade) {
+    const start = Math.max(r - FADE, 0), len = r - start;
+    if (len > 0.05) {
+      const pts = 200, curve = new Float32Array(pts);
+      for (let k = 0; k < pts; k++) curve[k] = fadeValue(len * (1 - k / (pts - 1)));
+      g.setValueCurveAtTime(curve, t + start + 0.01, len);
+    }
+  } else {
+    g.setValueAtTime(0, t + r);
+  }
+}
+async function keepAwake(on) {
+  try {
+    if (on && "wakeLock" in navigator && !lock) { lock = await navigator.wakeLock.request("screen"); lock.addEventListener("release", () => { lock = null; }); }
+    if (!on && lock) { await lock.release(); lock = null; }
+  } catch (e) {}
+}
+function play() {
+  ensureAudio();
+  if (ctx.state === "suspended") ctx.resume();
+  startSource(settings.sound);
+  playing = true;
+  if (settings.timer) {
+    if (remaining === null) remaining = settings.timer * 60000;
+    endAt = Date.now() + remaining;
+  }
+  scheduleFade();
+  keepAwake(true);
+  clearInterval(uiTimer); uiTimer = setInterval(onTick, 1000);
+  render();
+}
+function pause(finished) {
+  if (!playing) return;
+  playing = false;
+  stopSource();
+  remaining = finished || !settings.timer ? null : Math.max(endAt - Date.now(), 0);
+  scheduleFade();
+  keepAwake(false);
+  clearInterval(uiTimer);
+  render();
+}
+function onTick() {
+  if (playing && settings.timer && Date.now() >= endAt) { pause(true); $("status").textContent = "Minuteur terminé"; return; }
+  renderStatus();
+}
+function fmt(ms) {
+  const s = Math.ceil(ms / 1000), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+  return h ? `${h} h ${String(m).padStart(2, "0")}` : `${m}:${String(sec).padStart(2, "0")}`;
+}
+
+// ---------- UI ----------
+const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>';
+const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>';
+function renderStatus() {
+  const left = playing ? endAt - Date.now() : remaining;
+  let txt = playing ? "En lecture" : "Prêt";
+  if (settings.timer) {
+    const ms = left ?? settings.timer * 60000;
+    txt = `${playing ? "Arrêt dans" : "Minuteur"} ${fmt(ms)}`;
+    if (playing && settings.fade && ms < FADE * 1000) txt += " · decrescendo";
+  }
+  $("status").textContent = txt;
+}
+function render() {
+  $("player").classList.toggle("playing", playing);
+  $("play").innerHTML = playing ? PAUSE : PLAY;
+  $("play").setAttribute("aria-label", playing ? "Pause" : "Lecture");
+  const s = SOUNDS.find((x) => x.id === settings.sound);
+  $("nowName").textContent = s.name;
+  document.querySelectorAll(".snd").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === settings.sound));
+  document.querySelectorAll("#timers .chip").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.min === settings.timer));
+  $("fadeRow").hidden = !settings.timer;
+  $("fade").checked = settings.fade;
+  renderStatus();
+  if ("mediaSession" in navigator) {
+    try {
+      navigator.mediaSession.metadata = new MediaMetadata({ title: s.name, artist: "THOMAS911", artwork: [{ src: "icon-512.png", sizes: "512x512", type: "image/png" }] });
+      navigator.mediaSession.playbackState = playing ? "playing" : "paused";
+    } catch (e) {}
+  }
+}
+function renderVol() {
+  const v = settings.vol;
+  $("vol").value = v;
+  $("volOut").textContent = v + " %";
+  $("volOut").classList.toggle("boost", v > 100);
+  // Track: filled part in the accent colour, the boost zone (100–200 %) tinted orange
+  const p = v / 2, tint = "rgba(217,130,43,.28)";
+  $("vol").style.setProperty("--track", v <= 100
+    ? `linear-gradient(90deg, var(--accent) 0 ${p}%, var(--line) ${p}% 50%, ${tint} 50% 100%)`
+    : `linear-gradient(90deg, var(--accent) 0 50%, #d9822b 50% ${p}%, ${tint} ${p}% 100%)`);
+}
+
+$("sounds").innerHTML = SOUNDS.map((s) => `<button class="snd" type="button" data-id="${s.id}"><b>${s.name}</b><span>${s.desc}</span></button>`).join("");
+$("sounds").addEventListener("click", (e) => {
+  const b = e.target.closest(".snd"); if (!b) return;
+  settings.sound = b.dataset.id; saveSettings();
+  if (playing) startSource(settings.sound); // crossfade to the new sound
+  render();
+});
+$("timers").innerHTML = TIMERS.map((m) => `<button class="chip" type="button" data-min="${m}">${m === 0 ? "Non" : m < 60 ? m + " min" : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : m / 60 + " h"}</button>`).join("");
+$("timers").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  settings.timer = +b.dataset.min; saveSettings();
+  remaining = settings.timer ? settings.timer * 60000 : null;
+  if (playing && settings.timer) endAt = Date.now() + remaining;
+  scheduleFade(); render();
+});
+$("fade").addEventListener("change", (e) => { settings.fade = e.target.checked; saveSettings(); scheduleFade(); renderStatus(); });
+$("vol").addEventListener("input", (e) => {
+  settings.vol = +e.target.value; saveSettings(); renderVol();
+  if (ctx) volG.gain.setTargetAtTime(settings.vol / 100, ctx.currentTime, 0.05);
+});
+$("play").addEventListener("click", () => playing ? pause() : play());
+$("darkBtn").addEventListener("click", () => { $("night").hidden = false; });
+$("night").addEventListener("click", () => { $("night").hidden = true; });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && playing) keepAwake(true); });
+if ("mediaSession" in navigator) {
+  try {
+    navigator.mediaSession.setActionHandler("play", () => play());
+    navigator.mediaSession.setActionHandler("pause", () => pause());
+  } catch (e) {}
+}
+renderVol();
+render();
+</script>
+<script src="app.js"></script>
+</body>
+</html>

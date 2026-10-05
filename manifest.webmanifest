@@ -1,7 +1,7 @@
 {
-  "name": "Sortie bébé",
-  "short_name": "Sortie bébé",
-  "description": "Checklist avant de sortir avec le bébé",
+  "name": "THOMAS911",
+  "short_name": "THOMAS911",
+  "description": "Météo, checklist de sortie et boîte à bruit pour Thomas",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
