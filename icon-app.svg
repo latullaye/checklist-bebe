@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <!-- Source of the app icon. Rendered to PNG in a browser (needs the Exo Bold font). -->
+  <!-- Source of the app icon. Rendered to PNG in a browser (needs the Exo 2 Bold font). -->
   <style>
-    @font-face { font-family: "Exo"; font-weight: 700; src: url(fonts/exo-latin-700-normal.woff2) format("woff2"); }
-    text { font-family: "Exo"; font-weight: 700; text-anchor: middle; }
-    .num { font-size: 226px; letter-spacing: -4px; }
-    .name { font-size: 88px; letter-spacing: 1px; }
+    @font-face { font-family: "Exo 2"; font-weight: 700; src: url(fonts/exo-2-latin-700-normal.woff2) format("woff2"); }
+    text { font-family: "Exo 2"; font-weight: 700; text-anchor: middle; }
+    .num { font-size: 250px; letter-spacing: -4px; }
+    .name { font-size: 100px; letter-spacing: 1px; }
   </style>
   <rect id="bg" width="512" height="512" rx="112" fill="#1f6f78"/>
   <g id="art">
-    <!-- Widened like the Soletanche Bachy wordmark; THOMAS and 911 told apart by colour -->
-    <g transform="translate(256 0) scale(1.18 1) translate(-256 0)">
+    <!-- THOMAS and 911 told apart by colour -->
+    <g>
       <g fill="#0f4a51" transform="translate(6 6)">
         <text class="name" x="256" y="186">THOMAS</text>
         <text class="num" x="256" y="374">911</text>
