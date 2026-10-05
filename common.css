@@ -1,0 +1,46 @@
+/* Shared by the home page and the noise box (the checklist keeps its own inline copy). */
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 600; font-display: block; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
+@font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: block; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
+@font-face { font-family: "Ubuntu"; font-weight: 500; font-display: block; src: url(fonts/ubuntu-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
+@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
+html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+:root {
+  --bg: #eef3f1;
+  --surface: #ffffff;
+  --ink: #1d2b2a;
+  --muted: #5d706d;
+  --line: #cfdcd8;
+  --group: #e1ebe8;
+  --accent: #1f6f78;
+  --accent-ink: #ffffff;
+  --accent-soft: #d7e9ea;
+  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111a19; --surface: #1a2624; --ink: #e4eeeb; --muted: #93a8a4;
+    --line: #2f403d; --group: #162120; --accent: #5fb8bf; --accent-ink: #0c1716; --accent-soft: #1d3436;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111a19; --surface: #1a2624; --ink: #e4eeeb; --muted: #93a8a4;
+  --line: #2f403d; --group: #162120; --accent: #5fb8bf; --accent-ink: #0c1716; --accent-soft: #1d3436;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; }
+.wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px; }
+.label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
+svg.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Page header with a back button (sub-pages) */
+.top { display: flex; align-items: center; gap: 10px; }
+.top h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 1.25rem; margin: 0; }
+.back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px;
+  color: var(--accent); background: var(--surface); border: 1px solid var(--line); text-decoration: none; flex: none; }
+.back svg { width: 22px; height: 22px; }
