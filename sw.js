@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v2";
+const VERSION = "thomas911-v3";
 const FILES = [
   "./",
   "./index.html",

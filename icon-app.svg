@@ -1,15 +1,21 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Source of the app icon. Rendered to PNG in a browser (needs the Ubuntu Bold Italic font). -->
   <style>
-    @font-face { font-family: "BG"; font-weight: 800; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
-    @font-face { font-family: "BG6"; font-weight: 600; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
-    .num { font-family: "BG"; font-weight: 800; font-size: 236px; letter-spacing: -10px; fill: #fff; }
-    .name { font-family: "BG6"; font-weight: 600; font-size: 70px; letter-spacing: 14px; fill: #bfe3e6; }
+    @font-face { font-family: "UBI"; font-weight: 700; font-style: italic; src: url(fonts/ubuntu-latin-700-italic.woff2) format("woff2"); }
+    text { font-family: "UBI"; font-weight: 700; font-style: italic; text-anchor: middle; }
+    .num { font-size: 276px; letter-spacing: -18px; }
+    .name { font-size: 84px; letter-spacing: 3px; }
   </style>
   <rect id="bg" width="512" height="512" rx="112" fill="#1f6f78"/>
   <g id="art">
-    <text class="name" x="263" y="168" text-anchor="middle">THOMAS</text>
-    <text class="num" x="251" y="356" text-anchor="middle">911</text>
-    <!-- heartbeat line: the "911" for Thomas -->
-    <path d="M92 414 H204 l16 -28 l22 52 l18 -40 l12 16 H420" fill="none" stroke="#f4b942" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- drop shadow, TV-title style -->
+    <g fill="#0f4a51" transform="translate(7 7)">
+      <text class="name" x="258" y="176">THOMAS</text>
+      <text class="num" x="250" y="384">911</text>
+      <path d="M150 410 H410 L398 432 H138 Z"/>
+    </g>
+    <text class="name" x="258" y="176" fill="#fff">THOMAS</text>
+    <text class="num" x="250" y="384" fill="#f4b942">911</text>
+    <path d="M150 410 H410 L398 432 H138 Z" fill="#fff"/>
   </g>
 </svg>
