@@ -13,22 +13,28 @@
 <title>Boîte à bruit · THOMAS911</title>
 <style>
 /* Player */
-.player { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 22px 16px 18px; }
-.play { position: relative; width: 116px; height: 116px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-ink);
-  display: flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; }
-.play svg { width: 48px; height: 48px; fill: currentColor; stroke: none; }
-.play:active { transform: scale(0.97); }
-/* Soft rings while playing */
-.play::before, .play::after { content: ""; position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--accent); opacity: 0; pointer-events: none; }
-.playing .play::before { animation: ring 2.8s ease-out infinite; }
-.playing .play::after { animation: ring 2.8s 1.4s ease-out infinite; }
-@keyframes ring { 0% { transform: scale(1); opacity: .45; } 100% { transform: scale(1.45); opacity: 0; } }
-@media (prefers-reduced-motion: reduce) { .playing .play::before, .playing .play::after { animation: none; } }
-.now-name { font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; text-align: center; }
-.status { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: center; min-height: 1.2em; }
+.player { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
+.play { width: 100%; height: 64px; border-radius: 16px; border: 0; background: var(--accent); color: var(--accent-ink);
+  display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
+.play svg { width: 30px; height: 30px; fill: currentColor; stroke: none; }
+.play:active { transform: scale(0.985); }
+/* Soft breathing glow while playing */
+.playing .play { animation: glow 2.8s ease-in-out infinite; }
+@keyframes glow { 0%, 100% { box-shadow: 0 0 0 0 var(--accent-soft); } 50% { box-shadow: 0 0 0 6px var(--accent-soft); } }
+@media (prefers-reduced-motion: reduce) { .playing .play { animation: none; } }
+.status { color: var(--muted); font-size: 0.9rem; font-variant-numeric: tabular-nums; text-align: center; }
 
-/* Sound picker */
-.sounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+/* Sound picker: a dropdown that opens onto the sound cards */
+.pick { font: inherit; width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; color: var(--ink);
+  background: var(--bg); border: 1.5px solid var(--line); border-radius: 14px; padding: 10px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.pick .txt { flex: 1; min-width: 0; }
+.pick b { display: block; font-size: 1rem; }
+.pick .txt span { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
+.pick svg { width: 22px; height: 22px; color: var(--muted); transition: transform .2s; }
+.pick[aria-expanded="true"] { border-color: var(--accent); }
+.pick[aria-expanded="true"] svg { transform: rotate(180deg); }
+.sounds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .snd { font: inherit; text-align: left; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 14px;
   padding: 10px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .snd b { display: block; font-size: 0.95rem; }
@@ -77,14 +83,13 @@ details p { margin: 8px 0 0; line-height: 1.4; }
   </header>
 
   <section class="card player" id="player">
+    <button class="pick" id="pick" type="button" aria-expanded="false" aria-controls="sounds">
+      <span class="txt"><b id="pickName"></b><span id="pickDesc"></span></span>
+      <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="sounds" id="sounds" hidden></div>
     <button class="play" id="play" type="button" aria-label="Lecture"></button>
-    <div class="now-name" id="nowName"></div>
-    <div class="status" id="status">Prêt</div>
-  </section>
-
-  <section class="card">
-    <div class="label">Son</div>
-    <div class="sounds" id="sounds"></div>
+    <div class="status" id="status" hidden></div>
   </section>
 
   <section class="card">
@@ -335,7 +340,7 @@ function pause(finished) {
   render();
 }
 function onTick() {
-  if (playing && settings.timer && Date.now() >= endAt) { pause(true); $("status").textContent = "Minuteur terminé"; return; }
+  if (playing && settings.timer && Date.now() >= endAt) { pause(true); showStatus("Minuteur terminé"); return; }
   renderStatus();
 }
 function fmt(ms) {
@@ -346,22 +351,26 @@ function fmt(ms) {
 // ---------- UI ----------
 const PLAY = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5Z"/></svg>';
 const PAUSE = '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>';
+// Only says something useful: the timer countdown (while playing or paused mid-way).
+function showStatus(txt) { $("status").textContent = txt; $("status").hidden = !txt; }
 function renderStatus() {
-  const left = playing ? endAt - Date.now() : remaining;
-  let txt = playing ? "En lecture" : "Prêt";
-  if (settings.timer) {
-    const ms = left ?? settings.timer * 60000;
-    txt = `${playing ? "Arrêt dans" : "Minuteur"} ${fmt(ms)}`;
-    if (playing && settings.fade && ms < FADE * 1000) txt += " · decrescendo";
+  let txt = "";
+  if (settings.timer && playing) {
+    const ms = endAt - Date.now();
+    txt = `Arrêt dans ${fmt(ms)}`;
+    if (settings.fade && ms < FADE * 1000) txt += " · decrescendo";
+  } else if (settings.timer && remaining != null && remaining < settings.timer * 60000) {
+    txt = `Minuteur en pause · reste ${fmt(remaining)}`;
   }
-  $("status").textContent = txt;
+  showStatus(txt);
 }
 function render() {
   $("player").classList.toggle("playing", playing);
-  $("play").innerHTML = playing ? PAUSE : PLAY;
+  $("play").innerHTML = playing ? PAUSE + "Pause" : PLAY + "Lecture";
   $("play").setAttribute("aria-label", playing ? "Pause" : "Lecture");
   const s = SOUNDS.find((x) => x.id === settings.sound);
-  $("nowName").textContent = s.name;
+  $("pickName").textContent = s.name;
+  $("pickDesc").textContent = s.desc;
   document.querySelectorAll(".snd").forEach((b) => b.setAttribute("aria-pressed", b.dataset.id === settings.sound));
   document.querySelectorAll("#timers .chip").forEach((b) => b.setAttribute("aria-pressed", +b.dataset.min === settings.timer));
   $("fadeRow").hidden = !settings.timer;
@@ -391,8 +400,14 @@ $("sounds").addEventListener("click", (e) => {
   const b = e.target.closest(".snd"); if (!b) return;
   settings.sound = b.dataset.id; saveSettings();
   if (playing) startSource(settings.sound); // crossfade to the new sound
+  openPicker(false);
   render();
 });
+function openPicker(open) {
+  $("pick").setAttribute("aria-expanded", open);
+  $("sounds").hidden = !open;
+}
+$("pick").addEventListener("click", () => openPicker($("sounds").hidden));
 $("timers").innerHTML = TIMERS.map((m) => `<button class="chip" type="button" data-min="${m}">${m === 0 ? "Non" : m < 60 ? m + " min" : m % 60 ? `${Math.floor(m / 60)} h ${m % 60}` : m / 60 + " h"}</button>`).join("");
 $("timers").addEventListener("click", (e) => {
   const b = e.target.closest(".chip"); if (!b) return;
