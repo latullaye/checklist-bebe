@@ -39,12 +39,18 @@ const api = (path, opts = {}) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, {
 
 const rows = await (await api(`habitudes?select=cle,fait&jour=eq.${jour}`)).json();
 const done = (cle) => rows.some((r) => r.cle === cle && r.fait);
-const bouche = !done(`bouche-${slot}`), perinee = !done(`perinee-${slot}`);
-if (!bouche && !perinee) { console.log(`${jour} ${slot} : tout est fait.`); process.exit(0); }
+// What's left for this moment, in this order. Vitamin D only in the morning.
+const TODO = [
+  [`bouche-${slot}`, "il faut faire les exercices de bouche de Thomas"],
+  [`perinee-${slot}`, "Edith doit faire sa rééducation périnéenne"],
+  ...(slot === "matin" ? [["vitd", "Thomas doit prendre sa vitamine D"]] : [])
+].filter(([cle]) => !done(cle));
+if (!TODO.length) { console.log(`${jour} ${slot} : tout est fait.`); process.exit(0); }
 
-const body = bouche && perinee ? "Il faut faire les exercices de bouche de Thomas et Edith doit faire sa rééducation périnéenne."
-  : bouche ? "Il faut faire les exercices de bouche de Thomas." : "Edith doit faire sa rééducation périnéenne.";
-const payload = JSON.stringify({ title: `Rappel du ${slot}`, body, jour, slot });
+const phrases = TODO.map(([, text]) => text);
+const sentence = phrases.length > 1 ? `${phrases.slice(0, -1).join(", ")} et ${phrases.at(-1)}` : phrases[0];
+const body = sentence[0].toUpperCase() + sentence.slice(1) + ".";
+const payload = JSON.stringify({ title: `Rappel du ${slot}`, body, jour, slot, cles: TODO.map(([cle]) => cle) });
 
 const subs = await (await api("abonnements?select=endpoint,abonnement")).json();
 let sent = 0;

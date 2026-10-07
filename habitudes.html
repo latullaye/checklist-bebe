@@ -37,14 +37,16 @@
 .tick:active { transform: scale(.92); }
 
 /* Bath */
+.once { display: flex; flex-direction: column; gap: 12px; }
 .bath { display: flex; align-items: center; gap: 12px; }
+.once .bath + .bath { padding-top: 12px; border-top: 1px solid var(--line); }
 .bath .txt { flex: 1; min-width: 0; }
 .bath b { display: block; }
 .bath .txt > span { color: var(--muted); font-size: 0.85rem; }
 
 /* Last days */
-.hist { display: grid; grid-template-columns: auto 1fr 1fr 28px; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem; }
-.hist .h { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.hist { display: grid; grid-template-columns: auto 1fr 1fr 48px 24px; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem; }
+.hist .h { white-space: nowrap; font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .hist .d { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
 .hist .d.sel { color: var(--accent); font-weight: 700; }
 .dots { display: flex; gap: 5px; }
@@ -78,9 +80,15 @@
     <div class="grid" id="grid"></div>
   </section>
 
-  <section class="card bath">
-    <span class="txt"><b>Bain de Thomas</b><span id="bathLast"></span></span>
-    <button class="tick" id="bath" type="button" aria-label="Bain donné ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+  <section class="card once">
+    <div class="bath">
+      <span class="txt"><b>Vitamine D</b><span>Thomas, une fois par jour</span></span>
+      <button class="tick" id="vitd" type="button" aria-label="Vitamine D donnée ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
+    <div class="bath">
+      <span class="txt"><b>Bain de Thomas</b><span id="bathLast"></span></span>
+      <button class="tick" id="bath" type="button" aria-label="Bain donné ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
   </section>
 
   <section class="card">
@@ -113,7 +121,7 @@ let day = Habits.today();
 const q = new URLSearchParams(location.search);
 if (q.get("fait")) {
   const [jour, slot] = q.get("fait").split("|");
-  HABITS.forEach(([h]) => Habits.set(jour, `${h}-${slot}`, true));
+  Habits.REMIND(slot).forEach((k) => Habits.set(jour, k, true));
   history.replaceState(null, "", location.pathname);
 }
 
@@ -139,6 +147,7 @@ function render() {
       + SLOTS.map(([s, sn]) => `<button class="tick${s === now ? " now" : ""}" type="button" data-key="${h}-${s}"
           aria-pressed="${Habits.get(day, `${h}-${s}`)}" aria-label="${name}, ${sn.toLowerCase()}">${CHECK}</button>`).join("")).join("");
 
+  $("vitd").setAttribute("aria-pressed", Habits.get(day, "vitd"));
   $("bath").setAttribute("aria-pressed", Habits.get(day, "bain"));
   const last = Habits.lastBath();
   $("bathLast").textContent = !last ? "Pas de bain noté" : last === t ? "Dernier bain aujourd'hui"
@@ -149,9 +158,9 @@ function render() {
     const d = Habits.addDays(t, -i);
     const dots = (h) => `<span class="dots">${SLOTS.map(([s]) => `<i class="dot${Habits.get(d, `${h}-${s}`) ? " on" : ""}"></i>`).join("")}</span>`;
     const name = i === 0 ? "Auj." : i === 1 ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "short", day: "numeric" });
-    rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span>${Habits.get(d, "bain") ? TUB : ""}</span>`);
+    rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span class="dots"><i class="dot${Habits.get(d, "vitd") ? " on" : ""}"></i></span><span>${Habits.get(d, "bain") ? TUB : ""}</span>`);
   }
-  $("hist").innerHTML = '<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h" title="Bain"></span>' + rows.join("");
+  $("hist").innerHTML = '<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h">Vit. D</span><span class="h" title="Bain"></span>' + rows.join("");
 
   $("sync").textContent = { local: "Enregistré sur ce téléphone seulement", sync: "Synchronisation…",
     ok: "Partagé entre vos téléphones", offline: "Hors ligne : sera partagé au retour du réseau" }[Habits.status];
@@ -161,6 +170,7 @@ $("grid").addEventListener("click", (e) => {
   const b = e.target.closest(".tick"); if (!b) return;
   buzz(); Habits.set(day, b.dataset.key, b.getAttribute("aria-pressed") !== "true");
 });
+$("vitd").addEventListener("click", () => { buzz(); Habits.set(day, "vitd", !Habits.get(day, "vitd")); });
 $("bath").addEventListener("click", () => { buzz(); Habits.set(day, "bain", !Habits.get(day, "bain")); });
 $("prev").addEventListener("click", () => { day = Habits.addDays(day, -1); render(); });
 $("next").addEventListener("click", () => { day = Habits.addDays(day, 1); render(); });

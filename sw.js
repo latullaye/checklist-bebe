@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v10";
+const VERSION = "thomas911-v11";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -62,14 +62,14 @@ self.addEventListener("fetch", (e) => {
 });
 
 // ---------- Reminders ----------
-// The GitHub job sends { title, body, jour, slot }. Android shows the two quick actions; iPhone only the tap.
+// The GitHub job sends { title, body, jour, slot, cles } (cles: the boxes the reminder is about). Android shows the two quick actions; iPhone only the tap.
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data.json(); } catch (err) {}
   e.waitUntil(self.registration.showNotification(d.title || "THOMAS911", {
     body: d.body || "", tag: "rappel", renotify: true,
     icon: "icon-192.png",
-    data: { jour: d.jour, slot: d.slot },
+    data: { jour: d.jour, slot: d.slot, cles: d.cles },
     actions: [{ action: "fait", title: "C'est fait" }, { action: "plus-tard", title: "Plus tard" }]
   }));
 });
@@ -83,13 +83,14 @@ function openPage(url) {
 }
 
 self.addEventListener("notificationclick", (e) => {
-  const n = e.notification, { jour, slot } = n.data || {};
+  const n = e.notification, { jour, slot, cles } = n.data || {};
   n.close();
   if (e.action === "plus-tard") return;
   if (e.action === "fait" && jour && slot) {
-    // Tick both reminder boxes for that moment; if the network fails, the page does it.
+    // Tick the boxes the reminder was about; if the network fails, the page does it.
     const cfg = self.T911 || {};
-    const rows = ["bouche", "perinee"].map((h) => ({ jour, cle: `${h}-${slot}`, fait: true }));
+    const keys = cles || ["bouche", "perinee"].map((h) => `${h}-${slot}`).concat(slot === "matin" ? ["vitd"] : []);
+    const rows = keys.map((cle) => ({ jour, cle, fait: true }));
     e.waitUntil(fetch(`${cfg.SUPABASE_URL}/rest/v1/habitudes`, {
       method: "POST",
       headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
