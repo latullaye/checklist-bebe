@@ -92,10 +92,12 @@
     <section class="card" id="rainCard">
       <div class="label">Pluie · 4 prochaines heures</div>
       <div class="rain-head" id="rainHead"></div>
-      <div class="bars" id="bars" role="img"></div>
-      <div class="ticks" id="ticks" aria-hidden="true"></div>
-      <div class="caption" id="caption"></div>
-      <p class="note">Prévision par tranches de 15 minutes. Touche une barre pour le détail.</p>
+      <div id="chart">
+        <div class="bars" id="bars" role="img"></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <div class="caption" id="caption"></div>
+        <p class="note">Prévision par tranches de 15 minutes. Touche une barre pour le détail.</p>
+      </div>
     </section>
 
     <section class="card">
@@ -178,6 +180,8 @@ function render(w) {
   $("rainCard").hidden = !quarters.length;
   if (quarters.length) {
     $("rainHead").textContent = rainSummary(quarters, w);
+    // The 15-minute chart only when rain or snow is coming; otherwise the sentence is enough
+    $("chart").hidden = !quarters.some(([, mm]) => mm >= WET);
     const top = Math.max(8, ...quarters.map(([, mm]) => rate(mm))); // mm/h at full height
     $("bars").innerHTML = quarters.map((x, i) => {
       const dry = x[1] < WET, h = dry ? 0 : Math.max(8, Math.round(rate(x[1]) / top * 100));
