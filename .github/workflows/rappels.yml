@@ -1,0 +1,35 @@
+# Habit reminders at 9:00, 12:30 and 17:30 Montréal time (summer and winter lines; the script keeps the right one).
+name: Rappels habitudes
+on:
+  schedule:
+    - cron: "0 13 * * *"
+    - cron: "0 14 * * *"
+    - cron: "30 16 * * *"
+    - cron: "30 17 * * *"
+    - cron: "30 21 * * *"
+    - cron: "30 22 * * *"
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "Moment à envoyer tout de suite"
+        type: choice
+        options: [matin, midi, soir]
+        default: matin
+permissions:
+  contents: read
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+        working-directory: scripts
+      - run: node scripts/rappels.mjs
+        env:
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          SCHEDULE: ${{ github.event.schedule }}
+          SLOT: ${{ github.event.inputs.slot }}

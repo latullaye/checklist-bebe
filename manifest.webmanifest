@@ -1,7 +1,7 @@
 {
   "name": "THOMAS911",
   "short_name": "THOMAS911",
-  "description": "Météo, checklist de sortie et boîte à bruit pour Thomas",
+  "description": "Météo, checklist de sortie, boîte à bruit et bonnes habitudes pour Thomas",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

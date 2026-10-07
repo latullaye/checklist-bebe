@@ -100,9 +100,18 @@
     <span class="txt"><strong>Boîte à bruit</strong><span>Bruit blanc, rose, chut-chut…</span></span>
     <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
   </a>
+
+  <a class="card tile" href="habitudes.html">
+    <img class="ico" src="icon-habitudes.svg" alt="">
+    <span class="txt"><strong>Bonnes habitudes</strong><span>Bouche, rééducation, bain</span></span>
+    <span class="pill" id="habits" hidden></span>
+    <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
 </div>
 
 <script src="weather.js"></script>
+<script src="config.js"></script>
+<script src="habits.js"></script>
 <script>
 const DAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 document.getElementById("today").textContent =
@@ -119,6 +128,13 @@ try {
 } catch (e) {}
 
 const $ = (id) => document.getElementById(id);
+// Today's reminder boxes ticked, e.g. 4/6
+Habits.onChange(() => {
+  const { done, total } = Habits.progress();
+  $("habits").textContent = done >= total ? "Fait !" : `${done}/${total}`;
+  $("habits").hidden = false;
+});
+Habits.refresh();
 Wx.onUpdate((w) => {
   const [icon, label] = Wx.kind(w.code, w.day);
   const t = Math.round(w.temp);

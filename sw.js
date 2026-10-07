@@ -1,11 +1,15 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v9";
+const VERSION = "thomas911-v10";
+importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
   "./index.html",
   "./checklist.html",
   "./bruit.html",
+  "./habitudes.html",
+  "./config.js",
+  "./habits.js",
   "./common.css",
   "./weather.js",
   "./app.js",
@@ -13,6 +17,7 @@ const FILES = [
   "./icon-192.png",
   "./icon-poussette.svg",
   "./icon-bruit.svg",
+  "./icon-habitudes.svg",
   "./icon-512.png",
   "./icon-maskable-512.png",
   "./apple-touch-icon.png",
@@ -54,4 +59,44 @@ self.addEventListener("fetch", (e) => {
       )
     )
   );
+});
+
+// ---------- Reminders ----------
+// The GitHub job sends { title, body, jour, slot }. Android shows the two quick actions; iPhone only the tap.
+self.addEventListener("push", (e) => {
+  let d = {};
+  try { d = e.data.json(); } catch (err) {}
+  e.waitUntil(self.registration.showNotification(d.title || "THOMAS911", {
+    body: d.body || "", tag: "rappel", renotify: true,
+    icon: "icon-192.png",
+    data: { jour: d.jour, slot: d.slot },
+    actions: [{ action: "fait", title: "C'est fait" }, { action: "plus-tard", title: "Plus tard" }]
+  }));
+});
+
+function openPage(url) {
+  return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
+    const page = list.find((c) => c.url.includes("habitudes.html")) || list[0];
+    if (page) return page.navigate(url).then((c) => (c || page).focus()).catch(() => page.focus());
+    return self.clients.openWindow(url);
+  });
+}
+
+self.addEventListener("notificationclick", (e) => {
+  const n = e.notification, { jour, slot } = n.data || {};
+  n.close();
+  if (e.action === "plus-tard") return;
+  if (e.action === "fait" && jour && slot) {
+    // Tick both reminder boxes for that moment; if the network fails, the page does it.
+    const cfg = self.T911 || {};
+    const rows = ["bouche", "perinee"].map((h) => ({ jour, cle: `${h}-${slot}`, fait: true }));
+    e.waitUntil(fetch(`${cfg.SUPABASE_URL}/rest/v1/habitudes`, {
+      method: "POST",
+      headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify(rows)
+    }).then((r) => { if (!r.ok) throw new Error(r.status); })
+      .catch(() => openPage(`habitudes.html?fait=${encodeURIComponent(jour + "|" + slot)}`)));
+    return;
+  }
+  e.waitUntil(openPage("habitudes.html"));
 });
