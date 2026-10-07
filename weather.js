@@ -83,25 +83,30 @@
   const emit = () => listeners.forEach((fn) => { try { fn(wx); } catch (e) {} });
 
   let busy = false;
-  function refresh() {
-    // Older readings (from before the forecast was added) have no daily data: fetch again.
-    if (busy || !navigator.geolocation || (wx && wx.daily && Date.now() - wx.at < MAX_AGE)) return;
+  // maxAge: the weather page asks for fresher data (rain timing changes fast).
+  function refresh(maxAge = MAX_AGE) {
+    // Older readings (from before the 15-minute rain was added) lack it: fetch again.
+    if (busy || !navigator.geolocation || (wx && wx.quarter && Date.now() - wx.at < maxAge)) return;
     busy = true;
     navigator.geolocation.getCurrentPosition((pos) => {
       const lat = pos.coords.latitude.toFixed(2), lon = pos.coords.longitude.toFixed(2);
       fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
         + "&current=temperature_2m,apparent_temperature,weather_code,is_day"
-        + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_gusts_10m"
+        + "&minutely_15=precipitation,snowfall&past_minutely_15=1&forecast_minutely_15=20"
+        + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_gusts_10m,wind_speed_10m,is_day"
         + "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max"
-        + "&forecast_days=7&timezone=auto")
+        + "&forecast_days=11&timezone=auto")
         .then((r) => r.ok ? r.json() : Promise.reject())
         .then((d) => {
-          const h = d.hourly, dl = d.daily;
+          const h = d.hourly, dl = d.daily, m = d.minutely_15;
           wx = {
             temp: d.current.temperature_2m, feels: d.current.apparent_temperature,
             code: d.current.weather_code, day: d.current.is_day === 1,
-            hours: h.time.map((time, i) => [time, h.temperature_2m[i], h.precipitation_probability[i], h.weather_code[i], h.wind_gusts_10m[i]]),
+            // [time, temp, rain %, code, gusts, wind, is day]
+            hours: h.time.map((time, i) => [time, h.temperature_2m[i], h.precipitation_probability[i], h.weather_code[i], h.wind_gusts_10m[i], h.wind_speed_10m[i], h.is_day[i] === 1]),
             daily: dl.time.map((date, i) => [date, dl.weather_code[i], dl.temperature_2m_max[i], dl.temperature_2m_min[i], dl.precipitation_probability_max[i]]),
+            // Every 15 min: [start time, precipitation mm, snowfall cm]
+            quarter: m.time.map((time, i) => [time, m.precipitation[i] || 0, m.snowfall[i] || 0]),
             offset: d.utc_offset_seconds, lat, lon, at: Date.now()
           };
           try { localStorage.setItem(KEY, JSON.stringify(wx)); } catch (e) {}
@@ -122,5 +127,5 @@
     refresh();
   });
 
-  window.Wx = { PATHS, svg, kind, localNow, range, alerts, href, onUpdate, refresh, UNTIL };
+  window.Wx = { PATHS, svg, kind, localNow, range, alerts, href, onUpdate, refresh, UNTIL, get data() { return wx; } };
 })();

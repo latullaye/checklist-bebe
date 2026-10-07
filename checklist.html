@@ -162,7 +162,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
     </div>
     <div class="side">
       <div class="meta">
-        <a class="wx" id="wx" target="_blank" rel="noopener" hidden></a>
+        <a class="wx" id="wx" href="meteo.html" hidden></a>
         <div class="count"><b id="done">0</b>/<span id="total">0</span></div>
       </div>
       <button class="reset" id="reset" type="button">Réinitialiser</button>
@@ -521,12 +521,11 @@ Wx.onUpdate((w) => {
   const range = Wx.range(w);
   el.innerHTML = Wx.svg(Wx.PATHS[icon]) + `${t}°` + (range ? `<small>↓${range[0]}° ↑${range[1]}°</small>` : "");
   const desc = `${label}, ${t} degrés` + (range ? `, minimum ${range[0]}, maximum ${range[1]} d'ici ${Wx.UNTIL} h` : "");
-  el.setAttribute("aria-label", desc + ". Ouvrir The Weather Channel");
+  el.setAttribute("aria-label", desc + ". Ouvrir la météo détaillée");
   el.title = desc;
-  el.href = Wx.href(w);
   el.hidden = false;
   document.getElementById("alerts").innerHTML = Wx.alerts(w).map(([path, text, detail]) =>
-    `<a href="${el.href}" target="_blank" rel="noopener">${Wx.svg(path)}${text} <span>${detail}</span></a>`).join("");
+    `<a href="meteo.html">${Wx.svg(path)}${text} <span>${detail}</span></a>`).join("");
 });
 Wx.refresh();
 </script>
