@@ -35,10 +35,11 @@
 .note { font-size: 0.75rem; color: var(--muted); margin: 6px 0 0; }
 
 /* Hour by hour */
-.hours { display: flex; gap: 4px; overflow-x: auto; margin: 10px -16px -4px; padding: 0 16px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.hours { display: flex; gap: 4px; overflow-x: auto; margin: 10px -16px -4px; padding: 0 16px 6px; scrollbar-width: none;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x pan-y; } /* free native momentum, no snapping */
 .hours::-webkit-scrollbar { display: none; }
 .hour { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-radius: 12px;
-  font-variant-numeric: tabular-nums; scroll-snap-align: start; }
+  font-variant-numeric: tabular-nums; }
 .hour.first { background: var(--accent-soft); }
 .hour .h { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
 .hour svg { width: 26px; height: 26px; color: var(--accent); stroke-width: 1.8; }
@@ -129,7 +130,7 @@ const rate = (mm) => mm * 4;
 const level = (mm) => { const r = rate(mm); return r < 2.5 ? "faible" : r < 7.6 ? "modérée" : "forte"; };
 const what = ([, mm, snow]) => snow > 0 ? `neige ${level(mm)}` : `pluie ${level(mm)}`;
 
-let quarters = [], sel = 0;
+let quarters = [], sel = 0, lastHours = "";
 
 function rainSummary(q, w) {
   const wet = (x) => x && x[1] >= WET;
@@ -196,12 +197,18 @@ function render(w) {
   // Hour by hour: the next 24 hours from the current one
   const hourNow = now.slice(0, 13);
   const hrs = (w.hours || []).filter(([time]) => time.slice(0, 13) >= hourNow).slice(0, 24);
-  $("hours").innerHTML = hrs.map(([time, temp, pct, code, , wind, isDay], i) => {
+  const hoursHTML = hrs.map(([time, temp, pct, code, , wind, isDay], i) => {
     const [ic, lab] = Wx.kind(code, isDay !== false);
     return `<div class="hour${i === 0 ? " first" : ""}" aria-label="${hh(time)} : ${lab}, ${Math.round(temp)}°">
       <span class="h">${i === 0 ? "Maint." : hh(time)}</span>${Wx.svg(Wx.PATHS[ic])}<span class="t">${Math.round(temp)}°</span>
       <span class="p">${pct >= 20 ? pct + " %" : ""}</span><span class="w">${wind != null ? Math.round(wind) + " km/h" : ""}</span></div>`;
   }).join("");
+  // Redraw only when something changed, and keep where you had scrolled to
+  if (hoursHTML !== lastHours) {
+    const x = $("hours").scrollLeft;
+    $("hours").innerHTML = lastHours = hoursHTML;
+    $("hours").scrollLeft = x;
+  }
 
   // 10 days from today, with each day's range on a shared scale
   const today = Wx.localNow(w).day;
@@ -219,6 +226,34 @@ function render(w) {
 }
 
 $("bars").addEventListener("click", (e) => { const b = e.target.closest(".bar"); if (b) { sel = +b.dataset.i; renderCaption(); } });
+
+// Hour by hour: free native scrolling, then once it has fully stopped, a gentle glide onto the nearest hour.
+// A new touch cancels the glide right away, so gestures can be chained without waiting.
+(() => {
+  const el = $("hours");
+  let touching = false, timer = null;
+  const settle = () => {
+    clearTimeout(timer);
+    if (touching) return;
+    const first = el.querySelector(".hour"), second = first && first.nextElementSibling;
+    if (!second) return;
+    const step = second.offsetLeft - first.offsetLeft; // one hour column + gap
+    const max = el.scrollWidth - el.clientWidth;
+    // Near the end: stay against it, so the last hour is shown whole
+    const target = max - el.scrollLeft < step / 2 ? max : Math.min(max, Math.round(el.scrollLeft / step) * step);
+    if (Math.abs(target - el.scrollLeft) > 1) el.scrollTo({ left: target, behavior: "smooth" });
+  };
+  const hasEnd = "onscrollend" in window;
+  const later = () => { clearTimeout(timer); timer = setTimeout(settle, 140); };
+  el.addEventListener("touchstart", () => { touching = true; clearTimeout(timer); }, { passive: true });
+  // Finger lifted: settle soon, unless momentum keeps it scrolling (then scrollend / scroll takes over)
+  const lift = () => { touching = false; later(); };
+  el.addEventListener("touchend", lift, { passive: true });
+  el.addEventListener("touchcancel", lift, { passive: true });
+  // "scrollend" fires once momentum is over; older browsers: wait for scroll events to stop
+  el.addEventListener("scroll", () => { if (hasEnd) clearTimeout(timer); else later(); }, { passive: true });
+  if (hasEnd) el.addEventListener("scrollend", settle);
+})();
 $("ask").addEventListener("click", () => Wx.refresh(FRESH));
 Wx.onUpdate(render);
 Wx.refresh(FRESH);
