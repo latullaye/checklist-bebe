@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>Bonnes habitudes · THOMAS911</title>
+<style>
+/* Day picker */
+.day-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.day-nav strong { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
+.day-nav strong::first-letter { text-transform: uppercase; }
+.day-nav small { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-family: var(--font-body); }
+.arrow { font: inherit; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--accent);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; flex: none; }
+.arrow:disabled { opacity: .3; cursor: default; }
+.arrow svg { width: 20px; height: 20px; }
+
+/* Grid: one row per habit, one column per moment of the day */
+.grid { display: grid; grid-template-columns: 1fr repeat(3, 56px); align-items: center; row-gap: 10px; column-gap: 4px; margin-top: 14px; }
+.grid .col { text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 3px 0; border-radius: 8px; }
+.grid .col.now { color: var(--accent); background: var(--accent-soft); }
+.hab b { display: block; font-size: 0.98rem; line-height: 1.2; }
+.hab span { color: var(--muted); font-size: 0.8rem; }
+.tick { justify-self: center; width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); color: var(--accent-ink);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0; transition: background .15s, border-color .15s, transform .1s; }
+.tick svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .15s; }
+.tick.now { border-color: var(--accent); }
+.tick[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
+.tick[aria-pressed="true"] svg { opacity: 1; }
+.tick:active { transform: scale(.92); }
+
+/* Bath */
+.bath { display: flex; align-items: center; gap: 12px; }
+.bath .txt { flex: 1; min-width: 0; }
+.bath b { display: block; }
+.bath .txt > span { color: var(--muted); font-size: 0.85rem; }
+
+/* Last days */
+.hist { display: grid; grid-template-columns: auto 1fr 1fr 28px; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem; }
+.hist .h { font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.hist .d { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
+.hist .d.sel { color: var(--accent); font-weight: 700; }
+.dots { display: flex; gap: 5px; }
+.dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line); }
+.dot.on { background: var(--accent); border-color: var(--accent); }
+.hist .tub { width: 20px; height: 20px; color: var(--accent); }
+
+/* Reminders */
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.98rem; cursor: pointer; }
+.check input { width: 22px; height: 22px; accent-color: var(--accent); margin: 0; flex: none; }
+.check small { display: block; color: var(--muted); font-size: 0.8rem; }
+.notif-msg { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.35; }
+.notif-msg:empty { display: none; }
+.btn { font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 12px; padding: 11px 14px; margin-top: 10px; cursor: pointer; width: 100%; }
+.sync { text-align: center; font-size: 0.75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Bonnes habitudes</h1>
+  </header>
+
+  <section class="card">
+    <div class="day-nav">
+      <button class="arrow" id="prev" type="button" aria-label="Jour précédent"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+      <div style="text-align:center"><strong id="dayName"></strong><small id="dayDate"></small></div>
+      <button class="arrow" id="next" type="button" aria-label="Jour suivant"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <section class="card bath">
+    <span class="txt"><b>Bain de Thomas</b><span id="bathLast"></span></span>
+    <button class="tick" id="bath" type="button" aria-label="Bain donné ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+  </section>
+
+  <section class="card">
+    <div class="label">7 derniers jours</div>
+    <div class="hist" id="hist"></div>
+  </section>
+
+  <section class="card">
+    <label class="check">
+      <input type="checkbox" id="notif">
+      <span>Activer les notifications<small>Rappels à 9 h, 12 h 30 et 17 h 30, seulement s'il reste quelque chose à faire</small></span>
+    </label>
+    <p class="notif-msg" id="notifMsg"></p>
+    <button class="btn" id="notifAsk" type="button" hidden>Autoriser les notifications sur ce téléphone</button>
+  </section>
+
+  <p class="sync" id="sync"></p>
+</div>
+
+<script src="config.js"></script>
+<script src="habits.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+const TUB = '<svg class="i tub" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2Z M6 12V6a2 2 0 0 1 3.7-1 M7 19l-1 2 M17 19l1 2"/></svg>';
+const { SLOTS, HABITS } = Habits;
+let day = Habits.today();
+
+// A reminder's "C'est fait" that couldn't reach the network opens ?fait=jour|matin
+const q = new URLSearchParams(location.search);
+if (q.get("fait")) {
+  const [jour, slot] = q.get("fait").split("|");
+  HABITS.forEach(([h]) => Habits.set(jour, `${h}-${slot}`, true));
+  history.replaceState(null, "", location.pathname);
+}
+
+const label = (d) => {
+  const t = Habits.today();
+  if (d === t) return "aujourd'hui";
+  if (d === Habits.addDays(t, -1)) return "hier";
+  return new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "long" });
+};
+const longDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
+
+function buzz() { try { navigator.vibrate && navigator.vibrate(12); } catch (e) {} }
+
+function render() {
+  const t = Habits.today(), now = day === t ? Habits.slotNow() : null;
+  $("dayName").textContent = label(day);
+  $("dayDate").textContent = longDate(day);
+  $("next").disabled = day >= t;
+  $("prev").disabled = day <= Habits.addDays(t, -13);
+
+  $("grid").innerHTML = "<span></span>" + SLOTS.map(([s, name]) => `<span class="col${s === now ? " now" : ""}">${name}</span>`).join("")
+    + HABITS.map(([h, name, who]) => `<span class="hab"><b>${name}</b><span>${who}</span></span>`
+      + SLOTS.map(([s, sn]) => `<button class="tick${s === now ? " now" : ""}" type="button" data-key="${h}-${s}"
+          aria-pressed="${Habits.get(day, `${h}-${s}`)}" aria-label="${name}, ${sn.toLowerCase()}">${CHECK}</button>`).join("")).join("");
+
+  $("bath").setAttribute("aria-pressed", Habits.get(day, "bain"));
+  const last = Habits.lastBath();
+  $("bathLast").textContent = !last ? "Pas de bain noté" : last === t ? "Dernier bain aujourd'hui"
+    : `Dernier bain ${last === Habits.addDays(t, -1) ? "hier" : `il y a ${Math.round((new Date(t) - new Date(last)) / 864e5)} jours`}`;
+
+  const rows = [];
+  for (let i = 0; i < 7; i++) {
+    const d = Habits.addDays(t, -i);
+    const dots = (h) => `<span class="dots">${SLOTS.map(([s]) => `<i class="dot${Habits.get(d, `${h}-${s}`) ? " on" : ""}"></i>`).join("")}</span>`;
+    const name = i === 0 ? "Auj." : i === 1 ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "short", day: "numeric" });
+    rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span>${Habits.get(d, "bain") ? TUB : ""}</span>`);
+  }
+  $("hist").innerHTML = '<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h" title="Bain"></span>' + rows.join("");
+
+  $("sync").textContent = { local: "Enregistré sur ce téléphone seulement", sync: "Synchronisation…",
+    ok: "Partagé entre vos téléphones", offline: "Hors ligne : sera partagé au retour du réseau" }[Habits.status];
+}
+
+$("grid").addEventListener("click", (e) => {
+  const b = e.target.closest(".tick"); if (!b) return;
+  buzz(); Habits.set(day, b.dataset.key, b.getAttribute("aria-pressed") !== "true");
+});
+$("bath").addEventListener("click", () => { buzz(); Habits.set(day, "bain", !Habits.get(day, "bain")); });
+$("prev").addEventListener("click", () => { day = Habits.addDays(day, -1); render(); });
+$("next").addEventListener("click", () => { day = Habits.addDays(day, 1); render(); });
+$("hist").addEventListener("click", (e) => { const d = e.target.closest("[data-day]"); if (d) { day = d.dataset.day; render(); } });
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { if (day > Habits.today()) day = Habits.today(); render(); } });
+
+// ---------- Reminders (Web Push, sent by a GitHub job) ----------
+// On by default; the switch is per phone.
+const NKEY = "thomas911-notifs";
+const wanted = () => { try { return localStorage.getItem(NKEY) !== "off"; } catch (e) { return true; } };
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+const pushOK = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+
+const b64 = (s) => Uint8Array.from(atob((s + "=".repeat((4 - s.length % 4) % 4)).replace(/-/g, "+").replace(/_/g, "/")), (c) => c.charCodeAt(0));
+
+async function subscribe() {
+  const reg = await navigator.serviceWorker.ready;
+  const sub = (await reg.pushManager.getSubscription())
+    || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(T911.VAPID_PUBLIC) });
+  await Habits.api("abonnements", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify([{ endpoint: sub.endpoint, abonnement: sub.toJSON() }]) });
+}
+async function unsubscribe() {
+  const reg = await navigator.serviceWorker.ready;
+  const sub = await reg.pushManager.getSubscription();
+  if (!sub) return;
+  await Habits.api(`abonnements?endpoint=eq.${encodeURIComponent(sub.endpoint)}`, { method: "DELETE" }).catch(() => {});
+  await sub.unsubscribe();
+}
+
+let notifError = "";
+function renderNotif() {
+  const on = wanted();
+  $("notif").checked = on;
+  let msg = "", ask = false;
+  if (!Habits.shared) msg = "Les rappels seront actifs une fois le partage configuré.";
+  else if (isIOS && !standalone) msg = "Sur iPhone, ajoute d'abord THOMAS911 à l'écran d'accueil (Partager → Sur l'écran d'accueil), puis ouvre l'app depuis l'icône.";
+  else if (!pushOK) msg = "Ce navigateur ne permet pas les notifications.";
+  else if (on && Notification.permission === "denied") msg = "Les notifications sont bloquées pour THOMAS911 dans les réglages du téléphone.";
+  else if (on && Notification.permission === "default") ask = true;
+  else if (on && notifError) msg = notifError;
+  $("notifMsg").textContent = msg;
+  $("notifAsk").hidden = !ask;
+}
+// Make sure this phone's subscription is on the server (cheap, done on each visit).
+async function sync() {
+  notifError = "";
+  if (!Habits.shared || !pushOK || (isIOS && !standalone)) return renderNotif();
+  try {
+    if (wanted() && Notification.permission === "granted") await subscribe();
+    else if (!wanted()) await unsubscribe();
+  } catch (e) { notifError = "Impossible d'activer les rappels pour l'instant. Réessaie avec du réseau."; }
+  renderNotif();
+}
+$("notif").addEventListener("change", (e) => {
+  try { localStorage.setItem(NKEY, e.target.checked ? "on" : "off"); } catch (err) {}
+  // Asking right from the tap lets iPhone show the permission prompt
+  if (e.target.checked && pushOK && Notification.permission === "default" && Habits.shared) Notification.requestPermission().then(sync);
+  else sync();
+});
+$("notifAsk").addEventListener("click", () => Notification.requestPermission().then(sync));
+
+Habits.onChange(render);
+Habits.refresh();
+renderNotif();
+sync();
+</script>
+<script src="app.js"></script>
+</body>
+</html>
