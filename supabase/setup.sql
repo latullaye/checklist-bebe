@@ -27,6 +27,15 @@ create policy "app" on habitudes for all to anon using (true) with check (true);
 create policy "app" on abonnements for all to anon using (true) with check (true);
 revoke all on prive from anon, authenticated;
 
+-- Outing checklist shared between both phones: one row per item (its label)
+create table checklist (
+  cle text primary key,
+  fait boolean not null default false,
+  maj timestamptz not null default now()
+);
+alter table checklist enable row level security;
+create policy "app" on checklist for all to anon using (true) with check (true);
+
 -- Reminders: pg_cron calls the "rappels" function (supabase/functions/rappels/index.ts)
 create extension if not exists pg_cron;
 create extension if not exists pg_net;

@@ -180,6 +180,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
   </footer>
 </div>
 
+<script src="config.js"></script>
 <script>
 // An item is [label, hint, OPT?] or {group, items:[[label, hint], ...]}
 // Optional items: shown and checkable, but not needed for "Prêt pour l'aventure".
@@ -254,6 +255,56 @@ let state = {};
 try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
 
+// ---------- Shared between both phones (Supabase table "checklist") ----------
+// Each change is sent right away; what the other phone checked shows up within a few seconds.
+// Offline, changes wait in UNSENT and go out when the network is back.
+const cfg = self.T911 || {};
+const SHARED = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
+const UNSENT = "sortie-bebe-attente";
+let unsent = {};
+try { unsent = JSON.parse(localStorage.getItem(UNSENT) || "{}") || {}; } catch (e) {}
+const api = (path, opts = {}) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, {
+  ...opts, headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", ...(opts.headers || {}) }
+}).then((r) => { if (!r.ok) throw new Error(r.status); return r; });
+// Record a change (val: checked or not) for the other phone
+function share(ids, val) {
+  if (!SHARED) return;
+  ids.forEach((id) => { unsent[id] = val; });
+  try { localStorage.setItem(UNSENT, JSON.stringify(unsent)); } catch (e) {}
+  push();
+}
+let pushing = false;
+function push() {
+  const ids = Object.keys(unsent);
+  if (!SHARED || pushing || !ids.length) return Promise.resolve();
+  pushing = true;
+  const sent = { ...unsent };
+  return api("checklist", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(ids.map((cle) => ({ cle, fait: sent[cle], maj: new Date().toISOString() }))) })
+    .then(() => {
+      for (const k in sent) if (unsent[k] === sent[k]) delete unsent[k];
+      try { localStorage.setItem(UNSENT, JSON.stringify(unsent)); } catch (e) {}
+    })
+    .catch(() => {})
+    .finally(() => { pushing = false; });
+}
+// Take what the other phone did. Not while you're tapping (chips waiting to fold away).
+function pull() {
+  if (!SHARED || document.visibilityState !== "visible") return;
+  push().then(() => api("checklist?select=cle,fait")).then((r) => r.json()).then((rows) => {
+    if (pending.size || flushing) return;
+    // Very first sync (nothing on the server yet): this phone's ticks seed it instead of being wiped
+    if (!rows.length) { share(leaves.filter((l) => state[l.id]).map((l) => l.id), true); return; }
+    const next = {};
+    rows.forEach(({ cle, fait }) => { if (fait) next[cle] = 1; });
+    for (const [k, v] of Object.entries(unsent)) { if (v) next[k] = 1; else delete next[k]; }
+    const same = leaves.every((l) => !!next[l.id] === !!state[l.id]);
+    if (same) return;
+    leaves.forEach((l) => { if (next[l.id]) state[l.id] = 1; else delete state[l.id]; });
+    save(); render();
+  }).catch(() => {});
+}
+
 const reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 // Checked chips stay in place while you tap (tap again to undo).
 // After IDLE ms without a tap, they all fold away together and move to "Vérifié".
@@ -312,7 +363,7 @@ function chip(leaf, prefix) {
     if (prefix === "d-") {
       tick();
       // Uncheck from the tray: bring it back, highlighted where it lands
-      delete state[leaf.id]; save();
+      delete state[leaf.id]; save(); share([leaf.id], false);
       arrivals.add("t-" + leaf.id);
       flush();
       return;
@@ -320,12 +371,12 @@ function chip(leaf, prefix) {
     if (pending.has(leaf.id)) {
       // Undo in place, before it has moved
       tick();
-      pending.delete(leaf.id); delete state[leaf.id]; save();
+      pending.delete(leaf.id); delete state[leaf.id]; save(); share([leaf.id], false);
       b.classList.remove("checking");
       updateCounts(false);
     } else {
       const wasReady = required.every(l => state[l.id]);
-      pending.add(leaf.id); state[leaf.id] = 1; save();
+      pending.add(leaf.id); state[leaf.id] = 1; save(); share([leaf.id], true);
       b.classList.add("checking");
       if (updateCounts(true) === total && !wasReady) {
         // Last one: celebrate now, while we're still inside the tap (iPhone only plays sound then)
@@ -503,12 +554,16 @@ reset.addEventListener("click", () => {
     return;
   }
   clearTimeout(armed); armed = null;
-  state = {}; save();
+  state = {}; save(); share(leaves.map((l) => l.id), false);
   reset.classList.remove("confirm"); reset.textContent = "Réinitialiser";
   render();
 });
 
 render();
+pull();
+setInterval(pull, 4000); // only fetches while the page is on screen
+document.addEventListener("visibilitychange", pull);
+window.addEventListener("online", pull);
 </script>
 
 <script src="weather.js"></script>
