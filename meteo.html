@@ -226,6 +226,34 @@ function render(w) {
 }
 
 $("bars").addEventListener("click", (e) => { const b = e.target.closest(".bar"); if (b) { sel = +b.dataset.i; renderCaption(); } });
+
+// Hour by hour: free native scrolling, then once it has fully stopped, a gentle glide onto the nearest hour.
+// A new touch cancels the glide right away, so gestures can be chained without waiting.
+(() => {
+  const el = $("hours");
+  let touching = false, timer = null;
+  const settle = () => {
+    clearTimeout(timer);
+    if (touching) return;
+    const first = el.querySelector(".hour"), second = first && first.nextElementSibling;
+    if (!second) return;
+    const step = second.offsetLeft - first.offsetLeft; // one hour column + gap
+    const max = el.scrollWidth - el.clientWidth;
+    // Near the end: stay against it, so the last hour is shown whole
+    const target = max - el.scrollLeft < step / 2 ? max : Math.min(max, Math.round(el.scrollLeft / step) * step);
+    if (Math.abs(target - el.scrollLeft) > 1) el.scrollTo({ left: target, behavior: "smooth" });
+  };
+  const hasEnd = "onscrollend" in window;
+  const later = () => { clearTimeout(timer); timer = setTimeout(settle, 140); };
+  el.addEventListener("touchstart", () => { touching = true; clearTimeout(timer); }, { passive: true });
+  // Finger lifted: settle soon, unless momentum keeps it scrolling (then scrollend / scroll takes over)
+  const lift = () => { touching = false; later(); };
+  el.addEventListener("touchend", lift, { passive: true });
+  el.addEventListener("touchcancel", lift, { passive: true });
+  // "scrollend" fires once momentum is over; older browsers: wait for scroll events to stop
+  el.addEventListener("scroll", () => { if (hasEnd) clearTimeout(timer); else later(); }, { passive: true });
+  if (hasEnd) el.addEventListener("scrollend", settle);
+})();
 $("ask").addEventListener("click", () => Wx.refresh(FRESH));
 Wx.onUpdate(render);
 Wx.refresh(FRESH);
