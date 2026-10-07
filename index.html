@@ -66,7 +66,7 @@
     </div>
   </header>
 
-  <a class="card weather" id="wxCard" target="_blank" rel="noopener" aria-live="polite">
+  <a class="card weather" id="wxCard" href="meteo.html" aria-live="polite">
     <div class="wx-empty" id="wxEmpty">
       <div class="label">Météo</div>
       <p>Autorise la localisation pour voir la météo ici.</p>
@@ -84,7 +84,7 @@
       </div>
       <div class="alerts" id="wxAlerts"></div>
       <div class="days" id="wxDays"></div>
-      <div class="source">The Weather Channel ›</div>
+      <div class="source">Pluie, heure par heure, 10 jours ›</div>
     </div>
   </a>
 
@@ -138,7 +138,6 @@ Habits.refresh();
 Wx.onUpdate((w) => {
   const [icon, label] = Wx.kind(w.code, w.day);
   const t = Math.round(w.temp);
-  $("wxCard").href = Wx.href(w);
   $("wxIcon").innerHTML = Wx.svg(Wx.PATHS[icon]);
   $("wxTemp").textContent = `${t}°`;
   const feels = typeof w.feels === "number" ? Math.round(w.feels) : null;

@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>Météo · THOMAS911</title>
+<style>
+/* Now */
+.now { display: flex; align-items: center; gap: 14px; }
+.now svg { width: 64px; height: 64px; color: var(--accent); stroke-width: 1.6; flex: none; }
+.temp { font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 0.9; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.desc { font-weight: 700; margin-top: 6px; }
+.sub { color: var(--muted); font-size: 0.85rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+/* Rain, next 4 hours by 15 minutes */
+.rain-head { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; margin-top: 6px; line-height: 1.25; }
+.bars { position: relative; display: grid; grid-template-columns: repeat(16, 1fr); align-items: end; gap: 2px; height: 96px; margin-top: 14px;
+  border-bottom: 1px solid var(--line); }
+.bar { height: 100%; display: flex; align-items: flex-end; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.bar i { display: block; width: 100%; min-height: 0; border-radius: 4px 4px 0 0; background: var(--accent); }
+.bar.snow i { background: repeating-linear-gradient(135deg, var(--accent) 0 3px, transparent 3px 6px); border: 1.5px solid var(--accent); border-bottom: 0; }
+.bar.sel i { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.bar.dry i { height: 2px !important; background: var(--line); border-radius: 1px; }
+.ticks { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin-top: 4px; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ticks span { white-space: nowrap; }
+.caption { margin-top: 10px; font-size: 0.88rem; min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.caption b { font-weight: 700; }
+.note { font-size: 0.75rem; color: var(--muted); margin: 6px 0 0; }
+
+/* Hour by hour */
+.hours { display: flex; gap: 4px; overflow-x: auto; margin: 10px -16px -4px; padding: 0 16px 6px; scroll-snap-type: x proximity; scrollbar-width: none; }
+.hours::-webkit-scrollbar { display: none; }
+.hour { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-radius: 12px;
+  font-variant-numeric: tabular-nums; scroll-snap-align: start; }
+.hour.first { background: var(--accent-soft); }
+.hour .h { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+.hour svg { width: 26px; height: 26px; color: var(--accent); stroke-width: 1.8; }
+.hour .t { font-family: var(--font-display); font-weight: 800; font-size: 1rem; }
+.hour .p { font-size: 0.72rem; font-weight: 700; color: var(--accent); min-height: 1em; }
+.hour .w { font-size: 0.7rem; color: var(--muted); }
+
+/* 10 days */
+.days { display: flex; flex-direction: column; margin-top: 6px; }
+.day { display: grid; grid-template-columns: 4.6em 28px 3em 2.4em 1fr 2.4em; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line);
+  font-variant-numeric: tabular-nums; }
+.day:first-child { border-top: 0; }
+.day .dn { font-weight: 700; white-space: nowrap; }
+.day svg { width: 26px; height: 26px; color: var(--accent); stroke-width: 1.8; }
+.day .pp { font-size: 0.75rem; font-weight: 700; color: var(--accent); }
+.day .lo { color: var(--muted); text-align: right; }
+.day .hi { font-family: var(--font-display); font-weight: 800; }
+.range { position: relative; height: 6px; border-radius: 3px; background: var(--group); }
+.range i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
+
+.more { display: block; text-align: center; color: var(--accent); font-weight: 700; text-decoration: none; padding: 12px; }
+.fresh { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: -8px; }
+.empty { color: var(--muted); }
+.empty button { margin-top: 10px; font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 10px; padding: 9px 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Météo</h1>
+  </header>
+
+  <section class="card empty" id="empty">
+    <p>Autorise la localisation pour voir la météo ici.</p>
+    <button type="button" id="ask">Afficher la météo</button>
+  </section>
+
+  <div id="body" hidden style="display:contents">
+    <section class="card">
+      <div class="now">
+        <span id="icon"></span>
+        <div>
+          <div class="temp" id="temp"></div>
+          <div class="desc" id="desc"></div>
+          <div class="sub" id="feels"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" id="rainCard">
+      <div class="label">Pluie · 4 prochaines heures</div>
+      <div class="rain-head" id="rainHead"></div>
+      <div id="chart">
+        <div class="bars" id="bars" role="img"></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <div class="caption" id="caption"></div>
+        <p class="note">Prévision par tranches de 15 minutes. Touche une barre pour le détail.</p>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="label">Heure par heure</div>
+      <div class="hours" id="hours"></div>
+    </section>
+
+    <section class="card">
+      <div class="label">10 jours</div>
+      <div class="days" id="days"></div>
+    </section>
+
+    <a class="more" id="more" target="_blank" rel="noopener">Voir sur The Weather Channel ›</a>
+    <p class="fresh" id="fresh"></p>
+  </div>
+</div>
+
+<script src="weather.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const FRESH = 10 * 60 * 1000; // rain timing changes fast: refresh after 10 min here
+const WET = 0.1;              // mm in 15 min that counts as rain/snow
+const DAYS = ["Dim.", "Lun.", "Mar.", "Mer.", "Jeu.", "Ven.", "Sam."];
+const hh = (t) => `${+t.slice(11, 13)} h`;
+const hm = (t) => `${+t.slice(11, 13)} h ${t.slice(14, 16)}`;
+const localISO = (w) => new Date(Date.now() + w.offset * 1000).toISOString().slice(0, 16); // "2026-10-07T14:20" there
+// mm in 15 min -> mm/h and a word
+const rate = (mm) => mm * 4;
+const level = (mm) => { const r = rate(mm); return r < 2.5 ? "faible" : r < 7.6 ? "modérée" : "forte"; };
+const what = ([, mm, snow]) => snow > 0 ? `neige ${level(mm)}` : `pluie ${level(mm)}`;
+
+let quarters = [], sel = 0;
+
+function rainSummary(q, w) {
+  const wet = (x) => x && x[1] >= WET;
+  const end = q.length ? q[q.length - 1][0] : null;
+  const kind = (x) => x[2] > 0 ? "neige" : "pluie";
+  const inMin = (t) => Math.round((new Date(t + "Z") - new Date(localISO(w) + "Z")) / 60000);
+  if (!q.some(wet)) return `Pas de pluie prévue d'ici ${end ? hm(addQ(end)) : "4 h"}.`;
+  if (wet(q[0])) {
+    const stop = q.findIndex((x) => !wet(x));
+    if (stop < 0) return `${cap(kind(q[0]))} pendant encore au moins 4 h.`;
+    const again = q.slice(stop).findIndex(wet);
+    return `${cap(kind(q[0]))} jusqu'à ${hm(q[stop][0])} environ` + (again >= 0 ? `, puis reprise vers ${hm(q[stop + again][0])}.` : ".");
+  }
+  const start = q.findIndex(wet), n = inMin(q[start][0]);
+  const stop = q.slice(start).findIndex((x) => !wet(x));
+  const again = stop >= 0 ? q.slice(start + stop).findIndex(wet) : -1;
+  return `${cap(kind(q[start]))} à partir de ${hm(q[start][0])}${n > 0 ? ` (dans ${dur(n)})` : ""}`
+    + (stop < 0 ? ", pour au moins le reste des 4 h."
+      : `, jusqu'à ${hm(q[start + stop][0])} environ` + (again >= 0 ? `, puis reprise vers ${hm(q[start + stop + again][0])}.` : "."));
+}
+const dur = (n) => n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${String(n % 60).padStart(2, "0")}`;
+const cap = (s) => s[0].toUpperCase() + s.slice(1);
+const addQ = (t) => new Date(new Date(t + "Z").getTime() + 15 * 60000).toISOString().slice(0, 16);
+
+function renderCaption() {
+  const x = quarters[sel]; if (!x) return;
+  $("caption").innerHTML = `<b>${hm(x[0])}</b> · ` + (x[1] >= WET ? `${what(x)} (${rate(x[1]).toFixed(1).replace(".", ",")} mm/h)` : "sec");
+  document.querySelectorAll(".bar").forEach((b, i) => b.classList.toggle("sel", i === sel));
+}
+
+function render(w) {
+  if (!w) return;
+  $("empty").hidden = true; $("body").hidden = false;
+  const [icon, label] = Wx.kind(w.code, w.day), t = Math.round(w.temp);
+  $("icon").innerHTML = Wx.svg(Wx.PATHS[icon]);
+  $("temp").textContent = `${t}°`;
+  $("desc").textContent = label;
+  const feels = typeof w.feels === "number" ? Math.round(w.feels) : null;
+  $("feels").textContent = feels !== null && feels !== t ? `Ressenti ${feels}°` : "";
+  $("more").href = Wx.href(w);
+  $("fresh").textContent = `Mis à jour à ${new Date(w.at).toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit" })}`;
+
+  // Rain: the quarter we're in, then the next 15 (4 h)
+  const now = localISO(w);
+  const q = w.quarter || [];
+  const first = Math.max(0, q.findIndex(([time]) => time > now) - 1);
+  quarters = q.slice(first, first + 16);
+  $("rainCard").hidden = !quarters.length;
+  if (quarters.length) {
+    $("rainHead").textContent = rainSummary(quarters, w);
+    // The 15-minute chart only when rain or snow is coming; otherwise the sentence is enough
+    $("chart").hidden = !quarters.some(([, mm]) => mm >= WET);
+    const top = Math.max(8, ...quarters.map(([, mm]) => rate(mm))); // mm/h at full height
+    $("bars").innerHTML = quarters.map((x, i) => {
+      const dry = x[1] < WET, h = dry ? 0 : Math.max(8, Math.round(rate(x[1]) / top * 100));
+      return `<span class="bar${dry ? " dry" : ""}${x[2] > 0 ? " snow" : ""}" data-i="${i}"><i style="height:${h}%"></i></span>`;
+    }).join("");
+    $("bars").setAttribute("aria-label", $("rainHead").textContent);
+    $("ticks").innerHTML = quarters.map(([time], i) => `<span>${i === 0 ? "Maint." : time.slice(14, 16) === "00" ? hh(time) : ""}</span>`).join("");
+    if (sel >= quarters.length) sel = 0;
+    renderCaption();
+  }
+
+  // Hour by hour: the next 24 hours from the current one
+  const hourNow = now.slice(0, 13);
+  const hrs = (w.hours || []).filter(([time]) => time.slice(0, 13) >= hourNow).slice(0, 24);
+  $("hours").innerHTML = hrs.map(([time, temp, pct, code, , wind, isDay], i) => {
+    const [ic, lab] = Wx.kind(code, isDay !== false);
+    return `<div class="hour${i === 0 ? " first" : ""}" aria-label="${hh(time)} : ${lab}, ${Math.round(temp)}°">
+      <span class="h">${i === 0 ? "Maint." : hh(time)}</span>${Wx.svg(Wx.PATHS[ic])}<span class="t">${Math.round(temp)}°</span>
+      <span class="p">${pct >= 20 ? pct + " %" : ""}</span><span class="w">${wind != null ? Math.round(wind) + " km/h" : ""}</span></div>`;
+  }).join("");
+
+  // 10 days from today, with each day's range on a shared scale
+  const today = Wx.localNow(w).day;
+  const days = (w.daily || []).filter(([date]) => date >= today).slice(0, 10);
+  const lo = Math.min(...days.map((d) => d[3])), hi = Math.max(...days.map((d) => d[2])), span = Math.max(1, hi - lo);
+  $("days").innerHTML = days.map(([date, code, max, min, pp], i) => {
+    const [ic, lab] = Wx.kind(code);
+    const name = i === 0 ? "Auj." : DAYS[new Date(date + "T12:00:00").getDay()] + " " + +date.slice(8);
+    return `<div class="day" aria-label="${name} : ${lab}, ${Math.round(max)}° / ${Math.round(min)}°">
+      <span class="dn">${name}</span>${Wx.svg(Wx.PATHS[ic])}<span class="pp">${pp >= 20 ? pp + " %" : ""}</span>
+      <span class="lo">${Math.round(min)}°</span>
+      <span class="range"><i style="left:${(min - lo) / span * 100}%;right:${(hi - max) / span * 100}%"></i></span>
+      <span class="hi">${Math.round(max)}°</span></div>`;
+  }).join("");
+}
+
+$("bars").addEventListener("click", (e) => { const b = e.target.closest(".bar"); if (b) { sel = +b.dataset.i; renderCaption(); } });
+$("ask").addEventListener("click", () => Wx.refresh(FRESH));
+Wx.onUpdate(render);
+Wx.refresh(FRESH);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") Wx.refresh(FRESH); });
+</script>
+<script src="app.js"></script>
+</body>
+</html>
