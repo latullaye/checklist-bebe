@@ -11,7 +11,10 @@
   const SLOTS = [["matin", "Matin"], ["midi", "Midi"], ["soir", "Soir"]];
   const HABITS = [["bouche", "Exercices de bouche", "Thomas"], ["perinee", "Rééducation périnéenne", "Edith"]];
   // Tight follow-up: these boxes count in the daily progress and the reminders. The bath doesn't.
-  const DAILY = HABITS.flatMap(([h]) => SLOTS.map(([s]) => `${h}-${s}`));
+  // Vitamin D is once a day, in the morning reminder.
+  const DAILY = HABITS.flatMap(([h]) => SLOTS.map(([s]) => `${h}-${s}`)).concat("vitd");
+  // Boxes a reminder covers, for "C'est fait"
+  const REMIND = (slot) => HABITS.map(([h]) => `${h}-${slot}`).concat(slot === "matin" ? ["vitd"] : []);
 
   const pad = (n) => String(n).padStart(2, "0");
   const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -100,6 +103,6 @@
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
   window.addEventListener("online", refresh);
 
-  window.Habits = { SLOTS, HABITS, DAILY, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, onChange, api,
+  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, onChange, api,
     get status() { return status; } };
 })();

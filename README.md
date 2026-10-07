@@ -5,7 +5,7 @@ Petite application web (PWA) pour les sorties et les nuits de Thomas.
 - **Accueil** (`index.html`) : météo du jour, alertes pluie / neige / vent et prévisions sur 6 jours.
 - **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.
-- **Bonnes habitudes** (`habitudes.html`) : exercices de bouche de Thomas et rééducation périnéenne d'Edith (matin, midi, soir), bain de Thomas. Cases partagées entre les téléphones, rappels à 9 h, 12 h 30 et 17 h 30.
+- **Bonnes habitudes** (`habitudes.html`) : exercices de bouche de Thomas et rééducation périnéenne d'Edith (matin, midi, soir), vitamine D de Thomas (une fois par jour, dans le rappel du matin), bain de Thomas. Cases partagées entre les téléphones, rappels à 9 h, 12 h 30 et 17 h 30.
 
 En ligne : https://latullaye.github.io/checklist-bebe/ — sur téléphone, l'ajouter à l'écran d'accueil.
 
