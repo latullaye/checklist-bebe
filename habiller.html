@@ -144,7 +144,7 @@ const G = {
   couche: ["Couche", "", `<path d="M9 15 H39 Q39 33 24 38 Q9 33 9 15 Z"/>` + line("M9 20 H14 M34 20 H39")],
   bodyMC: ["Body", "manches courtes", `<path d="${ONESIE_SS}"/>`],
   bodyML: ["Body", "manches longues", `<path d="${ONESIE_LS}"/>`],
-  tshirt: ["T-shirt", "ou haut léger", `<path d="M17 8 L8 13 L11 20 L15 18 V40 H33 V18 L37 20 L40 13 L31 8 Q24 14 17 8 Z"/>`],
+  tshirt: ["T-shirt", "manches longues", `<path d="${TOP_LS}"/>`],
   pull: ["Pull", "", `<path d="${TOP_LS}"/>` + line("M14 36 H34 M5.6 28 L11.6 29 M42.4 28 L36.4 29")],
   gilet: ["Gilet", "ou veste légère", `<path d="${TOP_LS}"/>` + line("M24 11 V40") + `<path class="no-fill dot" d="M20.5 19 v.01 M20.5 26 v.01 M20.5 33 v.01"/>`],
   pantalon: ["Pantalon", "", `<path d="M14 7 H34 L36 42 H27 L24 19 L21 42 H12 Z"/>` + line("M14 12 H34")],
@@ -172,9 +172,9 @@ const EVEIL = [
   [24, [["bodyMC", "pantalon"], ["bodyML"]]],
   [22, [["bodyML", "pantalon"], ["pyjama"]]],
   [20, [["bodyML", "pantalon", "chaussettes"], ["bodyMC", "pyjama"]]],
-  [18, [["bodyML", "tshirt", "pantalon", "chaussettes"], ["bodyML", "pyjama"]]],
+  [18, [["bodyMC", "tshirt", "pantalon", "chaussettes"], ["bodyML", "pyjama"]]],
   [16, [["bodyML", "pull", "pantalon", "chaussettes"], ["bodyML", "pyjama", "gilet"]]],
-  [-99, [["bodyML", "tshirt", "pull", "pantalon", "chaussettes"]], "Pièce froide pour un bébé : l'idéal est entre 18 et 22 °C."]
+  [-99, [["bodyMC", "tshirt", "pull", "pantalon", "chaussettes"]], "Pièce froide pour un bébé : l'idéal est entre 18 et 22 °C."]
 ];
 // Sleeping: the sleep sack's TOG follows the room temperature
 const DODO = [
