@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v23";
+const VERSION = "thomas911-v24";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -10,8 +10,12 @@ const FILES = [
   "./habitudes.html",
   "./meteo.html",
   "./habiller.html",
+  "./age.html",
+  "./croissance.html",
   "./config.js",
   "./habits.js",
+  "./thomas.js",
+  "./who-boys.js",
   "./common.css",
   "./weather.js",
   "./app.js",
@@ -21,6 +25,8 @@ const FILES = [
   "./icon-bruit.svg",
   "./icon-habitudes.svg",
   "./icon-habiller.svg",
+  "./icon-age.svg",
+  "./icon-croissance.svg",
   "./icon-512.png",
   "./icon-maskable-512.png",
   "./apple-touch-icon.png",

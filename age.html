@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>L'âge de Thomas · THOMAS911</title>
+<style>
+:root { --gold: #d9822b; --gold-soft: #fbead2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gold: #f4b942; --gold-soft: #3a2e1a; } }
+:root[data-theme="dark"] { --gold: #f4b942; --gold-soft: #3a2e1a; }
+
+/* Today's party */
+.today { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, var(--gold-soft), var(--accent-soft)); border-color: transparent; }
+.today .txt { flex: 1; min-width: 0; }
+.today b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; line-height: 1.2; }
+.today span { color: var(--muted); font-size: 0.85rem; }
+.today svg.cake { width: 52px; height: 52px; flex: none; }
+.go { font: inherit; font-weight: 700; color: #fff; background: var(--gold); border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; flex: none; }
+
+/* Age */
+.hero { text-align: center; padding: 20px 16px 18px; }
+.hero .lead { color: var(--muted); font-size: 0.9rem; }
+.hero .big { font-family: var(--font-display); font-weight: 800; font-size: 4.2rem; line-height: 1; letter-spacing: -0.02em; margin: 6px 0 0; font-variant-numeric: tabular-nums; color: var(--accent); }
+.hero .unit { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; }
+.ways { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; text-align: left; }
+.way { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+.way small { display: block; font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
+.way b { display: block; margin-top: 3px; font-size: 0.98rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.way.wide { grid-column: 1 / -1; }
+.born { margin: 14px 0 0; font-size: 0.8rem; color: var(--muted); }
+.next { margin-top: 12px; padding: 10px 12px; border-radius: 14px; border: 1.5px dashed var(--gold); font-size: 0.9rem; }
+.next b { color: var(--gold); }
+
+/* Upcoming */
+.list { margin-top: 8px; }
+.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line);
+  cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.row:first-child { border-top: 0; }
+.chip { width: 40px; height: 40px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent); font-family: var(--font-display); font-weight: 800; line-height: 1; }
+.chip i { font-style: normal; font-size: 0.95rem; }
+.chip em { font-style: normal; font-family: var(--font-body); font-weight: 700; font-size: 0.55rem; margin-top: 2px; text-transform: uppercase; }
+.row.big .chip { background: var(--gold-soft); color: var(--gold); }
+.row .what b { display: block; font-weight: 700; }
+.row.big .what b { font-family: var(--font-display); font-weight: 800; }
+.row .what span { color: var(--muted); font-size: 0.8rem; }
+.row .when { text-align: right; font-size: 0.8rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.row .when b { display: block; color: var(--ink); font-size: 0.9rem; }
+.more { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 100%; margin-top: 10px; cursor: pointer; }
+details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); }
+.hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
+
+/* ---------- The party ---------- */
+.party { position: fixed; inset: 0; z-index: 50; overflow: hidden; display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--bg) 70%, transparent); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  animation: fadein .3s ease-out; }
+.party.out { animation: fadeout .5s ease-in forwards; }
+@keyframes fadein { from { opacity: 0; } }
+@keyframes fadeout { to { opacity: 0; } }
+.party-card { position: relative; z-index: 2; text-align: center; padding: 26px 26px 22px; border-radius: 28px; background: var(--surface);
+  box-shadow: 0 18px 50px rgba(0,0,0,.18); max-width: 300px; animation: pop .7s cubic-bezier(.2,1.6,.4,1) both .1s; }
+@keyframes pop { from { transform: scale(.2) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+.badge { position: relative; width: 168px; height: 168px; margin: 0 auto 10px; animation: wobble 2.4s ease-in-out infinite 1s; }
+@keyframes wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-4deg); } 75% { transform: rotate(4deg); } }
+.badge svg { width: 100%; height: 100%; }
+.badge .label { position: absolute; inset: 22px 0 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #fff; }
+.badge .label b { font-family: var(--font-display); font-weight: 800; font-size: 2.9rem; line-height: .95; text-shadow: 0 2px 0 rgba(0,0,0,.12); }
+.badge .label b.long { font-size: 1.55rem; }
+.badge .label span { font-weight: 700; font-size: 0.9rem; margin-top: 2px; }
+.party-card h2 { font-family: var(--font-display); font-weight: 800; font-size: 1.45rem; margin: 4px 0 0; line-height: 1.2; }
+.party-card p { margin: 6px 0 0; color: var(--muted); font-size: 0.9rem; }
+.party-card .close { margin-top: 14px; font-size: 0.75rem; color: var(--muted); }
+.balloon { position: absolute; bottom: -140px; z-index: 1; width: 64px; animation: rise var(--t, 7s) cubic-bezier(.35,.1,.6,1) var(--d, 0s) forwards; }
+.balloon svg { width: 100%; animation: sway 2.6s ease-in-out infinite alternate; transform-origin: 50% 100%; }
+@keyframes rise { to { transform: translateY(calc(-100vh - 200px)); } }
+@keyframes sway { from { transform: rotate(-7deg) translateX(-6px); } to { transform: rotate(7deg) translateX(6px); } }
+.confetti { position: absolute; top: -20px; z-index: 3; width: 9px; height: 14px; border-radius: 2px; animation: fall var(--t, 3s) linear var(--d, 0s) forwards; }
+@keyframes fall { to { transform: translate(var(--x, 0), 110vh) rotate(var(--r, 720deg)); } }
+@media (prefers-reduced-motion: reduce) { .balloon, .confetti { display: none; } .party-card, .badge { animation: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>L'âge de Thomas</h1>
+  </header>
+
+  <section class="card today" id="today" hidden></section>
+
+  <section class="card hero">
+    <div class="lead">Thomas a</div>
+    <div class="big" id="bigDays"></div>
+    <div class="unit" id="bigUnit">jours</div>
+    <div class="ways">
+      <div class="way"><small>En semaines</small><b id="wWeeks"></b></div>
+      <div class="way"><small>En mois</small><b id="wMonths"></b></div>
+      <div class="way wide"><small>En mois et semaines</small><b id="wMonthsWeeks"></b></div>
+      <div class="way wide"><small>En heures de vie</small><b id="wHours"></b></div>
+    </div>
+    <div class="next" id="next"></div>
+    <p class="born" id="born"></p>
+  </section>
+
+  <section class="card">
+    <div class="label">Prochaines célébrations</div>
+    <div class="list" id="upcoming"></div>
+    <button class="more" id="more" type="button">Voir plus loin</button>
+    <p class="hint">Touche une ligne pour voir un aperçu de la fête.</p>
+  </section>
+
+  <section class="card">
+    <details class="past">
+      <summary>Déjà célébrées</summary>
+      <div class="list" id="past"></div>
+    </details>
+  </section>
+</div>
+
+<div class="party" id="party" hidden></div>
+
+<script src="thomas.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const nf = (n) => n.toLocaleString("fr-CA");
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// ---------- Drawings ----------
+const CAKE = `<svg class="cake" viewBox="0 0 64 64" aria-hidden="true">
+  <path d="M10 34 H54 V54 Q54 57 51 57 H13 Q10 57 10 54 Z" fill="#f7c9b8"/>
+  <path d="M10 34 H54 V40 Q50 44 46 40 Q42 36 38 40 Q34 44 30 40 Q26 36 22 40 Q18 44 14 40 Q12 38 10 40 Z" fill="#fff"/>
+  <path d="M10 47 H54" stroke="#ef7b6c" stroke-width="3"/>
+  <rect x="29" y="20" width="6" height="14" rx="2" fill="#8fa8f0"/>
+  <path d="M32 8 Q37 14 32 18 Q27 14 32 8 Z" fill="#f4b942"/></svg>`;
+// Scalloped medal with ribbons; the number sits on top in HTML
+function medal(color) {
+  const pts = [...Array(32)].map((_, i) => { const a = i / 32 * Math.PI * 2, r = i % 2 ? 72 : 80; return `${100 + r * Math.sin(a)},${92 - r * Math.cos(a)}`; }).join(" ");
+  return `<svg viewBox="0 0 200 200" aria-hidden="true">
+    <path d="M62 140 L44 196 L70 184 L84 200 L98 150 Z" fill="#ef7b6c"/><path d="M138 140 L156 196 L130 184 L116 200 L102 150 Z" fill="#8fa8f0"/>
+    <polygon points="${pts}" fill="${color}"/><circle cx="100" cy="92" r="60" fill="none" stroke="#fff" stroke-opacity=".55" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/></svg>`;
+}
+const BALLOON = (c) => `<svg viewBox="0 0 64 120" aria-hidden="true"><path d="M32 4 C14 4 4 18 4 34 C4 54 22 70 32 74 C42 70 60 54 60 34 C60 18 50 4 32 4 Z" fill="${c}"/>
+  <path d="M20 18 Q14 26 15 36" stroke="#fff" stroke-opacity=".6" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M28 74 L32 80 L36 74 Z" fill="${c}"/><path d="M32 80 Q26 92 34 102 Q40 110 32 120" stroke="#9aa" stroke-width="1.5" fill="none"/></svg>`;
+const COLORS = ["#f4b942", "#ef7b6c", "#7cc68d", "#8fa8f0", "#5fb8bf", "#c39bd3"];
+const MEDAL = { mois: "#5fb8bf", ans: "#f4b942", jours: "#ef7b6c", semaines: "#8fa8f0", heures: "#c39bd3" };
+
+// ---------- Sound: soft chime + a cheerful voice (only after a tap: phones block sound otherwise) ----------
+let audio = null;
+function chime() {
+  try {
+    try { if (navigator.audioSession) navigator.audioSession.type = "ambient"; } catch (e) {}
+    audio = audio || new (window.AudioContext || window.webkitAudioContext)();
+    if (audio.state === "suspended") audio.resume();
+    const t0 = audio.currentTime + 0.05;
+    [523.25, 659.25, 783.99, 1046.5, 1318.5].forEach((f, i) => {
+      const o = audio.createOscillator(), g = audio.createGain(), t = t0 + i * 0.12;
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.2, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + (i === 4 ? 1.1 : 0.35));
+      o.connect(g).connect(audio.destination); o.start(t); o.stop(t + 1.2);
+    });
+  } catch (e) {}
+}
+function cheer(m) {
+  try {
+    const synth = window.speechSynthesis; if (!synth) return;
+    synth.cancel();
+    const line = m.kind === "heures" ? `Bravo Thomas, ${m.title} !` : `Joyeux ${m.title}, Thomas !`;
+    const u = new SpeechSynthesisUtterance(line);
+    const v = synth.getVoices().find((v) => v.lang === "fr-CA") || synth.getVoices().find((v) => v.lang && v.lang.startsWith("fr"));
+    if (v) u.voice = v;
+    u.lang = v ? v.lang : "fr-CA"; u.rate = 1.05; u.pitch = 1.35;
+    setTimeout(() => synth.speak(u), 650);
+  } catch (e) {}
+}
+
+// ---------- The party ----------
+let partyTimer = null;
+function party(list, withSound) {
+  const m = list[0];
+  const el = $("party");
+  clearTimeout(partyTimer);
+  el.classList.remove("out");
+  const long = m.num.length > 5;
+  const when = m.day === Thomas.today() ? "Aujourd'hui" : Thomas.fmtDay(m.day, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  el.innerHTML = `<div class="party-card" role="dialog" aria-label="Thomas a ${m.title}">
+      <div class="badge">${medal(MEDAL[m.kind])}<div class="label"><b class="${long ? "long" : ""}">${m.num}</b><span>${m.unit}</span></div></div>
+      <h2>Thomas a ${m.title} !</h2>
+      <p>${when}${m.at ? ` à ${Thomas.fmtTime(m.at)}` : ""}${list.length > 1 ? `<br>et aussi ${list.slice(1).map((x) => x.title).join(", ")}` : ""}</p>
+      <div class="close">Touche pour fermer</div></div>`;
+  if (!reduced) {
+    for (let i = 0; i < 9; i++) {
+      const b = document.createElement("div"); b.className = "balloon";
+      b.style.cssText = `left:${4 + i * 11 + Math.random() * 4}%;--t:${6 + Math.random() * 3}s;--d:${Math.random() * 1.2}s;width:${52 + Math.random() * 22}px`;
+      b.innerHTML = BALLOON(COLORS[i % COLORS.length]);
+      el.appendChild(b);
+    }
+    for (let i = 0; i < 70; i++) {
+      const c = document.createElement("i"); c.className = "confetti";
+      c.style.cssText = `left:${Math.random() * 100}%;background:${COLORS[i % COLORS.length]};--t:${2.4 + Math.random() * 2}s;--d:${Math.random() * 1.5}s;--x:${(Math.random() * 160 - 80) | 0}px;--r:${(Math.random() * 1080 - 540) | 0}deg;${i % 3 ? "" : "border-radius:50%;width:10px;height:10px;"}`;
+      el.appendChild(c);
+    }
+  }
+  el.hidden = false;
+  // Sound and buzz only after a tap: browsers refuse both before the first touch
+  if (withSound) { chime(); cheer(m); try { navigator.vibrate && navigator.vibrate([30, 60, 30, 60, 90]); } catch (e) {} }
+  partyTimer = setTimeout(closeParty, 9000);
+}
+function closeParty() {
+  const el = $("party");
+  if (el.hidden) return;
+  el.classList.add("out");
+  setTimeout(() => { el.hidden = true; el.innerHTML = ""; }, 500);
+}
+$("party").addEventListener("click", closeParty);
+
+// ---------- Age ----------
+function renderAge() {
+  const a = Thomas.age();
+  $("bigDays").textContent = nf(a.days);
+  $("bigUnit").textContent = a.days > 1 ? "jours" : "jour";
+  $("wWeeks").textContent = a.text.weeks;
+  $("wMonths").textContent = a.text.months;
+  $("wMonthsWeeks").textContent = a.text.monthsWeeks;
+  $("wHours").textContent = `${nf(a.hours)} heures`;
+  const birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: "America/Toronto", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
+  $("born").textContent = `Né le ${birth} (heure de Montréal)`;
+  const n = Thomas.upcoming(1)[0];
+  const inDays = Thomas.daysBetween(Thomas.today(), n.day);
+  $("next").innerHTML = `Prochaine fête : <b>${n.title}</b> ${inDays === 1 ? "demain" : `dans ${inDays} jours`} (${Thomas.fmtDay(n.day)})`;
+}
+
+// ---------- Today ----------
+function renderToday() {
+  const list = Thomas.on();
+  $("today").hidden = !list.length;
+  if (!list.length) return;
+  $("today").innerHTML = `${CAKE}<div class="txt"><b>Aujourd'hui, Thomas a ${list.map((m) => m.title).join(" et ")} !</b>
+    <span>${list.some((m) => m.at) ? `Pile à ${Thomas.fmtTime(list.find((m) => m.at).at)}` : "C'est jour de fête"}</span></div>
+    <button class="go" type="button">Célébrer</button>`;
+  $("today").querySelector(".go").addEventListener("click", () => party(list, true));
+  // First visit of the day (or coming from the home banner): the party starts by itself, quietly
+  const key = "thomas911-fete-" + Thomas.today();
+  let seen = false;
+  try { seen = localStorage.getItem(key) === "1"; localStorage.setItem(key, "1"); } catch (e) {}
+  if (!seen || location.hash === "#fete") setTimeout(() => party(list, false), 350);
+  if (location.hash === "#fete") history.replaceState(null, "", location.pathname); // only once
+}
+
+// ---------- Lists ----------
+// Short units so the little square never overflows
+const SHORT = { semaine: "sem.", semaines: "sem.", heures: "h", minutes: "min", "de minutes": "min", "de secondes": "sec." };
+const chip = (m) => `<span class="chip"><i>${m.kind === "heures" ? "⏱" : m.num}</i><em>${SHORT[m.unit] || m.unit}</em></span>`;
+const ago = (day) => { const d = Thomas.daysBetween(Thomas.today(), day); return d === 0 ? "aujourd'hui" : d === 1 ? "demain" : d > 0 ? `dans ${nf(d)} j` : `il y a ${nf(-d)} j`; };
+const row = (m) => `<div class="row${m.big ? " big" : ""}" data-key="${m.day}|${m.title}">${chip(m)}
+  <div class="what"><b>${m.title}</b><span>${m.kind === "heures" ? `à ${Thomas.fmtTime(m.at)}` : m.kind === "jours" || m.kind === "semaines" ? `jour ${nf(Thomas.daysBetween(Thomas.BIRTH_DAY, m.day))}` : ""}</span></div>
+  <div class="when"><b>${Thomas.fmtDay(m.day, { weekday: "short", day: "numeric", month: "short", year: Thomas.daysBetween(Thomas.today(), m.day) > 300 ? "numeric" : undefined })}</b>${ago(m.day)}</div></div>`;
+let shown = 12;
+function renderLists() {
+  const up = Thomas.upcoming(shown);
+  $("upcoming").innerHTML = up.map(row).join("");
+  $("more").hidden = shown >= 60;
+  $("past").innerHTML = Thomas.past().map(row).join("");
+}
+$("more").addEventListener("click", () => { shown += 16; renderLists(); });
+document.addEventListener("click", (e) => {
+  const r = e.target.closest(".row"); if (!r) return;
+  const m = Thomas.milestones().find((x) => `${x.day}|${x.title}` === r.dataset.key);
+  if (m) party([m], true);
+});
+
+function render() { renderAge(); renderToday(); renderLists(); }
+render();
+// Keep the hours ticking, and roll over at midnight
+setInterval(renderAge, 60000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") render(); });
+</script>
+<script src="app.js"></script>
+</body>
+</html>

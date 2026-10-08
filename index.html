@@ -54,6 +54,20 @@
 .pill { font-family: var(--font-display); font-weight: 600; font-size: 0.85rem; color: var(--accent); background: var(--accent-soft);
   border-radius: 999px; padding: 3px 9px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tile:active { transform: scale(0.985); }
+.tile .age { color: var(--accent); }
+
+/* Celebration day banner */
+:root { --gold-soft: #fbead2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --gold-soft: #3a2e1a; } }
+:root[data-theme="dark"] { --gold-soft: #3a2e1a; }
+.fete { display: flex; align-items: center; gap: 14px; color: inherit; text-decoration: none; padding: 14px 16px;
+  background: linear-gradient(135deg, var(--gold-soft), var(--accent-soft)); border-color: transparent; }
+.fete img { width: 46px; height: 46px; flex: none; animation: wiggle 2.4s ease-in-out infinite; }
+.fete .txt { flex: 1; min-width: 0; }
+.fete b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; line-height: 1.2; }
+.fete span { color: var(--muted); font-size: 0.85rem; }
+@keyframes wiggle { 0%, 70%, 100% { transform: rotate(0); } 76% { transform: rotate(-9deg); } 84% { transform: rotate(8deg); } 92% { transform: rotate(-4deg); } }
+@media (prefers-reduced-motion: reduce) { .fete img { animation: none; } }
 </style>
 </head>
 <body>
@@ -65,6 +79,8 @@
       <p id="today"></p>
     </div>
   </header>
+
+  <a class="card fete" id="fete" href="age.html#fete" hidden></a>
 
   <a class="card weather" id="wxCard" href="meteo.html" aria-live="polite">
     <div class="wx-empty" id="wxEmpty">
@@ -113,11 +129,25 @@
     <span class="txt"><strong>Comment habiller Thomas</strong><span>Dedans, pour dormir, dehors</span></span>
     <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
   </a>
+
+  <a class="card tile" href="age.html">
+    <img class="ico" src="icon-age.svg" alt="">
+    <span class="txt"><strong>L'âge de Thomas</strong><span id="ageNext">Jours, semaines, mois et fêtes</span></span>
+    <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
+
+  <a class="card tile" href="croissance.html">
+    <img class="ico" src="icon-croissance.svg" alt="">
+    <span class="txt"><strong>Croissance</strong><span id="growSub">Poids, taille, tour de tête</span></span>
+    <span class="pill" id="growPill" hidden></span>
+    <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+  </a>
 </div>
 
 <script src="weather.js"></script>
 <script src="config.js"></script>
 <script src="habits.js"></script>
+<script src="thomas.js"></script>
 <script>
 const DAYS = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
 document.getElementById("today").textContent =
@@ -134,6 +164,37 @@ try {
 } catch (e) {}
 
 const $ = (id) => document.getElementById(id);
+// Age, next celebration, and today's party if there is one
+function renderAge() {
+  // No pill here: the title is long, so the age goes in the line below, with the next party
+  const n = Thomas.upcoming(1)[0], inDays = Thomas.daysBetween(Thomas.today(), n.day);
+  $("ageNext").innerHTML = `<b class="age">${Thomas.short()}</b> · ${n.title} ${inDays === 1 ? "demain" : `dans ${inDays} j`}`;
+  const list = Thomas.on();
+  $("fete").hidden = !list.length;
+  if (list.length) $("fete").innerHTML = `<img src="icon-age.svg" alt=""><span class="txt"><b>Aujourd'hui, Thomas a ${list.map((m) => m.title).join(" et ")} !</b>
+    <span>Touche pour célébrer</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>`;
+}
+renderAge();
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") renderAge(); });
+// Last weight: saved by the growth page (with its percentile), refreshed from the shared table
+function showWeight(w) {
+  if (!w || !w.g) return;
+  $("growPill").textContent = `${(w.g / 1000).toLocaleString("fr-CA", { minimumFractionDigits: 3 })} kg`;
+  $("growPill").hidden = false;
+  $("growSub").textContent = `${w.p ? w.p + " · " : ""}pesé le ${Thomas.fmtDay(w.day, { day: "numeric", month: "short" })}`;
+}
+let lastW = null;
+try { lastW = JSON.parse(localStorage.getItem("thomas911-dernier-poids")); showWeight(lastW); } catch (e) {}
+if (self.T911 && T911.SUPABASE_URL) {
+  fetch(`${T911.SUPABASE_URL}/rest/v1/mesures?select=jour,poids_g&poids_g=not.is.null&order=jour.desc,cree.desc&limit=1`, { headers: { apikey: T911.SUPABASE_KEY } })
+    .then((r) => r.ok ? r.json() : []).then(([r]) => {
+      if (!r || (lastW && lastW.g === r.poids_g && lastW.day === r.jour)) return;
+      // A weight entered on the other phone: show it now, the percentile comes back once the growth page is opened
+      lastW = { g: r.poids_g, p: "", day: r.jour };
+      try { localStorage.setItem("thomas911-dernier-poids", JSON.stringify(lastW)); } catch (e) {}
+      showWeight(lastW);
+    }).catch(() => {});
+}
 // Today's reminder boxes ticked, e.g. 4/6
 Habits.onChange(() => {
   const { done, total } = Habits.progress();
