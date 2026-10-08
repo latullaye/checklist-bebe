@@ -47,6 +47,26 @@ alter table reglages enable row level security;
 create policy "app" on reglages for all to anon using (true) with check (true);
 insert into reglages (cle, valeur) values ('temp_interieur', '21');
 
+-- Growth measures (weight to the gram; length and head circumference optional).
+-- pese_le: exact time of the measure (gain per day is computed from it); fuseau: the phone's time zone then;
+-- jour: the local date, used for the age in days of the WHO percentiles.
+create table mesures (
+  id uuid primary key default gen_random_uuid(),
+  jour date not null,
+  pese_le timestamptz not null,
+  fuseau text,
+  poids_g integer check (poids_g between 500 and 40000),
+  taille_cm numeric(4,1) check (taille_cm between 30 and 150),
+  pc_cm numeric(4,1) check (pc_cm between 25 and 65),
+  note text,
+  cree timestamptz not null default now()
+);
+alter table mesures enable row level security;
+create policy "app" on mesures for all to anon using (true) with check (true);
+create index mesures_jour on mesures (jour);
+create index mesures_pese_le on mesures (pese_le);
+-- The growth screen also keeps its milk settings in reglages, key "lait": { cible: "P50" | "naissance" | grams, boires }
+
 -- Reminders: pg_cron calls the "rappels" function (supabase/functions/rappels/index.ts)
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
