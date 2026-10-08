@@ -51,7 +51,9 @@
 .chart { position: relative; margin: 6px -6px 0; }
 .chart svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
 .chart .grid, .fs-chart .grid { stroke: var(--line); stroke-width: 1; }
-.chart .axis text, .chart .curve-label, .fs-chart .axis text, .fs-chart .curve-label { fill: var(--muted); font-size: 11px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+/* Axis numbers and curve names follow the theme (they were left black in dark mode) */
+.chart text.axis, .chart .curve-label, .fs-chart text.axis, .fs-chart .curve-label { fill: var(--muted); font-size: 12px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.fs-chart text.axis { font-size: 13px; }
 .chart .axis-title, .fs-chart .axis-title { fill: var(--muted); font-size: 11px; font-weight: 700; }
 .chart .band, .fs-chart .band { fill: var(--muted); opacity: .09; }
 .chart .p50, .fs-chart .p50 { stroke: var(--ink); stroke-width: 2; fill: none; opacity: .7; }
