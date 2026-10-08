@@ -37,6 +37,16 @@ create table checklist (
 alter table checklist enable row level security;
 create policy "app" on checklist for all to anon using (true) with check (true);
 
+-- Shared settings (e.g. the indoor temperature on the "what to wear" screen)
+create table reglages (
+  cle text primary key,
+  valeur jsonb not null,
+  maj timestamptz not null default now()
+);
+alter table reglages enable row level security;
+create policy "app" on reglages for all to anon using (true) with check (true);
+insert into reglages (cle, valeur) values ('temp_interieur', '21');
+
 -- Reminders: pg_cron calls the "rappels" function (supabase/functions/rappels/index.ts)
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
