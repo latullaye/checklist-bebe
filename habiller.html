@@ -80,9 +80,9 @@
   <section class="card">
     <div class="section-head"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1Z"/></svg>À l'intérieur</div>
     <div class="stepper">
-      <button class="step" id="minus" type="button" aria-label="Un degré de moins"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
+      <button class="step" id="minus" type="button" data-buzz aria-label="Un degré de moins"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/></svg></button>
       <div class="reading" aria-live="polite"><b id="inTemp"></b><span id="inSync">Température de la pièce</span></div>
-      <button class="step" id="plus" type="button" aria-label="Un degré de plus"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+      <button class="step" id="plus" type="button" data-buzz aria-label="Un degré de plus"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
     </div>
     <div class="moment">
       <div class="moment-head" id="eveilHead"></div>
@@ -125,6 +125,8 @@
 </div>
 
 <script src="config.js"></script>
+<script src="sync.js"></script>
+<script src="prefs.js"></script>
 <script src="weather.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -144,7 +146,7 @@ const G = {
   couche: ["Couche", "", `<path d="M9 15 H39 Q39 33 24 38 Q9 33 9 15 Z"/>` + line("M9 20 H14 M34 20 H39")],
   bodyMC: ["Body", "manches courtes", `<path d="${ONESIE_SS}"/>`],
   bodyML: ["Body", "manches longues", `<path d="${ONESIE_LS}"/>`],
-  tshirt: ["T-shirt", "ou haut léger", `<path d="M17 8 L8 13 L11 20 L15 18 V40 H33 V18 L37 20 L40 13 L31 8 Q24 14 17 8 Z"/>`],
+  tshirt: ["T-shirt", "manches longues", `<path d="${TOP_LS}"/>`],
   pull: ["Pull", "", `<path d="${TOP_LS}"/>` + line("M14 36 H34 M5.6 28 L11.6 29 M42.4 28 L36.4 29")],
   gilet: ["Gilet", "ou veste légère", `<path d="${TOP_LS}"/>` + line("M24 11 V40") + `<path class="no-fill dot" d="M20.5 19 v.01 M20.5 26 v.01 M20.5 33 v.01"/>`],
   pantalon: ["Pantalon", "", `<path d="M14 7 H34 L36 42 H27 L24 19 L21 42 H12 Z"/>` + line("M14 12 H34")],
@@ -172,9 +174,9 @@ const EVEIL = [
   [24, [["bodyMC", "pantalon"], ["bodyML"]]],
   [22, [["bodyML", "pantalon"], ["pyjama"]]],
   [20, [["bodyML", "pantalon", "chaussettes"], ["bodyMC", "pyjama"]]],
-  [18, [["bodyML", "tshirt", "pantalon", "chaussettes"], ["bodyML", "pyjama"]]],
+  [18, [["bodyMC", "tshirt", "pantalon", "chaussettes"], ["bodyML", "pyjama"]]],
   [16, [["bodyML", "pull", "pantalon", "chaussettes"], ["bodyML", "pyjama", "gilet"]]],
-  [-99, [["bodyML", "tshirt", "pull", "pantalon", "chaussettes"]], "Pièce froide pour un bébé : l'idéal est entre 18 et 22 °C."]
+  [-99, [["bodyMC", "tshirt", "pull", "pantalon", "chaussettes"]], "Pièce froide pour un bébé : l'idéal est entre 18 et 22 °C."]
 ];
 // Sleeping: the sleep sack's TOG follows the room temperature
 const DODO = [
@@ -214,40 +216,12 @@ const outfits = ([, options, note], extraNotes = []) =>
   options.map((items, i) => (i ? '<div class="or">ou</div>' : "") + `<div class="outfit${i ? " alt" : ""}">${items.map(piece).join("")}</div>`).join("")
   + [note, ...extraNotes].filter(Boolean).map((n) => `<p class="note">${INFO}<span>${n}</span></p>`).join("");
 
-// ---------- Indoor temperature, shared between both phones (Supabase table "reglages") ----------
-const cfg = self.T911 || {};
-const SHARED = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
-const KEY = "thomas911-temp-interieur", MIN = 14, MAX = 30;
-let inside = 21, dirty = false, sendTimer = null;
-try { const v = parseFloat(localStorage.getItem(KEY)); if (v >= MIN && v <= MAX) inside = v; } catch (e) {}
-try { dirty = localStorage.getItem(KEY + "-attente") === "1"; } catch (e) {}
-const api = (path, opts = {}) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, {
-  ...opts, headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", ...(opts.headers || {}) }
-}).then((r) => { if (!r.ok) throw new Error(r.status); return r; });
-const keep = () => { try { localStorage.setItem(KEY, inside); localStorage.setItem(KEY + "-attente", dirty ? "1" : "0"); } catch (e) {} };
-
-function push() {
-  if (!SHARED || !dirty) return;
-  const sent = inside;
-  api("reglages", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{ cle: "temp_interieur", valeur: sent, maj: new Date().toISOString() }]) })
-    .then(() => { if (inside === sent) { dirty = false; keep(); } })
-    .catch(() => {});
-}
-function pull() {
-  if (!SHARED || document.visibilityState !== "visible") return;
-  if (dirty) { push(); return; } // our own change goes first
-  api("reglages?select=valeur&cle=eq.temp_interieur").then((r) => r.json()).then((rows) => {
-    const v = rows[0] && parseFloat(rows[0].valeur);
-    if (!dirty && v >= MIN && v <= MAX && v !== inside) { inside = v; keep(); renderInside(); }
-  }).catch(() => {});
-}
-function setInside(v) {
-  inside = Math.min(MAX, Math.max(MIN, v));
-  dirty = true; keep(); renderInside();
-  clearTimeout(sendTimer); sendTimer = setTimeout(push, 600); // one write after a few quick taps
-  try { navigator.vibrate && navigator.vibrate(8); } catch (e) {}
-}
+// ---------- Indoor temperature, shared between both phones (prefs.js, key "temp_interieur") ----------
+const MIN = 14, MAX = 30;
+const clampT = (v) => Math.min(MAX, Math.max(MIN, parseFloat(v) || 21));
+let inside = clampT(Prefs.get("temp_interieur", 21));
+function setInside(v) { inside = clampT(v); Prefs.set("temp_interieur", inside); renderInside(); }
+Prefs.on("temp_interieur", (v) => { if (clampT(v) !== inside) { inside = clampT(v); renderInside(); } });
 
 const SUN = Wx.svg(Wx.PATHS.sun), MOON = Wx.svg(Wx.PATHS.moon);
 $("eveilHead").innerHTML = SUN + "Éveil";
@@ -286,10 +260,6 @@ Wx.onUpdate(renderOutside);
 Wx.refresh();
 
 renderInside();
-pull();
-setInterval(pull, 15000); // only fetches while on screen
-document.addEventListener("visibilitychange", pull);
-window.addEventListener("online", pull);
 </script>
 <script src="app.js"></script>
 </body>
