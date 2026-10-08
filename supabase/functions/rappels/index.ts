@@ -1,7 +1,7 @@
 // THOMAS911 habit reminders (Web Push).
 // - GET  ?cle-publique      -> the VAPID public key (created on first call; the private half never leaves the database)
 // - POST (x-cron-key header) -> called by pg_cron every half hour; each phone gets its reminder at 9:00, 12:30 and 17:30
-//   in its own time zone (abonnements.tz). Body {"slot": "matin"} forces a moment, {"dry": true} sends nothing.
+//   in its own time zone (abonnements.tz); the 17:30 one also says when it's bath night (every 2 or 3 days). Body {"slot": "matin"} forces a moment, {"dry": true} sends nothing.
 import webpush from "npm:web-push@3.6.7";
 import postgres from "npm:postgres@3.4.5";
 
@@ -38,7 +38,15 @@ function local(tz: string) {
   return { jour: `${p.year}-${p.month}-${p.day}`, hm };
 }
 
-// What's left for this moment of that day, in this order. Vitamin D only in the morning.
+// The bath: every 2 or 3 days, in the evening. Due from the 2nd day after the last one (the home page says the same).
+const BATH_EVERY = 2;
+async function bathDue(jour: string) {
+  const last = (await sql`select max(jour)::text as j from habitudes where cle = 'bain' and fait and jour <= ${jour}`)[0]?.j as string | null;
+  const ago = last ? Math.round((Date.parse(jour) - Date.parse(last)) / 864e5) : null;
+  return ago === null || ago >= BATH_EVERY ? { ago } : null;
+}
+
+// What's left for this moment of that day, in this order. Vitamin D only in the morning, the bath only in the evening.
 async function message(jour: string, slot: string) {
   const rows = await sql`select cle from habitudes where jour = ${jour} and fait`;
   const done = new Set(rows.map((r) => r.cle));
@@ -47,14 +55,19 @@ async function message(jour: string, slot: string) {
     [`perinee-${slot}`, "la rééducation périnéenne"],
     ...(slot === "matin" ? [["vitd", ""]] : [])
   ].filter(([cle]) => !done.has(cle));
-  if (!todo.length) return null;
+  const bath = slot === "soir" && !done.has("bain") ? await bathDue(jour) : null;
+  if (!todo.length && !bath) return null;
   // "Il faut faire les exercices de bouche et la rééducation périnéenne. Thomas doit prendre sa vitamine D."
   const faire = todo.filter(([cle]) => cle !== "vitd").map(([, t]) => t);
   const body = [
     faire.length ? `Il faut faire ${faire.join(" et ")}.` : "",
-    todo.some(([cle]) => cle === "vitd") ? "Thomas doit prendre sa vitamine D." : ""
+    todo.some(([cle]) => cle === "vitd") ? "Thomas doit prendre sa vitamine D." : "",
+    bath ? `Et c'est le soir du bain${bath.ago ? ` (le dernier remonte à ${bath.ago} jours)` : ""}.` : ""
   ].filter(Boolean).join(" ");
-  return { title: `Rappel du ${slot}`, body, jour, slot, cles: todo.map(([c]) => c) };
+  // "C'est fait" ticks the exercises; it ticks the bath only when the bath is all the reminder is about
+  // (the bath usually comes later in the evening than the exercises).
+  const cles = todo.length ? todo.map(([c]) => c) : ["bain"];
+  return { title: `Rappel du ${slot}`, body: todo.length ? body : body.replace("Et c'est", "C'est"), jour, slot, cles };
 }
 
 Deno.serve(async (req) => {
