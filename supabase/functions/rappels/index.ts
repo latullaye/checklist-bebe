@@ -43,14 +43,18 @@ async function message(jour: string, slot: string) {
   const rows = await sql`select cle from habitudes where jour = ${jour} and fait`;
   const done = new Set(rows.map((r) => r.cle));
   const todo = [
-    [`bouche-${slot}`, "il faut faire les exercices de bouche de Thomas"],
-    [`perinee-${slot}`, "Edith doit faire sa rééducation périnéenne"],
-    ...(slot === "matin" ? [["vitd", "Thomas doit prendre sa vitamine D"]] : [])
+    [`bouche-${slot}`, "les exercices de bouche de Thomas"],
+    [`perinee-${slot}`, "la rééducation périnéenne"],
+    ...(slot === "matin" ? [["vitd", ""]] : [])
   ].filter(([cle]) => !done.has(cle));
   if (!todo.length) return null;
-  const phrases = todo.map(([, t]) => t);
-  const sentence = phrases.length > 1 ? `${phrases.slice(0, -1).join(", ")} et ${phrases.at(-1)}` : phrases[0];
-  return { title: `Rappel du ${slot}`, body: sentence[0].toUpperCase() + sentence.slice(1) + ".", jour, slot, cles: todo.map(([c]) => c) };
+  // "Il faut faire les exercices de bouche de Thomas et la rééducation périnéenne. Thomas doit prendre sa vitamine D."
+  const faire = todo.filter(([cle]) => cle !== "vitd").map(([, t]) => t);
+  const body = [
+    faire.length ? `Il faut faire ${faire.join(" et ")}.` : "",
+    todo.some(([cle]) => cle === "vitd") ? "Thomas doit prendre sa vitamine D." : ""
+  ].filter(Boolean).join(" ");
+  return { title: `Rappel du ${slot}`, body, jour, slot, cles: todo.map(([c]) => c) };
 }
 
 Deno.serve(async (req) => {

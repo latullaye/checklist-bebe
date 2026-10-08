@@ -9,7 +9,7 @@
   const shared = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
 
   const SLOTS = [["matin", "Matin"], ["midi", "Midi"], ["soir", "Soir"]];
-  const HABITS = [["bouche", "Exercices de bouche", "Thomas"], ["perinee", "Rééducation périnéenne", "Edith"]];
+  const HABITS = [["bouche", "Exercices de bouche", "Thomas"], ["perinee", "Rééducation périnéenne", ""]];
   // Tight follow-up: these boxes count in the daily progress and the reminders. The bath doesn't.
   // Vitamin D is once a day, in the morning reminder.
   const DAILY = HABITS.flatMap(([h]) => SLOTS.map(([s]) => `${h}-${s}`)).concat("vitd");

@@ -143,7 +143,7 @@ function render() {
   $("prev").disabled = day <= Habits.addDays(t, -13);
 
   $("grid").innerHTML = "<span></span>" + SLOTS.map(([s, name]) => `<span class="col${s === now ? " now" : ""}">${name}</span>`).join("")
-    + HABITS.map(([h, name, who]) => `<span class="hab"><b>${name}</b><span>${who}</span></span>`
+    + HABITS.map(([h, name, who]) => `<span class="hab"><b>${name}</b>${who ? `<span>${who}</span>` : ""}</span>`
       + SLOTS.map(([s, sn]) => `<button class="tick${s === now ? " now" : ""}" type="button" data-key="${h}-${s}"
           aria-pressed="${Habits.get(day, `${h}-${s}`)}" aria-label="${name}, ${sn.toLowerCase()}">${CHECK}</button>`).join("")).join("");
 
