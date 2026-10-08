@@ -151,17 +151,6 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 
   <section class="card" id="sumCard"></section>
 
-  <section class="card" id="milkCard" hidden>
-    <div class="label">Lait par jour</div>
-    <div class="milk">
-      <div class="mcol"><span>Selon son poids</span><b id="mNow"></b><em id="mNowW"></em></div>
-      <div class="mcol tgt"><span>Selon le poids cible</span><b id="mTgt"></b><em id="mTgtW"></em></div>
-    </div>
-    <div class="chips" id="tgtChips"></div>
-    <div class="feeds"><span class="step"><button type="button" id="feedMinus" aria-label="Un boire de moins">−</button><b id="nFeeds"></b><button type="button" id="feedPlus" aria-label="Un boire de plus">+</button></span><span id="perFeed"></span></div>
-    <p class="src" id="milkNote"></p>
-  </section>
-
   <section class="card">
     <div class="chart-head"><div class="label" id="chartTitle"></div>
       <button class="expand" id="fsOpen" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Plein écran</button></div>
@@ -175,6 +164,17 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   <section class="card">
     <div class="label">Mesures</div>
     <div id="table"></div>
+  </section>
+
+  <section class="card" id="milkCard" hidden>
+    <div class="label">Lait par jour</div>
+    <div class="milk">
+      <div class="mcol"><span>Selon son poids</span><b id="mNow"></b><em id="mNowW"></em></div>
+      <div class="mcol tgt"><span>Selon le poids cible</span><b id="mTgt"></b><em id="mTgtW"></em></div>
+    </div>
+    <div class="chips" id="tgtChips"></div>
+    <div class="feeds"><span class="step"><button type="button" id="feedMinus" aria-label="Un boire de moins">−</button><b id="nFeeds"></b><button type="button" id="feedPlus" aria-label="Un boire de plus">+</button></span><span id="perFeed"></span></div>
+    <p class="src" id="milkNote"></p>
   </section>
 </div>
 
