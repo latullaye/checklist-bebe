@@ -9,51 +9,15 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Sortie avec Thomas</title>
+<title>Checklist sortie · THOMAS911</title>
+<link rel="stylesheet" href="common.css">
 <style>
-@font-face { font-family: "Bricolage Grotesque"; font-weight: 600; font-display: block; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
-@font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: block; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
-@font-face { font-family: "Ubuntu"; font-weight: 500; font-display: block; src: url(fonts/ubuntu-latin-500-normal.woff2) format("woff2"); }
-@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
-@font-face { font-family: "Atkinson Hyperlegible"; font-weight: 700; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2"); }
-html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
 /* Layout: one phone screen; only unchecked chips show per category, checked ones drop to a quiet "Vérifié" tray at the bottom */
-:root {
-  --bg: #eef3f1;
-  --surface: #ffffff;
-  --ink: #1d2b2a;
-  --muted: #5d706d;
-  --line: #cfdcd8;
-  --group: #e1ebe8;
-  --accent: #1f6f78;
-  --accent-ink: #ffffff;
-  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
-  --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111a19; --surface: #1a2624; --ink: #e4eeeb; --muted: #93a8a4;
-    --line: #2f403d; --group: #162120; --accent: #5fb8bf; --accent-ink: #0c1716;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --bg: #111a19; --surface: #1a2624; --ink: #e4eeeb; --muted: #93a8a4;
-  --line: #2f403d; --group: #162120; --accent: #5fb8bf; --accent-ink: #0c1716;
-  color-scheme: dark;
-}
-* { box-sizing: border-box; }
-body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 14px; }
-.wrap { max-width: 560px; margin: 0 auto; padding: 14px 16px 18px; display: flex; flex-direction: column; gap: 12px; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.title { display: flex; align-items: center; gap: 10px; min-width: 0; }
-/* Back to home; same height as the two lines of the title (2 × font-size × line-height). */
-.back { display: inline-flex; align-items: center; justify-content: center; width: calc(2 * 1.1rem * 1.2); height: calc(2 * 1.1rem * 1.2);
-  border-radius: 12px; color: var(--accent); background: var(--surface); border: 1px solid var(--line); text-decoration: none; flex: none; }
-.back svg { width: 22px; height: 22px; }
-h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 1.1rem; line-height: 1.2; margin: 0; text-wrap: balance; }
-.side { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex: none; }
-.meta { display: flex; align-items: baseline; gap: 10px; }
+body { font-size: 14px; }
+.wrap { gap: 12px; padding-bottom: 18px; }
+/* Under the title: weather, progress, reset */
+.head2 { display: flex; align-items: center; gap: 10px; }
+.head2 .count { margin-left: auto; }
 .wx { text-decoration: none; -webkit-tap-highlight-color: transparent; display: inline-flex; align-items: center; gap: 3px; font-family: var(--font-display); font-weight: 600; font-size: 0.95rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .wx[hidden] { display: none; }
 .wx svg { width: 18px; height: 18px; align-self: center; }
@@ -69,7 +33,6 @@ h1 { font-family: "Ubuntu", system-ui, sans-serif; font-weight: 500; font-size: 
 .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
 .list { display: flex; flex-direction: column; gap: 12px; }
 section { display: flex; flex-direction: column; gap: 6px; }
-[hidden] { display: none !important; }
 h2 { margin: 0; display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
@@ -155,19 +118,15 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 
 
 <div class="wrap">
-  <header>
-    <div class="title">
-      <a class="back" href="./" aria-label="Retour à l'accueil"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
-      <h1>Avant de sortir avec Thomas</h1>
-    </div>
-    <div class="side">
-      <div class="meta">
-        <a class="wx" id="wx" href="meteo.html" hidden></a>
-        <div class="count"><b id="done">0</b>/<span id="total">0</span></div>
-      </div>
-      <button class="reset" id="reset" type="button">Réinitialiser</button>
-    </div>
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Checklist sortie</h1>
   </header>
+  <div class="head2">
+    <a class="wx" id="wx" href="meteo.html" hidden></a>
+    <div class="count"><b id="done">0</b>/<span id="total">0</span></div>
+    <button class="reset" id="reset" type="button">Réinitialiser</button>
+  </div>
   <div class="alerts" id="alerts"></div>
   <div class="bar"><i id="fill"></i></div>
   <div class="list" id="todo"></div>
@@ -181,6 +140,7 @@ footer { display: flex; justify-content: space-between; align-items: center; gap
 </div>
 
 <script src="config.js"></script>
+<script src="sync.js"></script>
 <script>
 // An item is [label, hint, OPT?] or {group, items:[[label, hint], ...]}
 // Optional items: shown and checkable, but not needed for "Prêt pour l'aventure".
@@ -314,24 +274,6 @@ let idleTimer = null, flushing = false;
 const pending = new Set();
 const arrivals = new Set();
 
-// Haptic tap. Android: vibrate(). iPhone (iOS 18+) has no vibrate(), but toggling a
-// native switch control gives a light haptic, so we flip a hidden one.
-let iosSwitch = null;
-if (!navigator.vibrate) {
-  iosSwitch = document.createElement("label");
-  iosSwitch.setAttribute("aria-hidden", "true");
-  iosSwitch.style.cssText = "position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden";
-  iosSwitch.innerHTML = '<input type="checkbox" switch tabindex="-1">';
-  document.body.appendChild(iosSwitch);
-}
-function buzz() {
-  try {
-    if (window.AndroidApp) AndroidApp.vibrate();
-    else if (navigator.vibrate) navigator.vibrate(12);
-    else if (iosSwitch) iosSwitch.click();
-  } catch (e) {}
-}
-
 function armIdle() {
   clearTimeout(idleTimer);
   idleTimer = pending.size ? setTimeout(flush, IDLE) : null;
@@ -359,7 +301,7 @@ function chip(leaf, prefix) {
   b.setAttribute("aria-label", (state[leaf.id] ? "Décocher " : "Cocher ") + leaf.label + (leaf.opt ? " (facultatif)" : ""));
   b.addEventListener("click", () => {
     if (flushing) return;
-    buzz();
+    window.buzz && buzz(); // tap feedback, from app.js
     if (prefix === "d-") {
       tick();
       // Uncheck from the tray: bring it back, highlighted where it lands

@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>Réglages · THOMAS911</title>
+<style>
+.set { display: flex; align-items: center; gap: 12px; }
+.set .txt { flex: 1; min-width: 0; }
+.set b { display: block; font-size: 0.98rem; }
+.set .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 2px; }
+.card .set + .set, .card .set + .block, .card .block + .set { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.card .label { margin-bottom: 10px; }
+/* Switch */
+.switch { position: relative; width: 52px; height: 32px; flex: none; }
+.switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
+.switch span { position: absolute; inset: 0; border-radius: 999px; background: var(--line); transition: background .2s; }
+.switch span::after { content: ""; position: absolute; left: 3px; top: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+  box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
+.switch input:checked + span { background: var(--accent); }
+.switch input:checked + span::after { transform: translateX(20px); }
+.msg { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.35; }
+.msg:empty { display: none; }
+.btn { font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 12px; padding: 11px 14px; margin-top: 10px; cursor: pointer; width: 100%; }
+.btn.light { color: var(--accent); background: var(--accent-soft); }
+/* Steppers */
+.step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
+.step button { font: inherit; font-weight: 800; font-size: 1.1rem; width: 40px; height: 36px; border: 0; background: var(--bg); color: var(--accent); cursor: pointer; }
+.step button:disabled { opacity: .35; }
+.step output { min-width: 62px; text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+/* Milk target */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { font: inherit; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.foot { text-align: center; font-size: 0.75rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Réglages</h1>
+  </header>
+
+  <section class="card" id="rappels">
+    <div class="label">Rappels des habitudes</div>
+    <div class="set">
+      <span class="txt"><b>Notifications sur ce téléphone</b><span class="hint">À 9 h, 12 h 30 et 17 h 30, à l'heure du téléphone, seulement s'il reste quelque chose à cocher.</span></span>
+      <label class="switch"><input type="checkbox" id="notif" aria-label="Notifications sur ce téléphone" data-buzz><span></span></label>
+    </div>
+    <p class="msg" id="notifMsg"></p>
+    <button class="btn" id="notifAsk" type="button" hidden>Autoriser les notifications sur ce téléphone</button>
+    <p class="msg" id="tz"></p>
+  </section>
+
+  <section class="card">
+    <div class="label">Comment habiller Thomas</div>
+    <div class="set">
+      <span class="txt"><b>Température de la pièce</b><span class="hint">Partagée entre vos téléphones.</span></span>
+      <span class="step"><button type="button" id="tMinus" data-buzz aria-label="Un degré de moins">−</button><output id="tVal"></output><button type="button" id="tPlus" data-buzz aria-label="Un degré de plus">+</button></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="label">Lait par jour</div>
+    <div class="block">
+      <b>Poids cible</b>
+      <div class="chips" id="cible"></div>
+    </div>
+    <div class="set">
+      <span class="txt"><b>Boires par jour</b><span class="hint">Pour calculer la quantité par biberon.</span></span>
+      <span class="step"><button type="button" id="fMinus" data-buzz aria-label="Un boire de moins">−</button><output id="fVal"></output><button type="button" id="fPlus" data-buzz aria-label="Un boire de plus">+</button></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="label">Partage entre vos téléphones</div>
+    <div class="set">
+      <span class="txt"><b id="shareTitle">Synchronisation</b><span class="hint" id="shareHint">Checklist, habitudes, mesures et réglages sont partagés.</span></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="label">Application</div>
+    <div class="set">
+      <span class="txt"><b>Version</b><span class="hint" id="version">—</span></span>
+    </div>
+    <button class="btn light" id="update" type="button">Rechercher une mise à jour</button>
+    <p class="msg" id="updateMsg"></p>
+  </section>
+  <p class="foot">THOMAS911 · fait maison pour Thomas</p>
+</div>
+
+<script src="config.js"></script>
+<script src="sync.js"></script>
+<script src="habits.js"></script>
+<script src="notifs.js"></script>
+<script src="prefs.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+
+// ---------- Reminders ----------
+function renderNotif({ on, msg, ask }) {
+  $("notif").checked = on;
+  $("notifMsg").textContent = msg;
+  $("notifAsk").hidden = !ask;
+}
+$("notif").addEventListener("change", (e) => Notifs.setWanted(e.target.checked).then(renderNotif));
+$("notifAsk").addEventListener("click", () => Notifs.ask().then(renderNotif));
+renderNotif(Notifs.state());
+Notifs.sync().then(renderNotif);
+const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+const zone = Habits.tz();
+$("tz").textContent = zone ? `Heure du téléphone : ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}). Après un voyage, les rappels suivent tout seuls.` : "";
+
+// ---------- Room temperature ----------
+const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
+function renderTemp() { const t = temp(); $("tVal").textContent = `${String(t).replace(".", ",")} °C`; $("tMinus").disabled = t <= 14; $("tPlus").disabled = t >= 30; }
+$("tMinus").addEventListener("click", () => Prefs.set("temp_interieur", temp() - 1));
+$("tPlus").addEventListener("click", () => Prefs.set("temp_interieur", temp() + 1));
+Prefs.on("temp_interieur", renderTemp);
+
+// ---------- Milk ----------
+const lait = () => ({ cible: "P50", boires: 8, ...Prefs.get("lait", {}) });
+const setLait = (change) => Prefs.set("lait", { ...lait(), ...change });
+const CIBLES = [["P25", "P25"], ["P50", "P50 (médiane)"], ["P75", "P75"], ["naissance", "Percentile de naissance"]];
+function renderLait() {
+  const { cible, boires } = lait(), custom = typeof cible === "number";
+  $("cible").innerHTML = CIBLES.map(([c, l]) => `<button type="button" class="chip" data-buzz data-c="${c}" aria-pressed="${c === cible}">${l}</button>`).join("")
+    + `<button type="button" class="chip" data-buzz data-c="autre" aria-pressed="${custom}">${custom ? `${(cible / 1000).toLocaleString("fr-CA", { minimumFractionDigits: 3 })} kg` : "Autre…"}</button>`;
+  $("fVal").textContent = boires;
+  $("fMinus").disabled = boires <= 3; $("fPlus").disabled = boires >= 14;
+}
+$("cible").addEventListener("click", (e) => {
+  const b = e.target.closest(".chip"); if (!b) return;
+  if (b.dataset.c !== "autre") return setLait({ cible: b.dataset.c });
+  const { cible } = lait();
+  const t = String(prompt("Poids cible en grammes (par exemple 6300) :", typeof cible === "number" ? cible : "") || "").replace(/\s|g/gi, "").replace(",", ".");
+  const n = Number(t), g = Math.round(n < 100 ? n * 1000 : n);
+  if (t && g >= 1000 && g <= 30000) setLait({ cible: g });
+});
+$("fMinus").addEventListener("click", () => setLait({ boires: Math.max(3, lait().boires - 1) }));
+$("fPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lait().boires + 1) }));
+Prefs.on("lait", renderLait);
+
+// ---------- Sharing ----------
+function renderShare() {
+  const n = window.Sync ? Sync.waiting() : 0, on = window.Sync ? Sync.online : true;
+  $("shareTitle").textContent = !on ? "Hors ligne" : n ? `${n} changement${n > 1 ? "s" : ""} en attente` : "À jour";
+  $("shareHint").textContent = !on ? "Ce que vous notez reste sur ce téléphone et part au retour du réseau."
+    : "Checklist, habitudes, mesures et réglages sont partagés entre vos téléphones.";
+}
+setInterval(renderShare, 2000);
+
+// ---------- App version and updates ----------
+function renderVersion() {
+  if (!("caches" in window)) return;
+  caches.keys().then((keys) => {
+    const v = keys.filter((k) => /^thomas911-v\d+$/.test(k)).map((k) => +k.split("-v")[1]).sort((a, b) => b - a)[0];
+    $("version").textContent = v ? `v${v} · disponible hors ligne` : "Pas encore installée pour le hors ligne";
+  }).catch(() => {});
+}
+$("update").addEventListener("click", async () => {
+  $("updateMsg").textContent = "Recherche…";
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg) { $("updateMsg").textContent = "L'app se met à jour toute seule une fois installée."; return; }
+    await reg.update();
+    // A new version found: app.js reloads the page as soon as it takes over
+    $("updateMsg").textContent = reg.installing || reg.waiting ? "Nouvelle version trouvée : installation…" : "C'est la dernière version.";
+  } catch (e) { $("updateMsg").textContent = "Pas de réseau : réessaie plus tard."; }
+});
+
+renderTemp(); renderLait(); renderShare(); renderVersion();
+</script>
+<script src="app.js"></script>
+</body>
+</html>
