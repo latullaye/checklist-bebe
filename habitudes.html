@@ -99,7 +99,7 @@
   <section class="card">
     <label class="check">
       <input type="checkbox" id="notif">
-      <span>Activer les notifications<small>Rappels à 9 h, 12 h 30 et 17 h 30, seulement s'il reste quelque chose à faire</small></span>
+      <span>Activer les notifications<small>Rappels à 9 h, 12 h 30 et 17 h 30 (heure du téléphone), seulement s'il reste quelque chose à faire</small></span>
     </label>
     <p class="notif-msg" id="notifMsg"></p>
     <button class="btn" id="notifAsk" type="button" hidden>Autoriser les notifications sur ce téléphone</button>
@@ -192,7 +192,7 @@ async function subscribe() {
   const sub = (await reg.pushManager.getSubscription())
     || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(T911.VAPID_PUBLIC) });
   await Habits.api("abonnements", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify([{ endpoint: sub.endpoint, abonnement: sub.toJSON() }]) });
+    body: JSON.stringify([{ endpoint: sub.endpoint, abonnement: sub.toJSON(), tz: Habits.tz() }]) });
 }
 async function unsubscribe() {
   const reg = await navigator.serviceWorker.ready;

@@ -12,6 +12,7 @@ create table habitudes (
 create table abonnements (
   endpoint text primary key,
   abonnement jsonb not null,
+  tz text not null default 'America/Toronto', -- the phone's time zone, kept up to date by the app
   cree timestamptz not null default now()
 );
 -- Server-only settings (VAPID keys, cron token): no policy, so the public key can't read it
@@ -40,8 +41,8 @@ create policy "app" on checklist for all to anon using (true) with check (true);
 create extension if not exists pg_cron;
 create extension if not exists pg_net;
 insert into public.prive (cle, valeur) values ('cron', encode(extensions.gen_random_bytes(24), 'hex')) on conflict (cle) do nothing;
--- 9:00, 12:30, 17:30 Montréal = 13/14, 16/17, 21/22 UTC (summer/winter); the function keeps only the right ones
-select cron.schedule('rappels-habitudes', '0,30 13,14,16,17,21,22 * * *', $$
+-- Every half hour: each phone gets its reminder at 9:00, 12:30 and 17:30 in its own time zone
+select cron.schedule('rappels-habitudes', '0,30 * * * *', $$
   select net.http_post(
     url := 'https://vvkkxphkyjejyhbcdcuw.supabase.co/functions/v1/rappels',
     headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-key', (select valeur from public.prive where cle = 'cron')),

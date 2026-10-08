@@ -99,10 +99,29 @@
     return Object.keys(data).filter((d) => data[d].bain).sort().pop() || null;
   }
 
-  function onChange(fn) { listeners.push(fn); fn(); }
-  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") refresh(); });
-  window.addEventListener("online", refresh);
+  // The phone's time zone: reminders come at 9:00, 12:30 and 17:30 wherever it is (Paris, Montréal...).
+  const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } };
+  const TZ_SENT = "thomas911-fuseau";
+  // After a trip, tell the server this phone's new zone (only when it changed and the phone gets reminders).
+  function syncTz() {
+    const zone = tz();
+    if (!shared || !zone || !("serviceWorker" in navigator)) return;
+    let sent = null;
+    try { sent = localStorage.getItem(TZ_SENT); } catch (e) {}
+    if (sent === zone) return;
+    navigator.serviceWorker.ready
+      .then((reg) => reg.pushManager && reg.pushManager.getSubscription())
+      .then((sub) => sub && api(`abonnements?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
+        { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ tz: zone }) })
+        .then(() => { try { localStorage.setItem(TZ_SENT, zone); } catch (e) {} }))
+      .catch(() => {});
+  }
 
-  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, onChange, api,
+  function onChange(fn) { listeners.push(fn); fn(); }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { refresh(); syncTz(); } });
+  window.addEventListener("online", refresh);
+  syncTz();
+
+  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, onChange, api, tz,
     get status() { return status; } };
 })();
