@@ -186,7 +186,7 @@ function showWeight(w) {
 let lastW = null;
 try { lastW = JSON.parse(localStorage.getItem("thomas911-dernier-poids")); showWeight(lastW); } catch (e) {}
 if (self.T911 && T911.SUPABASE_URL) {
-  fetch(`${T911.SUPABASE_URL}/rest/v1/mesures?select=jour,poids_g&poids_g=not.is.null&order=jour.desc,cree.desc&limit=1`, { headers: { apikey: T911.SUPABASE_KEY } })
+  fetch(`${T911.SUPABASE_URL}/rest/v1/mesures?select=jour,poids_g&poids_g=not.is.null&order=pese_le.desc,cree.desc&limit=1`, { headers: { apikey: T911.SUPABASE_KEY } })
     .then((r) => r.ok ? r.json() : []).then(([r]) => {
       if (!r || (lastW && lastW.g === r.poids_g && lastW.day === r.jour)) return;
       // A weight entered on the other phone: show it now, the percentile comes back once the growth page is opened

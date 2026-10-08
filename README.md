@@ -9,7 +9,7 @@ Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 - **Bonnes habitudes** (`habitudes.html`) : petites routines quotidiennes à cocher (matin, midi, soir ou une fois par jour), avec rappels.
 - **Comment habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
 - **L'âge de Thomas** (`age.html`) : son âge en jours, semaines, mois, mois et semaines, et toutes les occasions de faire la fête (100 jours, 4 mois, 10 millions de secondes…), avec animation le jour J et la liste des prochaines.
-- **Croissance** (`croissance.html`) : poids (au gramme), taille et tour de tête sur les courbes de l'OMS 2006, avec percentiles, score-z et gain par jour. Les tables OMS (garçons) sont dans `who-boys.js`.
+- **Croissance** (`croissance.html`) : poids (au gramme), taille et tour de tête sur les courbes de l'OMS 2006, avec percentiles, score-z et gain par jour calculé à l'heure de pesée près, plus le lait par jour conseillé selon son poids et un poids cible. Les tables OMS (garçons) sont dans `who-boys.js`.
 
 En ligne : https://latullaye.github.io/checklist-bebe/ — sur téléphone, l'ajouter à l'écran d'accueil.
 

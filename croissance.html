@@ -29,6 +29,24 @@
 .nw { white-space: nowrap; }
 .empty { color: var(--muted); font-size: 0.9rem; }
 
+/* Milk per day */
+.milk { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+.mcol { background: var(--bg); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.mcol span { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.mcol b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.mcol b small { font-size: 0.9rem; margin-left: 3px; }
+.mcol em { display: block; font-style: normal; font-size: 0.78rem; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
+.mcol.tgt { background: var(--accent-soft); }
+.mcol.tgt b { color: var(--accent); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.chips .lab { font-size: 0.8rem; color: var(--muted); font-weight: 700; margin-right: 2px; }
+.chip { font: inherit; font-size: 0.82rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 11px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.feeds { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.88rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
+.step button { font: inherit; font-weight: 800; font-size: 1rem; width: 34px; height: 32px; border: 0; background: var(--bg); color: var(--accent); cursor: pointer; }
+.step b { min-width: 26px; text-align: center; }
+
 /* Chart */
 .chart { position: relative; margin: 6px -6px 0; }
 .chart svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
@@ -61,6 +79,7 @@ table.m td { padding: 9px 4px 9px 0; border-top: 1px solid var(--line); white-sp
 table.m tr.r { cursor: pointer; }
 table.m tr.latest td { color: var(--accent); font-weight: 700; }
 table.m td.neg { color: #c4553f; }
+table.m td small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; margin-top: 1px; }
 table.m td.note { white-space: normal; color: var(--muted); font-size: 0.74rem; padding-top: 0; border-top: 0; }
 
 /* Entry sheet */
@@ -103,6 +122,17 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 
   <section class="card" id="sumCard"></section>
 
+  <section class="card" id="milkCard" hidden>
+    <div class="label">Lait par jour</div>
+    <div class="milk">
+      <div class="mcol"><span>Selon son poids</span><b id="mNow"></b><em id="mNowW"></em></div>
+      <div class="mcol tgt"><span>Selon le poids cible</span><b id="mTgt"></b><em id="mTgtW"></em></div>
+    </div>
+    <div class="chips" id="tgtChips"></div>
+    <div class="feeds"><span class="step"><button type="button" id="feedMinus" aria-label="Un boire de moins">−</button><b id="nFeeds"></b><button type="button" id="feedPlus" aria-label="Un boire de plus">+</button></span><span id="perFeed"></span></div>
+    <p class="src" id="milkNote"></p>
+  </section>
+
   <section class="card">
     <div class="label" id="chartTitle"></div>
     <div class="chart" id="chart"></div>
@@ -121,7 +151,11 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <dialog id="dlg">
   <form class="sheet" id="form" method="dialog">
     <h2 id="dlgTitle">Nouvelle mesure</h2>
-    <div class="field"><label for="fDate">Date</label><input type="date" id="fDate" required></div>
+    <div class="two">
+      <div class="field"><label for="fDate">Date</label><input type="date" id="fDate" required></div>
+      <div class="field"><label for="fHeure">Heure</label><input type="time" id="fHeure" required></div>
+    </div>
+    <p class="read" id="tzNote" hidden></p>
     <div class="field">
       <label for="fPoids">Poids</label>
       <div class="weight"><input id="fPoids" inputmode="decimal" autocomplete="off" placeholder="5850"><span>g</span></div>
@@ -153,10 +187,12 @@ const sign = (n, d = 2) => (n >= 0 ? "+" : "−") + nf(Math.abs(n), d);
 
 // ---------- WHO percentiles ----------
 const W = self.WHO_BOYS;
-function lms(table, x) { // x: day of age (or length in cm for wfl)
-  const t = W[table], i = Math.round((x - t.from) / t.step);
-  if (i < 0 || i >= t.M.length) return null;
-  return { L: Array.isArray(t.L) ? t.L[i] : t.L, M: t.M[i], S: t.S[i] };
+function lms(table, x) { // x: age in days (or length in cm for wfl); linear between table rows
+  const t = W[table], f = (x - t.from) / t.step;
+  if (f < -0.5 || f > t.M.length - 0.5) return null;
+  const i = Math.max(0, Math.min(t.M.length - 2, Math.floor(f))), k = Math.max(0, Math.min(1, f - i));
+  const at = (a) => a[i] + (a[i + 1] - a[i]) * k;
+  return { L: Array.isArray(t.L) ? at(t.L) : t.L, M: at(t.M), S: at(t.S) };
 }
 const atZ = ({ L, M, S }, z) => (L ? M * Math.pow(1 + L * S * z, 1 / L) : M * Math.exp(S * z));
 function zScore(table, x, v) {
@@ -196,23 +232,60 @@ const api = (path, opts = {}) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, {
   ...opts, headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", ...(opts.headers || {}) }
 }).then(async (r) => { if (!r.ok) throw new Error(await r.text() || r.status); return r; });
 function load() {
-  return api("mesures?select=id,jour,poids_g,taille_cm,pc_cm,note&order=jour.asc,cree.asc").then((r) => r.json()).then((data) => {
+  syncLait();
+  return api("mesures?select=id,jour,pese_le,fuseau,poids_g,taille_cm,pc_cm,note&order=pese_le.asc,cree.asc").then((r) => r.json()).then((data) => {
     rows = data;
     try { localStorage.setItem(CACHE, JSON.stringify(rows)); } catch (e) {}
     render();
   }).catch(() => {});
 }
 
-// Points for a view: [{ row, day, age, v (display unit), z }]
+// ---------- Time of each measure ----------
+// pese_le is the exact instant; fuseau the phone's time zone when it was taken, so 12 h 44 in Montréal stays 12 h 44
+const HERE = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
+const DAY_MS = 864e5;
+function partsIn(t, tz) { // instant -> { day: "YYYY-MM-DD", time: "HH:MM" } on the wall clock of tz
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+  const p = Object.fromEntries(f.formatToParts(new Date(t)).map((x) => [x.type, x.value]));
+  return { day: `${p.year}-${p.month}-${p.day}`, time: `${p.hour}:${p.minute}` };
+}
+function instant(day, time, tz) { // wall clock in tz -> Date
+  const wall = Date.parse(`${day}T${time}:00Z`);
+  const offset = (t) => { const p = partsIn(t, tz); return Date.parse(`${p.day}T${p.time}:00Z`) - t; };
+  let t = wall - offset(wall);
+  t = wall - offset(t); // second pass, right around a daylight-saving change
+  return new Date(t);
+}
+const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+const tzName = (tz) => CITY[tz] || (tz || "").split("/").pop().replace(/_/g, " ");
+const tsOf = (r) => Date.parse(r.pese_le) || Date.parse(r.jour + "T12:00:00Z");
+const fmtTime = (t, tz) => new Date(t).toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit", timeZone: tz || HERE });
+
+// Points for a view: [{ row, day, age (whole days), ageF (days to the minute), t, v (display unit), z }]
 function points(k = kind) {
   const K = KINDS[k];
   return rows.filter((r) => r[K.field] != null).map((r) => {
-    const age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), v = Number(r[K.field]) / K.scale;
-    return { row: r, day: r.jour, age, v, z: zScore(K.table, age, v) };
-  });
+    // Percentiles use the age in days like the WHO tools (date of the measure minus date of birth);
+    // the exact time places the point on the chart and gives the gain per day
+    const t = tsOf(r), age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), v = Number(r[K.field]) / K.scale;
+    return { row: r, day: r.jour, t, age, ageF: (t - Thomas.BIRTH) / DAY_MS, v, z: zScore(K.table, age, v) };
+  }).sort((a, b) => a.t - b.t);
 }
+// Grams per day between two weighings, from their exact times. Under 12 h apart the number means nothing.
+const MIN_GAP = 0.5;
+function gainOf(pts, i) {
+  const p = pts[i];
+  for (let j = i - 1; j >= 0; j--) {
+    const d = (p.t - pts[j].t) / DAY_MS;
+    if (d >= MIN_GAP) return { g: (p.v - pts[j].v) * 1000 / d, days: d, from: pts[j] };
+  }
+  return null;
+}
+// "7 j 23 h", "21 h", "31 j"
+const span = (d) => { const h = Math.round(d * 24); return h < 24 ? `${h} h` : h % 24 && d < 14 ? `${Math.floor(h / 24)} j ${h % 24} h` : `${Math.round(d)} j`; };
 const fmtV = (v, k = kind) => `${nf(v, KINDS[k].dec)} ${KINDS[k].unit}`;
 const fmtDate = (day, year) => Thomas.fmtDay(day, { day: "numeric", month: "short", ...(year ? { year: "numeric" } : {}) });
+const when = (p, year) => `${fmtDate(p.day, year)} à ${fmtTime(p.t, p.row.fuseau)}${p.row.fuseau && p.row.fuseau !== HERE ? ` (heure de ${tzName(p.row.fuseau)})` : ""}`;
 // Weight-for-length percentile when weight and length were taken the same day
 function wfl(r) {
   if (r.poids_g == null || r.taille_cm == null) return null;
@@ -224,15 +297,15 @@ function wfl(r) {
 function renderSummary() {
   const K = KINDS[kind], pts = points();
   if (!pts.length) { $("sumCard").innerHTML = `<p class="empty">Aucune ${K.what} pour l'instant. Touche « Nouvelle mesure ».</p>`; return; }
-  const last = pts.at(-1), prev = pts.at(-2);
+  const last = pts.at(-1);
   const nb = (t) => `<span class="nw">${t}</span>`; // keep "12 sem 4 j" or "+36 g/j" on one line
-  let sub = `Dernière ${K.what} le <b>${nb(fmtDate(last.day, true))}</b>, à ${nb(Thomas.short(last.day))} ${nb(`(${last.age} j)`)}`;
-  if (kind === "poids" && prev && last.age > prev.age) {
-    const g = (last.v - prev.v) * 1000 / (last.age - prev.age);
-    sub += `<br>${nb(`${sign(g, 0)} g/j`)} depuis le ${nb(fmtDate(prev.day))}`;
+  let sub = `Dernière ${K.what} le <b>${nb(when(last, true))}</b>, à ${nb(Thomas.short(last.day))} ${nb(`(${last.age} j)`)}`;
+  const gain = kind === "poids" && gainOf(pts, pts.length - 1);
+  if (gain) {
+    sub += `<br><b>${nb(`${sign(gain.g, 0)} g/j`)}</b> sur ${nb(span(gain.days))}, depuis la pesée du ${nb(when(gain.from))}`;
     // Average over the last ~4 weeks, when there's a measure that far back
-    const back = [...pts].reverse().find((p) => last.age - p.age >= 21);
-    if (back) sub += ` · ${nb(`${sign((last.v - back.v) * 1000 / (last.age - back.age), 0)} g/j`)} sur ${nb(`${last.age - back.age} jours`)}`;
+    const back = [...pts].reverse().find((p) => (last.t - p.t) / DAY_MS >= 21);
+    if (back) { const d = (last.t - back.t) / DAY_MS; sub += `<br>${nb(`${sign((last.v - back.v) * 1000 / d, 0)} g/j`)} en moyenne sur ${nb(span(d))}`; }
   }
   if (kind === "taille" && wfl(last.row)) sub += `<br>Poids-pour-taille : <b>${wfl(last.row)}</b>`;
   $("sumCard").innerHTML = `<div class="sum"><div class="val">${nf(last.v, K.dec)}<small>${K.unit}</small></div>
@@ -254,7 +327,7 @@ function renderChart() {
   const Wd = Math.max(280, box.clientWidth), H = Math.round(Math.min(380, Math.max(260, Wd * 0.8)));
   const m = { l: 40, r: 34, t: 10, b: 38 };
   // x: from birth to a little past the last measure
-  const lastAge = pts.at(-1).age;
+  const lastAge = pts.at(-1).ageF;
   const x0 = 0, x1 = Math.max(14, Math.ceil(lastAge + Math.max(4, lastAge * 0.05)));
   // y: the measures and the P3-P97 curves over that span
   let lo = Infinity, hi = -Infinity;
@@ -291,22 +364,22 @@ function renderChart() {
     if (ly > m.t - 2 && ly < H - m.b + 2) s += `<text class="curve-label${name === "P50" ? " p50l" : ""}" x="${Wd - m.r + 4}" y="${ly + 4}">${name}</text>`;
   });
   // Measures
-  s += `<path class="line" d="${path(pts.map((p) => [X(p.age), Y(p.v)]))}"/>`;
+  s += `<path class="line" d="${path(pts.map((p) => [X(p.ageF), Y(p.v)]))}"/>`;
   if (selected == null || selected >= pts.length) selected = pts.length - 1;
   const sp = pts[selected];
-  s += `<line class="guide" x1="${X(sp.age)}" x2="${X(sp.age)}" y1="${m.t}" y2="${H - m.b}"/>`;
-  pts.forEach((p, i) => { s += `<circle class="pt${i === pts.length - 1 ? " last" : ""}" cx="${X(p.age)}" cy="${Y(p.v)}" r="${i === pts.length - 1 ? 6.5 : 4.5}"/>`; });
-  s += `<circle class="sel" cx="${X(sp.age)}" cy="${Y(sp.v)}" r="10"/>`;
+  s += `<line class="guide" x1="${X(sp.ageF)}" x2="${X(sp.ageF)}" y1="${m.t}" y2="${H - m.b}"/>`;
+  pts.forEach((p, i) => { s += `<circle class="pt${i === pts.length - 1 ? " last" : ""}" cx="${X(p.ageF)}" cy="${Y(p.v)}" r="${i === pts.length - 1 ? 6.5 : 4.5}"/>`; });
+  s += `<circle class="sel" cx="${X(sp.ageF)}" cy="${Y(sp.v)}" r="10"/>`;
   box.innerHTML = `<svg viewBox="0 0 ${Wd} ${H}" height="${H}" role="img" aria-label="${K.title}, ${pts.length} mesures">${s}</svg>`;
   // Tap anywhere on the chart: the nearest measure in time
   box.querySelector("svg").addEventListener("click", (e) => {
     const r = e.currentTarget.getBoundingClientRect(), a = x0 + ((e.clientX - r.left) * Wd / r.width - m.l) / (Wd - m.l - m.r) * (x1 - x0);
-    let best = 0; pts.forEach((p, i) => { if (Math.abs(p.age - a) < Math.abs(pts[best].age - a)) best = i; });
+    let best = 0; pts.forEach((p, i) => { if (Math.abs(p.ageF - a) < Math.abs(pts[best].ageF - a)) best = i; });
     selected = best; renderChart();
   });
-  const prev = pts[selected - 1];
-  const gain = kind === "poids" && prev && sp.age > prev.age ? ` · ${sign((sp.v - prev.v) * 1000 / (sp.age - prev.age), 0)} g/j` : "";
-  $("tip").innerHTML = `<b>${fmtDate(sp.day, true)}</b> · ${Thomas.short(sp.day)} · <b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
+  const g = kind === "poids" && gainOf(pts, selected);
+  const gain = g ? `<br><span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span> (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})` : "";
+  $("tip").innerHTML = `<b>${when(sp, true)}</b> · ${Thomas.short(sp.day)}<br><b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
 }
 
 // ---------- Table ----------
@@ -315,20 +388,81 @@ function renderTable() {
   if (!pts.length) { $("table").innerHTML = '<p class="empty">Rien encore.</p>'; return; }
   const extra = kind === "poids" ? "<th>g/jour</th>" : kind === "taille" ? "<th>P/T</th>" : "";
   const lines = pts.map((p, i) => {
-    const prev = pts[i - 1];
     let more = "";
-    if (kind === "poids") { const g = prev && p.age > prev.age ? (p.v - prev.v) * 1000 / (p.age - prev.age) : null; more = `<td class="${g < 0 ? "neg" : ""}">${g == null ? "—" : sign(g, 0)}</td>`; }
+    if (kind === "poids") { const g = gainOf(pts, i); more = `<td class="${g && g.g < 0 ? "neg" : ""}">${g ? sign(g.g, 0) : "—"}</td>`; }
     if (kind === "taille") more = `<td>${wfl(p.row) || "—"}</td>`;
     const note = p.row.note ? `<tr class="r" data-id="${p.row.id}"><td class="note" colspan="6">${p.row.note.replace(/</g, "&lt;")}</td></tr>` : "";
-    return `<tr class="r${i === pts.length - 1 ? " latest" : ""}" data-id="${p.row.id}"><td>${fmtDate(p.day)}</td><td>${p.age} j</td><td>${nf(p.v, K.dec)}</td>
+    return `<tr class="r${i === pts.length - 1 ? " latest" : ""}" data-id="${p.row.id}"><td>${fmtDate(p.day)}<small>${fmtTime(p.t, p.row.fuseau)}</small></td><td>${p.age} j</td><td>${nf(p.v, K.dec)}</td>
       <td>${p.z == null ? "—" : pctText(p.z)}</td><td>${p.z == null ? "—" : sign(p.z)}</td>${more}</tr>${note}`;
   }).reverse().join("");
   $("table").innerHTML = `<table class="m"><tr><th>Date</th><th>Âge</th><th>${K.unit}</th><th>Perc.</th><th>z</th>${extra}</tr>${lines}</table>`;
 }
 
+// ---------- Milk per day, from his weight and from a target weight ----------
+// Usual guide for bottle feeding before 6 months: 150 mL per kg per day. The target (a percentile, his birth
+// percentile or a weight given by the doctor) and the number of feeds are shared between both phones.
+const ML_PER_KG = 150;
+const TARGETS = [["P25", -0.674], ["P50", 0], ["P75", 0.674]];
+let lait = { cible: "P50", boires: 8 }, laitDirty = false;
+try { Object.assign(lait, JSON.parse(localStorage.getItem("thomas911-lait")) || {}); laitDirty = localStorage.getItem("thomas911-lait-dirty") === "1"; } catch (e) {}
+function keepLait() { try { localStorage.setItem("thomas911-lait", JSON.stringify(lait)); localStorage.setItem("thomas911-lait-dirty", laitDirty ? "1" : ""); } catch (e) {} }
+function syncLait() {
+  if (laitDirty) { // our own change goes first
+    const sent = JSON.stringify(lait);
+    api("reglages", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
+      body: JSON.stringify([{ cle: "lait", valeur: lait, maj: new Date().toISOString() }]) })
+      .then(() => { if (JSON.stringify(lait) === sent) { laitDirty = false; keepLait(); } }).catch(() => {});
+    return;
+  }
+  api("reglages?select=valeur&cle=eq.lait").then((r) => r.json()).then(([row]) => {
+    if (!row || laitDirty || JSON.stringify(row.valeur) === JSON.stringify(lait)) return;
+    Object.assign(lait, row.valeur); keepLait(); renderMilk();
+  }).catch(() => {});
+}
+function setLait(change) { Object.assign(lait, change); laitDirty = true; keepLait(); renderMilk(); syncLait(); }
+
+function targetWeight() { // [kg, how it was chosen] for today
+  if (typeof lait.cible === "number") return [lait.cible / 1000, "donné par le pédiatre"];
+  const p = lms("wfa", Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.today())); if (!p) return null;
+  if (lait.cible === "naissance") { const b = points("poids")[0]; if (b && b.z != null) return [atZ(p, b.z), `${pctText(b.z)} comme à la naissance`]; }
+  const [name, z] = TARGETS.find(([n]) => n === lait.cible) || TARGETS[1];
+  return [atZ(p, z), `${name} pour son âge`];
+}
+const r5 = (ml) => Math.round(ml / 5) * 5;
+function renderMilk() {
+  const last = points("poids").at(-1), target = targetWeight();
+  $("milkCard").hidden = kind !== "poids" || !last || !target;
+  if ($("milkCard").hidden) return;
+  const [tkg, how] = target, now = r5(last.v * ML_PER_KG), tgt = r5(tkg * ML_PER_KG);
+  $("mNow").innerHTML = `${nf(now)}<small>mL</small>`;
+  $("mNowW").textContent = `${nf(last.v, 3)} kg, pesé le ${fmtDate(last.day)}`;
+  $("mTgt").innerHTML = `${nf(tgt)}<small>mL</small>`;
+  $("mTgtW").textContent = `${nf(tkg, 3)} kg, ${how}`;
+  const birth = points("poids")[0];
+  const chips = [...TARGETS.map(([n]) => [n, n]), ...(birth && birth.z != null ? [["naissance", `Naissance (${pctText(birth.z)})`]] : []),
+    ["autre", typeof lait.cible === "number" ? `${nf(lait.cible / 1000, 3)} kg` : "Autre…"]];
+  $("tgtChips").innerHTML = `<span class="lab">Cible :</span>` + chips.map(([c, label]) =>
+    `<button type="button" class="chip" data-c="${c}" aria-pressed="${c === lait.cible || (c === "autre" && typeof lait.cible === "number")}">${label}</button>`).join("");
+  $("nFeeds").textContent = lait.boires;
+  const per = (ml) => nf(r5(ml / lait.boires));
+  $("perFeed").innerHTML = `boires par jour, soit environ <b>${per(now)}</b>${tgt !== now ? ` à <b>${per(tgt)}</b>` : ""} mL par boire`;
+  const appert = (kg) => nf(r5(kg * 100 + 250)); // French rule of thumb: weight in g / 10 + 250 mL
+  $("milkNote").textContent = `Repère : ${ML_PER_KG} mL par kg et par jour, avant 6 mois (selon les bébés, souvent de 120 à 180). `
+    + `Règle d'Appert (poids en g ÷ 10 + 250) : ${appert(last.v)} mL et ${appert(tkg)} mL. `
+    + `Au-delà d'environ 1 litre par jour, en parler au pédiatre. Ce sont des moyennes : l'appétit varie d'un jour à l'autre, et l'avis du pédiatre prime.`;
+}
+$("tgtChips").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  if (c.dataset.c !== "autre") return setLait({ cible: c.dataset.c });
+  const g = grams(prompt("Poids cible en grammes (par exemple 6300) :", typeof lait.cible === "number" ? lait.cible : ""));
+  if (g >= 1000 && g <= 30000) setLait({ cible: g });
+});
+$("feedMinus").addEventListener("click", () => setLait({ boires: Math.max(3, lait.boires - 1) }));
+$("feedPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lait.boires + 1) }));
+
 function render() {
   document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", t.dataset.k === kind));
-  renderSummary(); renderChart(); renderTable();
+  renderSummary(); renderMilk(); renderChart(); renderTable();
   // For the home tile
   const w = points("poids").at(-1);
   try { localStorage.setItem("thomas911-dernier-poids", w ? JSON.stringify({ g: w.row.poids_g, p: w.z == null ? "" : pctText(w.z), day: w.day }) : ""); } catch (e) {}
@@ -356,11 +490,19 @@ function readWeight() {
   el.classList.toggle("bad", g != null && (isNaN(g) || g < 1000 || g > 30000));
   if (g == null) { el.textContent = ""; return; }
   if (isNaN(g)) { el.innerHTML = "<b>Nombre invalide</b>"; return; }
-  const day = $("fDate").value || Thomas.today(), age = Thomas.daysBetween(Thomas.BIRTH_DAY, day), z = zScore("wfa", age, g / 1000);
-  el.innerHTML = `= <b>${nf(g)} g</b> (${nf(g / 1000, 3)} kg)${z != null && g >= 1000 && g <= 30000 ? ` · ${pctText(z)}` : ""}`;
+  const t = sheetTime(), ok = g >= 1000 && g <= 30000, z = t && zScore("wfa", Thomas.daysBetween(Thomas.BIRTH_DAY, $("fDate").value), g / 1000);
+  // What this weighing would give: percentile, and grams per day since the one before (to the minute)
+  let gain = "";
+  const before = points("poids").filter((p) => (!editing || p.row.id !== editing.id) && t && (t - p.t) / DAY_MS >= MIN_GAP).at(-1);
+  if (ok && before) { const d = (t - before.t) / DAY_MS; gain = `<br><b>${sign((g / 1000 - before.v) * 1000 / d, 0)} g/j</b> depuis le ${fmtDate(before.day)} à ${fmtTime(before.t, before.row.fuseau)} (${span(d)})`; }
+  el.innerHTML = `= <b>${nf(g)} g</b> (${nf(g / 1000, 3)} kg)${z != null && ok ? ` · ${pctText(z)}` : ""}${gain}`;
 }
+// The sheet's date and time are read on the wall clock of the measure's own time zone (the phone's for a new one)
+let sheetTZ = HERE;
+const sheetTime = () => $("fDate").value && /^\d\d:\d\d/.test($("fHeure").value) ? instant($("fDate").value, $("fHeure").value.slice(0, 5), sheetTZ).getTime() : null;
 $("fPoids").addEventListener("input", readWeight);
 $("fDate").addEventListener("input", readWeight);
+$("fHeure").addEventListener("input", readWeight);
 document.querySelectorAll(".nudge button").forEach((b) => b.addEventListener("click", () => {
   const g = grams($("fPoids").value) || lastWeight() || 0;
   $("fPoids").value = String(Math.max(0, g + Number(b.dataset.g)));
@@ -370,9 +512,13 @@ const lastWeight = () => { const p = points("poids").at(-1); return p ? p.row.po
 $("more").addEventListener("click", () => { $("moreFields").hidden = false; $("more").hidden = true; $("fTaille").focus(); });
 function openSheet(row) {
   editing = row || null;
+  sheetTZ = row && row.fuseau || HERE;
   $("dlgTitle").textContent = row ? "Modifier la mesure" : "Nouvelle mesure";
-  $("fDate").value = row ? row.jour : Thomas.today();
-  $("fDate").max = Thomas.today();
+  const at = partsIn(row ? tsOf(row) : Date.now(), sheetTZ);
+  $("fDate").value = at.day; $("fHeure").value = at.time;
+  $("fDate").max = partsIn(Date.now(), sheetTZ).day;
+  $("tzNote").hidden = sheetTZ === HERE;
+  $("tzNote").textContent = `Heure de ${tzName(sheetTZ)}, là où cette mesure a été prise.`;
   $("fPoids").value = row && row.poids_g != null ? String(row.poids_g) : "";
   $("fPoids").placeholder = lastWeight() ? String(lastWeight()) : "5850";
   $("fTaille").value = row && row.taille_cm != null ? String(row.taille_cm).replace(".", ",") : "";
@@ -393,13 +539,16 @@ $("form").addEventListener("submit", (e) => {
   e.preventDefault();
   const g = grams($("fPoids").value), t = cm($("fTaille").value), h = cm($("fPc").value);
   const bad = (msg) => { $("err").textContent = msg; };
+  const stamp = sheetTime();
   if (!$("fDate").value) return bad("Choisis une date.");
-  if ($("fDate").value < Thomas.BIRTH_DAY) return bad("La date est avant la naissance.");
+  if (!stamp) return bad("Indique l'heure de la mesure.");
+  if (stamp < Thomas.BIRTH.getTime()) return bad("C'est avant la naissance.");
+  if (stamp > Date.now() + 10 * 60e3) return bad("C'est dans le futur : vérifie la date et l'heure.");
   if (Number.isNaN(g) || (g != null && (g < 1000 || g > 30000))) return bad("Poids à vérifier : entre 1 000 et 30 000 g.");
   if (Number.isNaN(t) || (t != null && (t < 40 || t > 130))) return bad("Taille à vérifier : entre 40 et 130 cm.");
   if (Number.isNaN(h) || (h != null && (h < 30 || h > 60))) return bad("Tour de tête à vérifier : entre 30 et 60 cm.");
   if (g == null && t == null && h == null) return bad("Entre au moins une mesure.");
-  const body = { jour: $("fDate").value, poids_g: g, taille_cm: t, pc_cm: h, note: $("fNote").value.trim() || null };
+  const body = { jour: $("fDate").value, pese_le: new Date(stamp).toISOString(), fuseau: sheetTZ, poids_g: g, taille_cm: t, pc_cm: h, note: $("fNote").value.trim() || null };
   $("save").disabled = true;
   const req = editing ? api(`mesures?id=eq.${editing.id}`, { method: "PATCH", body: JSON.stringify(body) })
     : api("mesures", { method: "POST", body: JSON.stringify(body) });
