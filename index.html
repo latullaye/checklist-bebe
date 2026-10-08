@@ -101,7 +101,10 @@
 .todo button { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--bg); border: 1.5px solid var(--accent); border-radius: 999px;
   padding: 7px 12px 7px 9px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; transition: background .15s, color .15s, opacity .3s, transform .3s; }
 .todo button::before { content: ""; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--accent); flex: none; box-sizing: border-box; }
+.todo button small { font-size: 0.75rem; color: var(--muted); margin-left: 2px; }
+.todo button.late small { color: #b36b12; font-weight: 700; }
 .todo button.done { background: var(--accent); color: var(--accent-ink); }
+.todo button.done small { color: var(--accent-ink); }
 .todo button.done::before { background: var(--accent-ink); border-color: var(--accent-ink); }
 .todo button.gone { opacity: 0; transform: scale(.9); }
 .alldone { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
@@ -213,11 +216,23 @@ function renderWeight() {
 Growth.onChange(renderWeight);
 
 // Habits of the moment (this slot) and the vitamin D, checkable right here
-const NAMES = { bouche: "Exercices de bouche", perinee: "Rééducation", vitd: "Vitamine D" };
+const NAMES = { bouche: "Exercices de bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain" };
 const MOMENT = { matin: "ce matin", midi: "ce midi", soir: "ce soir" };
+// The bath: every 2 or 3 days, in the evening. Due from the 2nd day after the last one.
+const BATH_EVERY = 2;
+function bathAgo() {
+  const last = Habits.lastBath();
+  return last ? Math.round((new Date(Habits.today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
+}
+const bathDue = () => { const d = bathAgo(); return d === null || d >= BATH_EVERY; };
 function todoKeys() {
   const slot = Habits.slotNow();
-  return [...Habits.HABITS.map(([h]) => `${h}-${slot}`), "vitd"];
+  return [...Habits.HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : [])];
+}
+function todoLabel(k) {
+  if (k !== "bain") return NAMES[k.split("-")[0]];
+  const d = bathAgo();
+  return `Bain<small>${d === null ? "pas noté depuis 2 semaines" : `dernier il y a ${d} jours`}</small>`;
 }
 function renderTodo() {
   const day = Habits.today(), slot = Habits.slotNow(), { done, total } = Habits.progress();
@@ -225,7 +240,7 @@ function renderTodo() {
   $("todoTitle").textContent = `À faire ${MOMENT[slot]}`;
   $("todoCount").textContent = `${done}/${total} aujourd'hui ›`;
   $("habSub").innerHTML = done >= total ? "<b>Tout est fait</b> aujourd'hui" : `<b>${done}/${total}</b> aujourd'hui`;
-  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}">${NAMES[k.split("-")[0]]}</button>`).join("");
+  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${k === "bain" && bathAgo() !== null && bathAgo() >= 3 ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
   $("allDone").hidden = !!left.length;
   $("allDone").innerHTML = `<b>Tout est fait ${MOMENT[slot]}.</b> Bravo !`;
 }

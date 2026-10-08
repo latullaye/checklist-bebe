@@ -1,7 +1,8 @@
-/* Shared by every page. Two type families: Bricolage Grotesque for titles and numbers, Atkinson Hyperlegible for text
+/* Shared by every page. Two type families: Ubuntu for titles and numbers, Atkinson Hyperlegible for text
    (Exo 2 only draws the THOMAS911 logo). */
-@font-face { font-family: "Bricolage Grotesque"; font-weight: 600; font-display: block; src: url(fonts/bricolage-grotesque-latin-600-normal.woff2) format("woff2"); }
-@font-face { font-family: "Bricolage Grotesque"; font-weight: 800; font-display: block; src: url(fonts/bricolage-grotesque-latin-800-normal.woff2) format("woff2"); }
+/* Ubuntu Medium serves weights up to 600 (page titles), Ubuntu Bold 700 and up (numbers, tile names) */
+@font-face { font-family: "Ubuntu"; font-weight: 400 600; font-display: block; src: url(fonts/ubuntu-latin-500-normal.woff2) format("woff2"); }
+@font-face { font-family: "Ubuntu"; font-weight: 700 900; font-display: block; src: url(fonts/ubuntu-latin-700-normal.woff2) format("woff2"); }
 /* Logo font: Exo 2 Bold */
 @font-face { font-family: "Exo 2"; font-weight: 700; font-display: block; src: url(fonts/exo-2-latin-700-normal.woff2) format("woff2"); }
 @font-face { font-family: "Atkinson Hyperlegible"; font-weight: 400; font-display: block; src: url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2"); }
@@ -17,7 +18,7 @@ html, body { margin: 0; -webkit-tap-highlight-color: transparent; -webkit-user-s
   --accent: #1f6f78;
   --accent-ink: #ffffff;
   --accent-soft: #d7e9ea;
-  --font-display: "Bricolage Grotesque", "Avenir Next", system-ui, sans-serif;
+  --font-display: "Ubuntu", "Avenir Next", system-ui, sans-serif;
   --font-body: "Atkinson Hyperlegible", system-ui, -apple-system, sans-serif;
 }
 @media (prefers-color-scheme: dark) {
@@ -42,7 +43,7 @@ svg.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor;
 
 /* Page header with a back button (sub-pages) */
 .top { display: flex; align-items: center; gap: 10px; }
-.top h1 { font-family: var(--font-display); font-weight: 600; font-size: 1.3rem; letter-spacing: -0.01em; margin: 0; line-height: 1.15; }
+.top h1 { font-family: var(--font-display); font-weight: 500; font-size: 1.3rem; margin: 0; line-height: 1.15; }
 .back { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border-radius: 12px;
   color: var(--accent); background: var(--surface); border: 1px solid var(--line); text-decoration: none; flex: none; }
 .back svg { width: 22px; height: 22px; }

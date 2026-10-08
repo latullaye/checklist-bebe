@@ -25,7 +25,7 @@ La checklist, les habitudes, la température intérieure et les mesures de crois
 
 ## Organisation du code
 
-- `common.css` : styles communs (deux polices : Bricolage Grotesque pour les titres, Atkinson Hyperlegible pour le texte), transitions entre écrans.
+- `common.css` : styles communs (deux polices : Ubuntu pour les titres et les chiffres, Atkinson Hyperlegible pour le texte), transitions entre écrans.
 - `app.js` : hors ligne et mises à jour (service worker `sw.js`), flèche retour, retour haptique (`data-buzz`).
 - `sync.js` : pastille « À jour / Hors ligne / en attente » en haut des écrans partagés.
 - `prefs.js` : réglages partagés (table `reglages`) ; `habits.js` + `notifs.js` : habitudes et rappels ; `growth.js` : mesures, percentiles OMS et file d'attente hors ligne.

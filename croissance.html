@@ -802,7 +802,7 @@ async function buildExport() {
   const cv = document.createElement("canvas"); cv.width = W * SC; cv.height = H * SC;
   const c = cv.getContext("2d"); c.scale(SC, SC);
   const INK = "#1d2b2a", MUTED = "#5d706d", ACC = "#1f6f78", LINE = "#d5e0dc";
-  const BODY = '"Atkinson Hyperlegible", Helvetica, Arial, sans-serif', DISP = '"Bricolage Grotesque", Helvetica, Arial, sans-serif';
+  const BODY = '"Atkinson Hyperlegible", Helvetica, Arial, sans-serif', DISP = '"Ubuntu", Helvetica, Arial, sans-serif';
   c.fillStyle = "#fff"; c.fillRect(0, 0, W, H);
   // Title block
   const a = Thomas.age(), birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: "America/Toronto", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });

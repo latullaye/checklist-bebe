@@ -146,8 +146,10 @@ function render() {
   $("vitd").setAttribute("aria-pressed", Habits.get(day, "vitd"));
   $("bath").setAttribute("aria-pressed", Habits.get(day, "bain"));
   const last = Habits.lastBath();
-  $("bathLast").textContent = !last ? "Pas de bain noté" : last === t ? "Dernier bain aujourd'hui"
-    : `Dernier bain ${last === Habits.addDays(t, -1) ? "hier" : `il y a ${Math.round((new Date(t) - new Date(last)) / 864e5)} jours`}`;
+  // Every 2 or 3 days, in the evening: due from the 2nd day
+  const ago = last ? Math.round((new Date(t) - new Date(last)) / 864e5) : null;
+  $("bathLast").textContent = (!last ? "Pas de bain noté" : ago === 0 ? "Dernier bain aujourd'hui"
+    : `Dernier bain ${ago === 1 ? "hier" : `il y a ${ago} jours`}`) + (ago === null || ago >= 2 ? " · à donner ce soir" : " · tous les 2 à 3 jours");
 
   const rows = [];
   for (let i = 0; i < 7; i++) {
