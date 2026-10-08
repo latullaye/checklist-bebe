@@ -7,7 +7,7 @@ Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 - **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.
 - **Bonnes habitudes** (`habitudes.html`) : petites routines quotidiennes à cocher (matin, midi, soir ou une fois par jour), avec rappels.
-- **Comment l'habiller** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
+- **Comment habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
 
 En ligne : https://latullaye.github.io/checklist-bebe/ — sur téléphone, l'ajouter à l'écran d'accueil.
 
