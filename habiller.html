@@ -51,6 +51,22 @@
 .wx-line span { display: block; color: var(--muted); font-size: 0.82rem; }
 .empty { color: var(--muted); font-size: 0.9rem; margin-top: 10px; }
 .empty button { margin-top: 10px; font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 10px; padding: 9px 14px; }
+.moment-head .what { margin-left: auto; font-size: 0.78rem; font-weight: 700; color: var(--accent); text-decoration: none; padding: 4px 10px;
+  border: 1px solid var(--line); border-radius: 999px; }
+.note b { color: var(--ink); }
+.legend { font-size: 0.88rem; line-height: 1.45; }
+.legend summary { cursor: pointer; font-weight: 700; color: var(--accent); list-style: none; display: flex; align-items: center; gap: 8px; }
+.legend summary::-webkit-details-marker { display: none; }
+.legend summary::before { content: "i"; display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 50%;
+  border: 1.5px solid var(--accent); font-size: 0.75rem; font-style: italic; font-family: Georgia, serif; flex: none; }
+.legend summary::after { content: ""; margin-left: auto; width: 8px; height: 8px; border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted); transform: rotate(45deg); transition: transform .2s; }
+.legend[open] summary::after { transform: rotate(-135deg); }
+.legend p { margin: 10px 0 0; color: var(--muted); }
+.legend p b { color: var(--ink); }
+.legend table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.legend th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); padding: 0 6px 6px 0; }
+.legend td { padding: 6px 6px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
+.legend td:first-child { font-weight: 700; color: var(--accent); white-space: nowrap; }
 .tip { font-size: 0.82rem; color: var(--muted); line-height: 1.4; text-align: center; margin: 0; }
 </style>
 </head>
@@ -90,6 +106,21 @@
     </div>
   </section>
 
+  <details class="card legend" id="tog">
+    <summary>C'est quoi le TOG ?</summary>
+    <p>Le <b>TOG</b> (« Thermal Overall Grade ») mesure à quel point un tissu garde la chaleur : <b>plus le chiffre est élevé, plus c'est chaud</b>. Il est indiqué sur l'étiquette ou l'emballage de la gigoteuse.</p>
+    <table>
+      <tr><th>TOG</th><th>Épaisseur</th><th>Chambre</th></tr>
+      <tr><td>0,5</td><td>très fine, coton léger</td><td>24 °C et plus</td></tr>
+      <tr><td>1</td><td>fine</td><td>20 à 24 °C</td></tr>
+      <tr><td>2,5</td><td>ouatinée, la plus courante</td><td>16 à 20 °C</td></tr>
+      <tr><td>3,5</td><td>épaisse, d'hiver</td><td>moins de 16 °C</td></tr>
+    </table>
+    <p><b>Chez vous</b> : la gigoteuse légère correspond à 0,5–1 TOG, la chaude à 2,5 TOG. Sous 16 °C, la chaude avec un pyjama chaud dessous.</p>
+    <p><b>Comment choisir</b> : le TOG suit la température de la chambre, et on ajuste ce qu'il porte dessous (body ou pyjama). Une gigoteuse à manches tient plus chaud : allège en dessous.</p>
+    <p><b>Sécurité</b> : la gigoteuse remplace la couverture, à éviter dans le lit avant 1 an. Choisis la bonne taille : le col et les emmanchures ajustés pour que sa tête ne glisse pas dedans. Pour dormir, l'idéal est une chambre entre 18 et 20 °C.</p>
+  </details>
+
   <p class="tip">Repère simple : une couche de plus que toi. Touche sa nuque : chaude et sèche, c'est parfait ; moite, il a trop chaud.</p>
 </div>
 
@@ -120,10 +151,10 @@ const G = {
   chaussettes: ["Chaussettes", "", `<path d="M17 6 H27 V25 L35 31 Q39 35 36 39 Q33 42 28 39 L17 32 Z"/>` + line("M17 11 H27")],
   pyjama: ["Pyjama", "une pièce", `<path d="${SLEEPSUIT}"/>` + line("M24 9 V31")],
   pyjamaChaud: ["Pyjama chaud", "molleton", `<path d="${SLEEPSUIT}"/>` + line("M24 9 V31 M15 20 H21 M27 20 H33 M15 26 H21 M27 26 H33")],
-  gig05: ["Gigoteuse légère", "0,5 TOG", sack(0)],
-  gig1: ["Gigoteuse", "1 TOG", sack(1)],
-  gig25: ["Gigoteuse chaude", "2,5 TOG", sack(2)],
-  gig35: ["Gigoteuse très chaude", "3,5 TOG", sack(3)],
+  gig05: ["Gigoteuse légère", "0,5 TOG · très fine", sack(0)],
+  gig1: ["Gigoteuse", "1 TOG · fine", sack(1)],
+  gig25: ["Gigoteuse chaude", "2,5 TOG · ouatinée", sack(2)],
+  gig35: ["Gigoteuse très chaude", "3,5 TOG · épaisse", sack(3)],
   combiLegere: ["Combinaison", "mi-saison", suit(false)],
   combi: ["Combinaison", "d'hiver", suit(true)],
   bonnet: ["Bonnet", "", `<path d="M11 31 Q11 15 24 15 Q37 15 37 31 Z"/><path d="M9 31 H39 V37 H9 Z"/><circle cx="24" cy="11" r="4"/>`],
@@ -156,6 +187,14 @@ const DODO = [
   [-99, [["bodyML", "pyjamaChaud", "gig35"]], "Chambre très froide : pour dormir, l'idéal est entre 18 et 20 °C."]
 ];
 const DODO_NOTE = "Rien d'autre dans le lit : ni bonnet, ni couverture, ni oreiller.";
+// We have two sleep sacks: a light one and a warm one
+const OURS = {
+  gig05: "<b>la légère</b>",
+  gig1: "<b>la légère</b>",
+  gig25: "<b>la chaude</b>",
+  gig35: "<b>la chaude</b>, avec le pyjama chaud dessous"
+};
+const ours = (row) => { const id = row[1][0].find((x) => OURS[x]); return id ? `Avec vos gigoteuses : prends ${OURS[id]}.` : ""; };
 // Outdoors, by "feels like" temperature (wind included)
 const DEHORS = [
   [27, [["bodyMC", "chapeau"]], "Reste à l'ombre ; évite le soleil direct, surtout avant 6 mois."],
@@ -212,13 +251,15 @@ function setInside(v) {
 
 const SUN = Wx.svg(Wx.PATHS.sun), MOON = Wx.svg(Wx.PATHS.moon);
 $("eveilHead").innerHTML = SUN + "Éveil";
-$("dodoHead").innerHTML = MOON + "Dodo";
+$("dodoHead").innerHTML = MOON + "Dodo" + '<a class="what" href="#tog">Le TOG ?</a>';
+$("dodoHead").querySelector(".what").addEventListener("click", () => { $("tog").open = true; });
 function renderInside() {
   $("inTemp").textContent = `${String(inside).replace(".", ",")} °C`;
   $("minus").disabled = inside <= MIN;
   $("plus").disabled = inside >= MAX;
   $("eveil").innerHTML = outfits(pick(EVEIL, inside));
-  $("dodo").innerHTML = outfits(pick(DODO, inside), [DODO_NOTE]);
+  const dodo = pick(DODO, inside);
+  $("dodo").innerHTML = outfits([dodo[0], dodo[1]], [ours(dodo), dodo[2], DODO_NOTE]); // which of ours first
 }
 $("minus").addEventListener("click", () => setInside(inside - 1));
 $("plus").addEventListener("click", () => setInside(inside + 1));
