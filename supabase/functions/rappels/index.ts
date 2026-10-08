@@ -43,12 +43,12 @@ async function message(jour: string, slot: string) {
   const rows = await sql`select cle from habitudes where jour = ${jour} and fait`;
   const done = new Set(rows.map((r) => r.cle));
   const todo = [
-    [`bouche-${slot}`, "les exercices de bouche de Thomas"],
+    [`bouche-${slot}`, "les exercices de bouche"],
     [`perinee-${slot}`, "la rééducation périnéenne"],
     ...(slot === "matin" ? [["vitd", ""]] : [])
   ].filter(([cle]) => !done.has(cle));
   if (!todo.length) return null;
-  // "Il faut faire les exercices de bouche de Thomas et la rééducation périnéenne. Thomas doit prendre sa vitamine D."
+  // "Il faut faire les exercices de bouche et la rééducation périnéenne. Thomas doit prendre sa vitamine D."
   const faire = todo.filter(([cle]) => cle !== "vitd").map(([, t]) => t);
   const body = [
     faire.length ? `Il faut faire ${faire.join(" et ")}.` : "",
