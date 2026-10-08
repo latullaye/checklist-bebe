@@ -50,19 +50,46 @@
 /* Chart */
 .chart { position: relative; margin: 6px -6px 0; }
 .chart svg { display: block; width: 100%; overflow: visible; touch-action: pan-y; }
-.chart .grid { stroke: var(--line); stroke-width: 1; }
-.chart .axis text, .chart .curve-label { fill: var(--muted); font-size: 11px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
-.chart .axis-title { fill: var(--muted); font-size: 11px; font-weight: 700; }
-.chart .band { fill: var(--muted); opacity: .09; }
-.chart .p50 { stroke: var(--ink); stroke-width: 2; fill: none; opacity: .7; }
-.chart .p15 { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
-.chart .p3 { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 1.5 3; stroke-linecap: round; }
-.chart .curve-label.p50l { fill: var(--ink); font-weight: 700; }
-.chart .line { stroke: var(--accent); stroke-width: 2.5; fill: none; stroke-linejoin: round; stroke-linecap: round; }
-.chart .pt { fill: var(--surface); stroke: var(--accent); stroke-width: 2.5; }
-.chart .pt.last { fill: var(--accent); }
-.chart .sel { fill: none; stroke: var(--ink); stroke-width: 2; }
-.chart .guide { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
+.chart .grid, .fs-chart .grid { stroke: var(--line); stroke-width: 1; }
+.chart .axis text, .chart .curve-label, .fs-chart .axis text, .fs-chart .curve-label { fill: var(--muted); font-size: 11px; font-family: var(--font-body); font-variant-numeric: tabular-nums; }
+.chart .axis-title, .fs-chart .axis-title { fill: var(--muted); font-size: 11px; font-weight: 700; }
+.chart .band, .fs-chart .band { fill: var(--muted); opacity: .09; }
+.chart .p50, .fs-chart .p50 { stroke: var(--ink); stroke-width: 2; fill: none; opacity: .7; }
+.chart .p15, .fs-chart .p15 { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 6 4; }
+.chart .p3, .fs-chart .p3 { stroke: var(--muted); stroke-width: 1.2; fill: none; stroke-dasharray: 1.5 3; stroke-linecap: round; }
+.chart .curve-label.p50l, .fs-chart .curve-label.p50l { fill: var(--ink); font-weight: 700; }
+.chart .line, .fs-chart .line { stroke: var(--accent); stroke-width: 2; fill: none; stroke-linejoin: round; stroke-linecap: round; }
+.chart .pt, .fs-chart .pt { fill: var(--surface); stroke: var(--accent); stroke-width: 1.8; }
+.chart .pt.last, .fs-chart .pt.last { fill: var(--accent); }
+.chart .sel, .fs-chart .sel { fill: none; stroke: var(--ink); stroke-width: 1.5; opacity: .8; }
+.chart .pt.on, .fs-chart .pt.on { fill: var(--ink); stroke: var(--ink); }
+.chart .guide, .fs-chart .guide { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
+.chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.expand { font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
+  padding: 6px 11px 6px 9px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
+.expand svg { width: 16px; height: 16px; }
+
+/* Full screen chart: pinch to zoom on time; portrait, landscape, or turned by CSS when the phone can't */
+.fs { position: fixed; inset: 0; z-index: 50; background: var(--surface); overflow: hidden; }
+.fs-in { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: flex; flex-direction: column; gap: 6px;
+  padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left)); }
+.fs-in.rot { transform-origin: 0 0; padding: 10px 14px 8px; }
+.fs-top { display: flex; align-items: center; gap: 6px; }
+.fs-top .seg { display: flex; gap: 2px; padding: 3px; border-radius: 12px; background: var(--group); margin-right: auto; }
+.fs-top .seg button { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 6px 9px; cursor: pointer; }
+.fs-top .seg button[aria-selected="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.fs-btn { font: inherit; font-size: 0.82rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
+  height: 34px; padding: 0 11px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; flex: none; }
+.fs-btn svg { width: 17px; height: 17px; }
+.fs-btn.x { width: 34px; padding: 0; justify-content: center; color: var(--ink); background: var(--group); }
+.fs-chart { flex: 1; min-height: 0; position: relative; touch-action: none; -webkit-user-select: none; user-select: none; }
+.fs-chart svg { display: block; position: absolute; left: 0; top: 0; }
+.fs-tip { font-size: 0.84rem; line-height: 1.3; font-variant-numeric: tabular-nums; min-height: 1.3em; }
+.fs-hint { font-size: 0.72rem; color: var(--muted); }
+/* Narrow screens: icons only, "Tout voir" first */
+@media (max-width: 480px) { #fsAll .lbl { display: none; } #fsAll { width: 34px; padding: 0; justify-content: center; } }
+@media (max-width: 360px) { .fs-btn .lbl { display: none; } .fs-btn { width: 34px; padding: 0; justify-content: center; } }
+
 .tip { min-height: 2.6em; margin-top: 6px; font-size: 0.86rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .tip b { font-weight: 700; }
 .src { font-size: 0.72rem; color: var(--muted); margin: 6px 0 0; }
@@ -134,7 +161,8 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   </section>
 
   <section class="card">
-    <div class="label" id="chartTitle"></div>
+    <div class="chart-head"><div class="label" id="chartTitle"></div>
+      <button class="expand" id="fsOpen" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Plein écran</button></div>
     <div class="chart" id="chart"></div>
     <div class="tip" id="tip"></div>
     <p class="src">Référentiel OMS 2006, garçons. Bande grise : entre P15 et P85.</p>
@@ -146,6 +174,20 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="label">Mesures</div>
     <div id="table"></div>
   </section>
+</div>
+
+<div class="fs" id="fs" hidden>
+  <div class="fs-in" id="fsIn">
+    <div class="fs-top">
+      <div class="seg" role="tablist"><button type="button" data-k="poids">Poids</button><button type="button" data-k="taille">Taille</button><button type="button" data-k="pc">Tête</button></div>
+      <button class="fs-btn" id="fsAll" type="button" title="Tout voir" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span class="lbl">Tout voir</span></button>
+      <button class="fs-btn" id="fsRot" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M8 3.5a7 7 0 0 1 8 0M14.5 2l1.6 1.6-1.6 1.6"/></svg><span class="lbl" id="fsRotLbl">Paysage</span></button>
+      <button class="fs-btn x" id="fsClose" type="button" aria-label="Fermer le plein écran"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div class="fs-chart" id="fsChart"></div>
+    <div class="fs-tip" id="fsTip"></div>
+    <div class="fs-hint">Pince pour zoomer sur le temps · glisse pour te déplacer · touche un point · double-tape pour tout voir</div>
+  </div>
 </div>
 
 <dialog id="dlg">
@@ -313,74 +355,287 @@ function renderSummary() {
     <div class="sub">${sub}</div>`;
 }
 
-// ---------- Chart: always zoomed on the measures ----------
-const NS = "http://www.w3.org/2000/svg";
+// ---------- Chart ----------
+// One drawing function for the card (birth to now, P3-P97 always shown) and the full-screen view
+// (any time window; the measure axis fits what is visible plus the percentile curves just around it).
 let selected = null;
 function niceStep(range, target) {
   const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
   return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || 10 * p;
 }
+const fullSpan = (pts) => { const a = pts.at(-1).ageF; return Math.max(14, Math.ceil(a + Math.max(4, a * 0.05))); };
+const ZS = CURVES.map(([, z]) => z);
+// The measure line at a given age (between two measures), or null outside them
+function lineAt(pts, a) {
+  for (let i = 1; i < pts.length; i++) if (pts[i - 1].ageF <= a && a <= pts[i].ageF) {
+    const k = (a - pts[i - 1].ageF) / ((pts[i].ageF - pts[i - 1].ageF) || 1); return pts[i - 1].v + (pts[i].v - pts[i - 1].v) * k;
+  }
+  return null;
+}
+function drawChart({ pts, K, W, H, x0, x1, fit, id, big }) {
+  const m = { l: big ? 44 : 40, r: 36, t: 10, b: 38 }, pw = W - m.l - m.r, ph = H - m.t - m.b;
+  const step = Math.max((x1 - x0) / 220, 0.05);
+  const curveAt = (a, z) => { const p = lms(K.table, a); return p ? atZ(p, z) : null; };
+  // y range
+  let lo = Infinity, hi = -Infinity;
+  const take = (v) => { if (v != null) { lo = Math.min(lo, v); hi = Math.max(hi, v); } };
+  const over = (z) => { for (let a = x0; a <= x1 + 1e-9; a += step) take(curveAt(a, z)); take(curveAt(x1, z)); };
+  if (fit === "curves") { over(-1.881); over(1.881); pts.forEach((p) => take(p.v)); }
+  else {
+    // What is visible of the measures (points in the window, and the line where it crosses the edges)...
+    const seen = pts.filter((p) => p.ageF >= x0 && p.ageF <= x1).map((p) => [p.ageF, p.v]);
+    [x0, x1].forEach((a) => { const v = lineAt(pts, a); if (v != null) seen.push([a, v]); });
+    if (!seen.length) seen.push(...pts.slice(-1).map((p) => [p.ageF, p.v]));
+    seen.forEach(([, v]) => take(v));
+    // ...and the percentile curves just below and just above it, so you always see where he stands
+    const zs = seen.map(([a, v]) => zScore(K.table, Math.max(0, Math.round(a)), v)).filter((z) => z != null);
+    if (zs.length) {
+      const below = ZS.filter((z) => z <= Math.min(...zs)).at(-1), above = ZS.find((z) => z >= Math.max(...zs));
+      if (below != null) over(below); if (above != null) over(above);
+    }
+    const minRange = K.unit === "kg" ? 0.1 : 1;
+    if (hi - lo < minRange) { const c = (hi + lo) / 2; lo = c - minRange / 2; hi = c + minRange / 2; }
+  }
+  const yStep = niceStep(hi - lo, big ? Math.max(5, Math.round(ph / 50)) : 6);
+  let y0, y1;
+  if (fit === "curves") { y0 = Math.floor((lo - (hi - lo) * 0.02) / yStep) * yStep; y1 = Math.ceil((hi + (hi - lo) * 0.02) / yStep) * yStep; }
+  else { const pad = (hi - lo) * 0.08; y0 = lo - pad; y1 = hi + pad; }
+  const X = (a) => m.l + (a - x0) / (x1 - x0) * pw;
+  const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0)) * ph;
+  const f1 = (n) => n.toFixed(1);
+  let s = `<defs><clipPath id="${id}c"><rect x="${m.l}" y="${m.t}" width="${pw}" height="${ph}"/></clipPath></defs>`;
+  // y grid
+  const dec = yStep < 1 ? (yStep < 0.1 ? 2 : 1) : 0;
+  for (let v = Math.ceil(y0 / yStep - 1e-9) * yStep; v <= y1 + 1e-9; v += yStep)
+    s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text class="axis" x="${m.l - 6}" y="${f1(Y(v) + 4)}" text-anchor="end"><tspan>${nf(v, dec)}</tspan></text>`;
+  // x grid: days when zoomed in close, then weeks, then months
+  const span = x1 - x0, maxTicks = Math.max(3, Math.floor(pw / 40));
+  let unit, ticks = [];
+  if (span <= 35) {
+    unit = "jours"; const st = [1, 2, 5, 7, 10, 14].find((e) => span / e <= maxTicks) || 14;
+    for (let a = Math.ceil(x0 / st) * st; a <= x1; a += st) ticks.push([a, a]);
+  } else if (span <= 182) {
+    unit = "semaines"; const st = [1, 2, 4, 8, 13].find((e) => span / 7 / e <= maxTicks) || 13;
+    for (let n = Math.ceil(x0 / 7 / st) * st; n * 7 <= x1; n += st) ticks.push([n * 7, n]);
+  } else {
+    unit = "mois"; const st = [1, 2, 3, 6, 12, 24].find((e) => span / 30.44 / e <= maxTicks) || 24;
+    for (let n = 0; n <= 240; n += st) { const a = Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.addMonths(Thomas.BIRTH_DAY, n)); if (a > x1) break; if (a >= x0) ticks.push([a, n]); }
+  }
+  ticks.forEach(([a, n]) => {
+    const atCorner = X(a) - m.l < 6; // the label at the corner sits to the right so it doesn't touch the lowest y label
+    s += `<line class="grid" x1="${f1(X(a))}" x2="${f1(X(a))}" y1="${m.t}" y2="${H - m.b}" opacity=".6"/><text class="axis" x="${f1(atCorner ? X(a) + 2 : X(a))}" y="${H - m.b + 16}" text-anchor="${atCorner ? "start" : "middle"}">${n}</text>`;
+  });
+  s += `<text class="axis-title" x="${(m.l + W - m.r) / 2}" y="${H - 4}" text-anchor="middle">Âge (${unit})</text>`;
+  // Percentile curves, clipped to the plot
+  const curve = (z) => { const out = []; for (let a = x0; a <= x1 + 1e-9; a += step) { const v = curveAt(a, z); if (v != null) out.push([X(a), Y(v)]); } const v = curveAt(x1, z); if (v != null) out.push([X(x1), Y(v)]); return out; };
+  const path = (c) => "M" + c.map(([x, y]) => `${f1(x)} ${f1(y)}`).join(" L");
+  const c15 = curve(-1.036), c85 = curve(1.036);
+  s += `<g clip-path="url(#${id}c)"><path class="band" d="${path(c15)} L${c85.reverse().map(([x, y]) => `${f1(x)} ${f1(y)}`).join(" L")} Z"/>`;
+  const labels = [];
+  CURVES.forEach(([name, z, cls]) => { const c = curve(z); s += `<path class="${cls}" d="${path(c)}"/>`; labels.push([name, c.at(-1)[1]]); });
+  // Measures
+  s += `<path class="line" d="${path(pts.map((p) => [X(p.ageF), Y(p.v)]))}"/>`;
+  const sp = pts[selected];
+  s += `<line class="guide" x1="${f1(X(sp.ageF))}" x2="${f1(X(sp.ageF))}" y1="${m.t}" y2="${H - m.b}"/>`;
+  const r = big ? 3.6 : 3.2;
+  pts.forEach((p, i) => { if (p.ageF >= x0 - span * 0.05 && p.ageF <= x1 + span * 0.05)
+    s += `<circle class="pt${i === pts.length - 1 ? " last" : ""}${i === selected ? " on" : ""}" cx="${f1(X(p.ageF))}" cy="${f1(Y(p.v))}" r="${i === selected || i === pts.length - 1 ? r + 0.8 : r}"/>`; });
+  s += `<circle class="sel" cx="${f1(X(sp.ageF))}" cy="${f1(Y(sp.v))}" r="${r + 4}"/></g>`;
+  // Curve names on the right, pushed apart when they're close
+  const shown = labels.filter(([, y]) => y > m.t - 2 && y < H - m.b + 2).sort((a, b) => a[1] - b[1]);
+  for (let i = 1; i < shown.length; i++) shown[i][1] = Math.max(shown[i][1], shown[i - 1][1] + 12);
+  shown.forEach(([name, y]) => { s += `<text class="curve-label${name === "P50" ? " p50l" : ""}" x="${W - m.r + 4}" y="${f1(y + 4)}">${name}</text>`; });
+  const svg = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${K.title}, ${pts.length} mesures">${s}</svg>`;
+  return { svg, m, pw, X, Y, invX: (px) => x0 + (px - m.l) / pw * (x1 - x0) };
+}
+// Text about the selected measure
+function tipText(pts, i, oneLine) {
+  const sp = pts[i], g = kind === "poids" && gainOf(pts, i), br = oneLine ? " · " : "<br>";
+  const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})`}` : "";
+  return `<b>${when(sp, true)}</b> · ${Thomas.short(sp.day)}${br}<b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
+}
 function renderChart() {
   const K = KINDS[kind], pts = points(), box = $("chart");
   $("chartTitle").textContent = K.title;
+  $("fsOpen").hidden = !pts.length;
   if (!pts.length) { box.innerHTML = ""; $("tip").textContent = ""; return; }
-  const Wd = Math.max(280, box.clientWidth), H = Math.round(Math.min(380, Math.max(260, Wd * 0.8)));
-  const m = { l: 40, r: 34, t: 10, b: 38 };
-  // x: from birth to a little past the last measure
-  const lastAge = pts.at(-1).ageF;
-  const x0 = 0, x1 = Math.max(14, Math.ceil(lastAge + Math.max(4, lastAge * 0.05)));
-  // y: the measures and the P3-P97 curves over that span
-  let lo = Infinity, hi = -Infinity;
-  for (let a = x0; a <= x1; a++) { const p = lms(K.table, a); if (!p) continue; lo = Math.min(lo, atZ(p, -1.881)); hi = Math.max(hi, atZ(p, 1.881)); }
-  pts.forEach((p) => { lo = Math.min(lo, p.v); hi = Math.max(hi, p.v); });
-  const yStep = niceStep(hi - lo, 6);
-  const y0 = Math.floor((lo - (hi - lo) * 0.02) / yStep) * yStep, y1 = Math.ceil((hi + (hi - lo) * 0.02) / yStep) * yStep;
-  const X = (a) => m.l + (a - x0) / (x1 - x0) * (Wd - m.l - m.r);
-  const Y = (v) => m.t + (1 - (v - y0) / (y1 - y0)) * (H - m.t - m.b);
-  let s = "";
-  // Grid and y axis
-  for (let v = y0; v <= y1 + 1e-9; v += yStep) s += `<line class="grid" x1="${m.l}" x2="${Wd - m.r}" y1="${Y(v)}" y2="${Y(v)}"/><text class="axis" x="${m.l - 6}" y="${Y(v) + 4}" text-anchor="end"><tspan>${nf(v, yStep < 1 ? (yStep < 0.1 ? 2 : 1) : 0)}</tspan></text>`;
-  // x axis: weeks for the first months, then months
-  const inWeeks = x1 <= 182;
-  const unitDays = inWeeks ? 7 : 30.4375;
-  const maxTicks = Math.floor((Wd - m.l - m.r) / 34);
-  const every = [1, 2, 3, 4, 6, 12, 24].find((e) => (x1 / unitDays) / e <= maxTicks) || 24;
-  for (let n = 0; n * unitDays <= x1; n += every) {
-    const a = inWeeks ? n * 7 : Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.addMonths(Thomas.BIRTH_DAY, n));
-    if (a > x1) break;
-    // the 0 sits right of the corner so it doesn't touch the lowest y label
-    s += `<line class="grid" x1="${X(a)}" x2="${X(a)}" y1="${m.t}" y2="${H - m.b}" opacity=".6"/><text class="axis" x="${n ? X(a) : X(a) + 2}" y="${H - m.b + 16}" text-anchor="${n ? "middle" : "start"}">${n}</text>`;
-  }
-  s += `<text class="axis-title" x="${(m.l + Wd - m.r) / 2}" y="${H - 4}" text-anchor="middle">Âge (${inWeeks ? "semaines" : "mois"})</text>`;
-  // Percentile curves
-  const curve = (z) => { const out = []; for (let a = x0; a <= x1; a += Math.max(1, Math.round((x1 - x0) / 160))) { const p = lms(K.table, a); if (p) out.push([X(a), Y(atZ(p, z))]); } const p = lms(K.table, x1); if (p) out.push([X(x1), Y(atZ(p, z))]); return out; };
-  const path = (c) => "M" + c.map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L");
-  const c15 = curve(-1.036), c85 = curve(1.036);
-  s += `<path class="band" d="${path(c15)} L${c85.reverse().map(([x, y]) => `${x.toFixed(1)} ${y.toFixed(1)}`).join(" L")} Z"/>`;
-  CURVES.forEach(([name, z, cls]) => {
-    const c = curve(z);
-    s += `<path class="${cls}" d="${path(c)}"/>`;
-    const [, ly] = c.at(-1);
-    if (ly > m.t - 2 && ly < H - m.b + 2) s += `<text class="curve-label${name === "P50" ? " p50l" : ""}" x="${Wd - m.r + 4}" y="${ly + 4}">${name}</text>`;
-  });
-  // Measures
-  s += `<path class="line" d="${path(pts.map((p) => [X(p.ageF), Y(p.v)]))}"/>`;
   if (selected == null || selected >= pts.length) selected = pts.length - 1;
-  const sp = pts[selected];
-  s += `<line class="guide" x1="${X(sp.ageF)}" x2="${X(sp.ageF)}" y1="${m.t}" y2="${H - m.b}"/>`;
-  pts.forEach((p, i) => { s += `<circle class="pt${i === pts.length - 1 ? " last" : ""}" cx="${X(p.ageF)}" cy="${Y(p.v)}" r="${i === pts.length - 1 ? 6.5 : 4.5}"/>`; });
-  s += `<circle class="sel" cx="${X(sp.ageF)}" cy="${Y(sp.v)}" r="10"/>`;
-  box.innerHTML = `<svg viewBox="0 0 ${Wd} ${H}" height="${H}" role="img" aria-label="${K.title}, ${pts.length} mesures">${s}</svg>`;
+  const W = Math.max(280, box.clientWidth), H = Math.round(Math.min(380, Math.max(260, W * 0.8)));
+  const c = drawChart({ pts, K, W, H, x0: 0, x1: fullSpan(pts), fit: "curves", id: "card" });
+  box.innerHTML = c.svg;
+  box.querySelector("svg").style.height = "auto";
   // Tap anywhere on the chart: the nearest measure in time
   box.querySelector("svg").addEventListener("click", (e) => {
-    const r = e.currentTarget.getBoundingClientRect(), a = x0 + ((e.clientX - r.left) * Wd / r.width - m.l) / (Wd - m.l - m.r) * (x1 - x0);
+    const r = e.currentTarget.getBoundingClientRect(), a = c.invX((e.clientX - r.left) * W / r.width);
     let best = 0; pts.forEach((p, i) => { if (Math.abs(p.ageF - a) < Math.abs(pts[best].ageF - a)) best = i; });
     selected = best; renderChart();
   });
-  const g = kind === "poids" && gainOf(pts, selected);
-  const gain = g ? `<br><span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span> (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})` : "";
-  $("tip").innerHTML = `<b>${when(sp, true)}</b> · ${Thomas.short(sp.day)}<br><b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
+  $("tip").innerHTML = tipText(pts, selected);
+  if (!$("fs").hidden) renderFS();
 }
+
+// ---------- Full screen ----------
+const fs = { views: {}, rot: false, pointers: new Map(), gesture: null, lastTap: 0, frame: 0, chart: null };
+const fsBox = $("fsChart");
+function fsView(pts) { // the time window for this tab, kept while the page is open
+  const full = fullSpan(pts), v = fs.views[kind] || (fs.views[kind] = { x0: 0, x1: full });
+  return clampView(v, full);
+}
+function clampView(v, full) {
+  const minSpan = Math.min(3, full);
+  let span = Math.max(minSpan, Math.min(full, v.x1 - v.x0)), x0 = Math.max(0, Math.min(full - span, v.x0));
+  v.x0 = x0; v.x1 = x0 + span; return v;
+}
+function renderFS() {
+  const K = KINDS[kind], pts = points();
+  document.querySelectorAll("#fs .seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.k === kind));
+  if (!pts.length) { fsBox.innerHTML = ""; $("fsTip").textContent = ""; return; }
+  if (selected == null || selected >= pts.length) selected = pts.length - 1;
+  const v = fsView(pts), full = fullSpan(pts);
+  // Texts first: they set how much room is left for the chart
+  $("fsAll").hidden = v.x1 - v.x0 >= full - 0.01 && v.x0 <= 0.01;
+  $("fsTip").innerHTML = tipText(pts, selected, true);
+  $("fsRotLbl").textContent = landscape() ? "Portrait" : "Paysage";
+  // Back to portrait: our own quarter turn can be undone, a real landscape only where the page can be locked (Android)
+  $("fsRot").hidden = landscape() && !fs.rot && !document.fullscreenElement;
+  const W = fsBox.clientWidth, H = fsBox.clientHeight;
+  if (W < 50 || H < 50) return;
+  fs.chart = drawChart({ pts, K, W, H, x0: v.x0, x1: v.x1, fit: "data", id: "fs", big: true });
+  fsBox.innerHTML = fs.chart.svg;
+  fs.size = W + "x" + H;
+}
+// Redraw whenever the room for the chart changes (tip on two lines, bars appearing, turning)
+if (window.ResizeObserver) new ResizeObserver(() => { if (!$("fs").hidden && fs.size !== fsBox.clientWidth + "x" + fsBox.clientHeight) redrawFS(); }).observe(fsBox);
+const redrawFS = () => { if (!fs.frame) fs.frame = requestAnimationFrame(() => { fs.frame = 0; renderFS(); }); };
+const landscape = () => fs.rot || innerWidth > innerHeight;
+
+// Turned by CSS (when the phone won't rotate the page): the view is laid out landscape and rotated a quarter turn
+function setRot(on) {
+  fs.rot = on;
+  const el = $("fsIn");
+  el.classList.toggle("rot", on);
+  el.style.width = on ? innerHeight + "px" : "";
+  el.style.height = on ? innerWidth + "px" : "";
+  el.style.transform = on ? `translateX(${innerWidth}px) rotate(90deg)` : "";
+  redrawFS();
+}
+// Finger position in the chart's own coordinates (also when the view is turned by CSS)
+function local(e) {
+  const r = fsBox.getBoundingClientRect();
+  return fs.rot ? [e.clientY - r.top, r.right - e.clientX] : [e.clientX - r.left, e.clientY - r.top];
+}
+
+async function openFS() {
+  $("fs").hidden = false;
+  document.body.style.overflow = "hidden";
+  history.pushState({ fs: 1 }, "");
+  // Real full screen where the browser allows it (Android), then let the phone turn the page
+  try { if (document.documentElement.requestFullscreen && !document.fullscreenElement) await document.documentElement.requestFullscreen({ navigationUI: "hide" }); } catch (e) {}
+  try { if (document.fullscreenElement && screen.orientation && screen.orientation.lock) await screen.orientation.lock("any"); } catch (e) {}
+  renderFS();
+}
+function teardownFS() {
+  if ($("fs").hidden) return;
+  if (fs.rot) setRot(false);
+  try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
+  $("fs").hidden = true;
+  document.body.style.overflow = "";
+  fs.pointers.clear(); fs.gesture = null;
+  renderChart();
+}
+const closeFS = () => { if (history.state && history.state.fs) history.back(); else teardownFS(); };
+window.addEventListener("popstate", teardownFS);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$("fs").hidden) closeFS(); });
+$("fsOpen").addEventListener("click", openFS);
+$("fsClose").addEventListener("click", closeFS);
+$("fsAll").addEventListener("click", () => { delete fs.views[kind]; renderFS(); });
+$("fsRot").addEventListener("click", async () => {
+  const want = landscape() ? "portrait" : "landscape";
+  if (fs.rot) return setRot(false);
+  try {
+    if (!document.fullscreenElement || !screen.orientation || !screen.orientation.lock) throw 0;
+    await screen.orientation.lock(want); // Android: the page really turns
+    await new Promise((r) => setTimeout(r, 700));
+    if (want === "landscape" && innerWidth <= innerHeight) throw 0; // said yes but didn't turn
+  } catch (e) { if (want === "landscape") setRot(true); } // iPhone: turn it ourselves
+});
+document.querySelectorAll("#fs .seg button").forEach((b) => b.addEventListener("click", () => {
+  kind = b.dataset.k; selected = null;
+  try { localStorage.setItem("thomas911-croissance-onglet", kind); } catch (e) {}
+  render();
+}));
+window.addEventListener("resize", () => {
+  if ($("fs").hidden) return;
+  if (fs.rot && innerWidth > innerHeight) setRot(false); // the phone turned the page after all
+  else if (fs.rot) setRot(true);
+  redrawFS();
+});
+
+// Gestures: pinch = zoom on time, one finger = move along time, tap = pick a measure, double tap = see all
+function startGesture() {
+  const pts = points(), v = fsView(pts), ps = [...fs.pointers.values()];
+  if (ps.length >= 2) {
+    const [a, b] = ps;
+    fs.gesture = { kind: "pinch", s: [a[0], b[0]], d: [fs.chart.invX(a[0]), fs.chart.invX(b[0])] };
+  } else if (ps.length === 1) {
+    fs.gesture = { kind: "pan", sx: ps[0][0], sy: ps[0][1], v0: { ...v }, moved: fs.gesture ? true : false, t: Date.now() };
+  } else fs.gesture = null;
+}
+fsBox.addEventListener("pointerdown", (e) => {
+  if (!fs.chart) return;
+  try { fsBox.setPointerCapture(e.pointerId); } catch (err) {}
+  fs.pointers.set(e.pointerId, local(e));
+  startGesture();
+});
+fsBox.addEventListener("pointermove", (e) => {
+  if (!fs.pointers.has(e.pointerId) || !fs.gesture) return;
+  fs.pointers.set(e.pointerId, local(e));
+  const pts = points(), full = fullSpan(pts), v = fsView(pts), pw = fs.chart.pw, ml = fs.chart.m.l, g = fs.gesture;
+  if (g.kind === "pinch" && fs.pointers.size >= 2) {
+    const [a, b] = [...fs.pointers.values()];
+    const s1 = a[0], s2 = b[0];
+    if (Math.abs(s2 - s1) < 20) return;
+    const k = (g.d[1] - g.d[0]) / (s2 - s1); // days per pixel that keep both days under both fingers
+    if (k <= 0) return;
+    v.x0 = g.d[0] - (s1 - ml) * k; v.x1 = v.x0 + k * pw;
+    clampView(v, full);
+  } else if (g.kind === "pan") {
+    const [x, y] = [...fs.pointers.values()][0];
+    if (Math.hypot(x - g.sx, y - g.sy) > 8) g.moved = true;
+    if (!g.moved) return;
+    const span = g.v0.x1 - g.v0.x0;
+    v.x0 = g.v0.x0 - (x - g.sx) / pw * span; v.x1 = v.x0 + span;
+    clampView(v, full);
+  }
+  redrawFS();
+});
+function endPointer(e) {
+  if (!fs.pointers.has(e.pointerId)) return;
+  const g = fs.gesture, wasTap = g && g.kind === "pan" && !g.moved && fs.pointers.size === 1 && Date.now() - g.t < 500;
+  fs.pointers.delete(e.pointerId);
+  startGesture();
+  if (fs.gesture && fs.gesture.kind === "pan") fs.gesture.moved = true; // the finger left after a pinch: no tap
+  if (!wasTap) return;
+  const now = Date.now();
+  if (now - fs.lastTap < 320) { fs.lastTap = 0; delete fs.views[kind]; return renderFS(); }
+  fs.lastTap = now;
+  // Tap: the nearest measure on screen
+  const [x, y] = local(e), pts = points();
+  let best = 0, bd = Infinity;
+  pts.forEach((p, i) => { const d = Math.hypot(fs.chart.X(p.ageF) - x, (fs.chart.Y(p.v) - y) * 0.35); if (d < bd) { bd = d; best = i; } });
+  selected = best; renderFS();
+}
+fsBox.addEventListener("pointerup", endPointer);
+fsBox.addEventListener("pointercancel", endPointer);
+// Mouse wheel / trackpad on a computer: zoom around the pointer
+fsBox.addEventListener("wheel", (e) => {
+  if (!fs.chart) return;
+  e.preventDefault();
+  const pts = points(), full = fullSpan(pts), v = fsView(pts), [x] = local(e), d = fs.chart.invX(x);
+  const k = Math.exp(e.deltaY * 0.0025);
+  v.x0 = d - (d - v.x0) * k; v.x1 = d + (v.x1 - d) * k;
+  clampView(v, full); redrawFS();
+}, { passive: false });
 
 // ---------- Table ----------
 function renderTable() {
