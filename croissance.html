@@ -114,6 +114,25 @@ table.m tr.latest td { color: var(--accent); font-weight: 700; }
 table.m td.neg { color: #c4553f; }
 table.m td small.wait { color: #b36b12; font-weight: 700; }
 table.m td small { display: block; font-size: 0.7rem; color: var(--muted); font-weight: 400; margin-top: 1px; }
+/* Usual gain for the age: green = P15–P85, amber = P5–P15 and P85–P95, the mark = his gain */
+.gauge { position: relative; display: block; width: 46px; height: 6px; border-radius: 3px; margin-top: 5px;
+  background: linear-gradient(90deg, rgba(196,85,63,.35) 0 17.1%, rgba(224,160,64,.5) 17.1% 29.3%, rgba(63,174,106,.6) 29.3% 70.7%, rgba(224,160,64,.5) 70.7% 82.9%, rgba(196,85,63,.35) 82.9%); }
+.gauge i { position: absolute; top: -3px; width: 3px; height: 12px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 1.5px var(--surface); }
+.gauge.faint { opacity: .45; }
+table.m td small.early { font-size: 0.66rem; }
+.vel { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.84rem; color: var(--muted); }
+.vel-head b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.vel .gauge { width: 100%; height: 9px; border-radius: 5px; margin-top: 12px; }
+.vel .gauge i { top: -4px; width: 4px; height: 17px; margin-left: -2px; }
+.vel-scale { position: relative; height: 15px; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vel-scale span { position: absolute; top: 2px; transform: translateX(-50%); }
+.vel-say { margin: 4px 0 0; font-size: 0.86rem; font-weight: 700; }
+.vel-say.ok { color: #2f8f55; } .vel-say.near { color: #b36b12; } .vel-say.out { color: #c4553f; }
+.vel-note { margin: 2px 0 0; font-size: 0.74rem; color: var(--muted); line-height: 1.35; }
+.legend { font-size: 0.72rem; color: var(--muted); margin: 8px 0 0; line-height: 1.4; display: flex; align-items: center; gap: 8px; }
+.legend .gauge { flex: none; margin: 0; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .vel-say.ok { color: #6fd39a; } :root:not([data-theme="light"]) .vel-say.near { color: #f0b860; } :root:not([data-theme="light"]) .vel-say.out { color: #f08a75; } }
 table.m td.note { white-space: normal; color: var(--muted); font-size: 0.74rem; padding-top: 0; border-top: 0; }
 
 /* Entry sheet */
@@ -302,6 +321,11 @@ function points(k = kind) {
   }).sort((a, b) => a.t - b.t);
 }
 const MIN_GAP = Growth.MIN_GAP;
+// Where a gain stands against the usual gain for the age (growth.js, WHO 2009 velocity standards)
+const velOf = (g) => g && Growth.velocity(g.from.ageF, g.from.ageF + g.days, g.g);
+const gaugeAt = (z) => (Math.max(-2.5, Math.min(2.5, z)) + 2.5) / 5 * 100;
+const gauge = (v, cls = "") => `<span class="gauge${v.short ? " faint" : ""}${cls}" title="Habituel à cet âge : ${nf(v.lo)} à ${nf(v.hi)} g/j"><i style="left:${gaugeAt(v.z).toFixed(1)}%"></i></span>`;
+const usual = (v) => `${nf(Math.max(0, v.lo))} à ${nf(v.hi)} g/j`;
 // "7 j 23 h", "21 h", "31 j"
 const span = (d) => { const h = Math.round(d * 24); return h < 24 ? `${h} h` : h % 24 && d < 14 ? `${Math.floor(h / 24)} j ${h % 24} h` : `${Math.round(d)} j`; };
 const fmtV = (v, k = kind) => `${nf(v, KINDS[k].dec)} ${KINDS[k].unit}`;
@@ -327,6 +351,11 @@ function renderSummary() {
     // Average over the last ~4 weeks, when there's a measure that far back
     const back = [...pts].reverse().find((p) => (last.t - p.t) / DAY_MS >= 21);
     if (back) { const d = (last.t - back.t) / DAY_MS; sub += `<br>${nb(`${sign((last.v - back.v) * 1000 / d, 0)} g/j`)} en moyenne sur ${nb(span(d))}`; }
+    const v = velOf(gain);
+    if (v) sub += `<div class="vel"><div class="vel-head"><span>Gain habituel à cet âge (OMS)</span><b>${usual(v)}</b></div>${gauge(v)}
+      <div class="vel-scale"><span style="left:29.3%">${nf(Math.max(0, v.lo))}</span><span style="left:70.7%">${nf(v.hi)}</span></div>
+      <p class="vel-say ${Growth.velLevel(v.z)}">${sign(gain.g, 0)} g/j : ${Growth.velWords(v.z)}</p>
+      <p class="vel-note">Zone verte : ce que font 70 % des garçons de cet âge (P15 à P85). Repère calculé sur un mois : sur quelques jours, les écarts sont fréquents ; c'est la tendance qui compte.</p></div>`;
   }
   if (kind === "taille" && wfl(last.row)) sub += `<br>Poids-pour-taille : <b>${wfl(last.row)}</b>`;
   $("sumCard").innerHTML = `<div class="sum"><div class="val">${nf(last.v, K.dec)}<small>${K.unit}</small></div>
@@ -431,7 +460,9 @@ function drawChart({ pts, K, W, H, x0, x1, fit, id, big, plain }) { // plain: no
 // Text about the selected measure
 function tipText(pts, i, oneLine) {
   const sp = pts[i], g = kind === "poids" && gainOf(pts, i), br = oneLine ? " · " : "<br>";
-  const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})`}` : "";
+  const v = velOf(g);
+  const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})`}`
+    + (v ? ` · <span class="nw">habituel ${usual(v)}</span>` : "") : "";
   return `<b>${when(sp, true)}</b> · ${Thomas.short(sp.day)}${br}<b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
 }
 function renderChart() {
@@ -624,13 +655,17 @@ function renderTable() {
   const extra = kind === "poids" ? "<th>g/jour</th>" : kind === "taille" ? "<th>P/T</th>" : "";
   const lines = pts.map((p, i) => {
     let more = "";
-    if (kind === "poids") { const g = gainOf(pts, i); more = `<td class="${g && g.g < 0 ? "neg" : ""}">${g ? sign(g.g, 0) : "—"}</td>`; }
+    if (kind === "poids") {
+      const g = gainOf(pts, i), v = velOf(g);
+      more = `<td class="${g && g.g < 0 ? "neg" : ""}">${g ? sign(g.g, 0) : "—"}${v ? gauge(v) : g ? '<small class="early">1res sem.</small>' : ""}</td>`;
+    }
     if (kind === "taille") more = `<td>${wfl(p.row) || "—"}</td>`;
     const note = p.row.note ? `<tr class="r" data-id="${p.row.id}"><td class="note" colspan="6">${p.row.note.replace(/</g, "&lt;")}</td></tr>` : "";
     return `<tr class="r${i === pts.length - 1 ? " latest" : ""}" data-id="${p.row.id}"><td>${fmtDate(p.day)}<small>${fmtTime(p.t, p.row.fuseau)}</small>${p.row._pending ? '<small class="wait">en attente</small>' : ""}</td><td>${p.age} j</td><td>${nf(p.v, K.dec)}</td>
       <td>${p.z == null ? "—" : pctText(p.z)}</td><td>${p.z == null ? "—" : sign(p.z)}</td>${more}</tr>${note}`;
   }).reverse().join("");
-  $("table").innerHTML = `<table class="m"><tr><th>Date</th><th>Âge</th><th>${K.unit}</th><th>Perc.</th><th>z</th>${extra}</tr>${lines}</table>`;
+  $("table").innerHTML = `<table class="m"><tr><th>Date</th><th>Âge</th><th>${K.unit}</th><th>Perc.</th><th>z</th>${extra}</tr>${lines}</table>`
+    + (kind === "poids" ? `<p class="legend"><span class="gauge" aria-hidden="true"></span><span>Sous le gain : la zone verte est le gain habituel pour l'âge (OMS, P15 à P85), le trait est celui de Thomas. « 1res sem. » : les premiers jours, la perte de poids est normale.</span></p>` : "");
 }
 
 // ---------- Milk per day, from his weight and from a target weight ----------
@@ -716,7 +751,11 @@ function readWeight() {
   // What this weighing would give: percentile, and grams per day since the one before (to the minute)
   let gain = "";
   const before = points("poids").filter((p) => (!editing || p.row.id !== editing.id) && t && (t - p.t) / DAY_MS >= MIN_GAP).at(-1);
-  if (ok && before) { const d = (t - before.t) / DAY_MS; gain = `<br><b>${sign((g / 1000 - before.v) * 1000 / d, 0)} g/j</b> depuis le ${fmtDate(before.day)} à ${fmtTime(before.t, before.row.fuseau)} (${span(d)})`; }
+  if (ok && before) {
+    const d = (t - before.t) / DAY_MS, gd = (g / 1000 - before.v) * 1000 / d, v = Growth.velocity(before.ageF, (t - Thomas.BIRTH) / DAY_MS, gd);
+    gain = `<br><b>${sign(gd, 0)} g/j</b> depuis le ${fmtDate(before.day)} à ${fmtTime(before.t, before.row.fuseau)} (${span(d)})`
+      + (v ? `<br>Habituel à cet âge : ${usual(v)} · ${Growth.velWords(v.z)}` : "");
+  }
   el.innerHTML = `= <b>${nf(g)} g</b> (${nf(g / 1000, 3)} kg)${z != null && ok ? ` · ${pctText(z)}` : ""}${gain}`;
 }
 // The sheet's date and time are read on the wall clock of the measure's own time zone (the phone's for a new one)
@@ -798,7 +837,7 @@ async function buildExport() {
   const kinds = Object.keys(KINDS).filter((k) => points(k).length);
   const all = Growth.rows().sort((a, b) => tsOf(a) - tsOf(b)), weightsPts = points("poids");
   const rowH = 30, tableH = 44 + all.length * rowH;
-  const H = 150 + kinds.length * (ch + 56) + tableH + 70;
+  const H = 150 + kinds.length * (ch + 56) + tableH + 90;
   const cv = document.createElement("canvas"); cv.width = W * SC; cv.height = H * SC;
   const c = cv.getContext("2d"); c.scale(SC, SC);
   const INK = "#1d2b2a", MUTED = "#5d706d", ACC = "#1f6f78", LINE = "#d5e0dc";
@@ -823,7 +862,7 @@ async function buildExport() {
     y += ch + 56;
   }
   // Table: every measure, oldest first, like the health record
-  const cols = [["Date", 112], ["Heure", 64], ["Âge", 62], ["Poids (kg)", 92], ["P", 52], ["g/j", 56], ["Taille (cm)", 92], ["P", 52], ["P. crânien (cm)", 126], ["P", 52], ["Note", 0]];
+  const cols = [["Date", 108], ["Heure", 60], ["Âge", 56], ["Poids (kg)", 86], ["P", 46], ["g/j", 50], ["Habituel", 74], ["Taille (cm)", 88], ["P", 46], ["P. crânien (cm)", 120], ["P", 46], ["Note", 0]];
   let x = pad; const xs = cols.map(([, w]) => { const at = x; x += w; return at; });
   c.font = `700 13px ${BODY}`; c.fillStyle = MUTED;
   cols.forEach(([name], i) => c.fillText(name.toUpperCase(), xs[i], y + 22));
@@ -833,14 +872,17 @@ async function buildExport() {
   all.forEach((r) => {
     c.strokeStyle = LINE; c.lineWidth = 1; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke();
     const age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), wi = weightsPts.findIndex((p) => p.row.id === r.id), g = wi >= 0 ? gainOf(weightsPts, wi) : null;
+    const v = velOf(g);
     const cells = [fmtDate(r.jour, true), fmtTime(tsOf(r), r.fuseau), `${age} j`,
       r.poids_g == null ? "" : nf(r.poids_g / 1000, 3), r.poids_g == null ? "" : pct("wfa", age, r.poids_g / 1000), g ? sign(g.g, 0) : "",
+      v ? `${nf(Math.max(0, v.lo))}–${nf(v.hi)}` : g ? "1res sem." : "",
       r.taille_cm == null ? "" : nf(Number(r.taille_cm), 1), pct("lhfa", age, r.taille_cm == null ? null : Number(r.taille_cm)),
       r.pc_cm == null ? "" : nf(Number(r.pc_cm), 1), pct("hcfa", age, r.pc_cm == null ? null : Number(r.pc_cm)), r.note || ""];
     cells.forEach((t, i) => {
-      c.fillStyle = i === 5 && g && g.g < 0 ? "#c4553f" : i === 10 ? MUTED : INK;
+      const lvl = v && Growth.velLevel(v.z);
+      c.fillStyle = i === 5 && lvl ? { ok: "#2f8f55", near: "#b36b12", out: "#c4553f" }[lvl] : i === 5 && g && g.g < 0 ? "#c4553f" : i === 6 || i === 11 ? MUTED : INK;
       let text = String(t);
-      if (i === 10) { const room = W - pad - xs[10]; while (text && c.measureText(text).width > room) text = text.slice(0, -2) + "…"; }
+      if (i === 11) { const room = W - pad - xs[11]; while (text && c.measureText(text).width > room) text = text.slice(0, -2) + "…"; }
       c.fillText(text, xs[i], y + 21);
     });
     y += rowH;
@@ -848,6 +890,7 @@ async function buildExport() {
   c.strokeStyle = LINE; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke();
   c.fillStyle = MUTED; c.font = `13px ${BODY}`;
   c.fillText("THOMAS911 · percentiles OMS 2006 (garçons) · gain par jour calculé entre les heures de pesée (au moins 12 h d'écart)", pad, y + 38);
+  c.fillText("Habituel : gain des garçons du même âge entre P15 et P85 (OMS 2009) ; g/j en vert dedans, orange un peu en dehors, rouge au-delà de P5–P95.", pad, y + 58);
   return new Promise((res) => cv.toBlob(res, "image/png"));
 }
 let exportFile = null, exportURL = null;

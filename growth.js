@@ -56,6 +56,35 @@
     return null;
   }
 
+  // ---------- Usual weight gain for the age (WHO 2009 weight velocity standards, boys) ----------
+  // 1-month increments in grams: [interval start, end (days), L, M, S], Box-Cox with a +400 g shift:
+  // z = (((g + 400) / M)^L − 1) / (L·S). Months are 30.4375 days; the first interval is 0–4 weeks.
+  const VEL = [[0, 28, 1.3828, 1423.0783, 0.22048], [28, 60.875, 0.7241, 1596.347, 0.19296], [60.875, 91.3125, 0.659, 1215.3989, 0.19591],
+    [91.3125, 121.75, 0.7003, 1017.0488, 0.20965], [121.75, 152.1875, 0.7419, 921.6249, 0.2279], [152.1875, 182.625, 0.7668, 822.1842, 0.24854],
+    [182.625, 213.0625, 0.7688, 756.5306, 0.26783], [213.0625, 243.5, 0.7624, 715.6257, 0.28677], [243.5, 273.9375, 0.762, 684.7459, 0.30439],
+    [273.9375, 304.375, 0.7659, 658.5809, 0.32154], [304.375, 334.8125, 0.7713, 643.4374, 0.33882], [334.8125, 365.25, 0.7761, 639.4743, 0.35502]];
+  const DELTA = 400;
+  const velZ = ([a, b, L, M, S], gday) => { const g = gday * (b - a) + DELTA; return g <= 0 ? -5 : (Math.pow(g / M, L) - 1) / (L * S); };
+  const velG = ([a, b, L, M, S], z) => { const base = 1 + L * S * z; return base <= 0 ? -DELTA / (b - a) : (M * Math.pow(base, 1 / L) - DELTA) / (b - a); };
+  // Between two weighings (ages in days): where the gain stands. Uses the age halfway, blending the two
+  // nearest monthly intervals. Not for the first week, when babies lose weight then get it back (by about 10–14 days).
+  function velocity(fromAge, toAge, gday) {
+    const mid = (fromAge + toAge) / 2;
+    if (mid < 8 || mid > 365) return null;
+    const mids = VEL.map(([a, b]) => (a + b) / 2);
+    let i = mids.findIndex((m) => m > mid) - 1;
+    if (i < 0) i = mid <= mids[0] ? 0 : VEL.length - 1;
+    const j = Math.min(VEL.length - 1, i + 1), w = j === i ? 0 : Math.max(0, Math.min(1, (mid - mids[i]) / (mids[j] - mids[i])));
+    const mix = (f, x) => (1 - w) * f(VEL[i], x) + w * f(VEL[j], x);
+    const z = mix(velZ, gday);
+    return { z, lo: mix(velG, -1.036), hi: mix(velG, 1.036), med: mix(velG, 0), lo5: mix(velG, -1.645), hi95: mix(velG, 1.645),
+      short: toAge - fromAge < 4 }; // over a few days the scale's precision weighs a lot
+  }
+  // Plain words for where the gain stands
+  const velWords = (z) => z < -1.645 ? "en dessous de l'habituel" : z < -1.036 ? "un peu en dessous de l'habituel"
+    : z <= 1.036 ? "dans la fourchette habituelle" : z <= 1.645 ? "un peu au-dessus de l'habituel" : "au-dessus de l'habituel";
+  const velLevel = (z) => Math.abs(z) <= 1.036 ? "ok" : Math.abs(z) <= 1.645 ? "near" : "out";
+
   // ---------- Shared table, cache and outbox ----------
   const cfg = self.T911 || {};
   const shared = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
@@ -112,7 +141,7 @@
   window.addEventListener("online", () => flush().then(load));
 
   window.Growth = {
-    lms, atZ, zScore, phi, pctText, CURVES, nf, DAY_MS, MIN_GAP, tsOf, weights, gainOf,
+    lms, atZ, zScore, phi, pctText, CURVES, nf, DAY_MS, MIN_GAP, tsOf, weights, gainOf, velocity, velWords, velLevel,
     rows, load, save, remove, flush, onChange: (fn) => listeners.push(fn), shared,
     get error() { return error; }, get waiting() { return outbox.length; }
   };
