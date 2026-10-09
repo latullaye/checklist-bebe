@@ -1,5 +1,5 @@
 // Growth measures, shared by the growth screen and the home page (needs who-boys.js and thomas.js).
-// - WHO 2006 percentiles (boys): LMS tables, z-scores, percentile labels.
+// - WHO 2006 percentiles (boys): LMS tables, z-scores, percentile labels; usual gain for the age; trends over a few days.
 // - The shared table "mesures", cached on the phone. Saves and deletions go through an outbox:
 //   they show right away, are sent as soon as possible, and wait there while offline.
 (function () {
@@ -80,6 +80,47 @@
     return { z, lo: mix(velG, -1.036), hi: mix(velG, 1.036), med: mix(velG, 0), lo5: mix(velG, -1.645), hi95: mix(velG, 1.645),
       short: toAge - fromAge < 4 }; // over a few days the scale's precision weighs a lot
   }
+  // ---------- Trend: average gain per 24 h over the last few days ----------
+  // Weighings come at any hour and any interval (every day at home, every few weeks at the CLSC). Over each period
+  // ending at the last weighing, the trend is the slope of the straight line closest to all its weighings (least squares,
+  // times to the minute): a weighing a bit high or low (feed, diaper) weighs less than in a plain difference of two.
+  const WINDOWS = [3, 5, 7, 10, 14, 30];
+  const TOL = 0.25; // never the same hour: up to 6 h more still counts as "N days ago"
+  function slope(pts) { // grams per day
+    const n = pts.length, tm = pts.reduce((a, p) => a + p.t, 0) / n, vm = pts.reduce((a, p) => a + p.v, 0) / n;
+    let num = 0, den = 0;
+    for (const p of pts) { const dt = (p.t - tm) / DAY_MS; num += dt * (p.v - vm) * 1000; den += dt * dt; }
+    return den ? num / den : null;
+  }
+  function trend(pts, days) {
+    const last = pts.at(-1); if (!last) return null;
+    const ago = (p) => (last.t - p.t) / DAY_MS;
+    const win = pts.filter((p) => ago(p) <= days + TOL);
+    // No weighing near the start of the period: take the one just before, unless it's much further back
+    if (ago(win[0]) < days - Math.max(TOL, days * 0.15)) {
+      const before = pts.filter((p) => ago(p) > days + TOL).at(-1);
+      if (before && ago(before) <= days * 1.5 + TOL) win.unshift(before);
+    }
+    const span = ago(win[0]);
+    if (win.length < 2 || span < Math.max(1, days / 3)) return null;
+    const g = slope(win), known = new Set(win.map((p) => p.row.lieu).filter(Boolean));
+    // nominal: the weighings do cover about that many days (else say the real span)
+    return { days, g, span, n: win.length, from: win[0], to: last, mixed: known.size > 1, vel: velocity(win[0].ageF, last.ageF, g),
+      nominal: Math.abs(span - days) <= Math.max(0.5, days * 0.15) };
+  }
+  // Every period, without repeating one that rests on the same weighings as the shorter one before it
+  function trends(pts) {
+    const out = [];
+    for (const d of WINDOWS) { const t = trend(pts, d); if (t && !(out.length && out.at(-1).from === t.from)) out.push(t); }
+    return out;
+  }
+  // The one to read first: a week, or the nearest period there is
+  const headline = (list) => list.find((t) => t.days === 7) || list.find((t) => t.days > 7) || list.at(-1) || null;
+
+  // ---------- Where it was taken (scales differ a little) ----------
+  const LIEUX = [["clsc", "CLSC", "au CLSC"], ["medecin", "Médecin", "chez le médecin"], ["maison", "Maison", "à la maison"]];
+  const lieuName = (l, phrase) => (LIEUX.find(([k]) => k === l) || [])[phrase ? 2 : 1] || "";
+
   // Plain words for where the gain stands
   const velWords = (z) => z < -1.645 ? "en dessous de l'habituel" : z < -1.036 ? "un peu en dessous de l'habituel"
     : z <= 1.036 ? "dans la fourchette habituelle" : z <= 1.645 ? "un peu au-dessus de l'habituel" : "au-dessus de l'habituel";
@@ -108,7 +149,7 @@
   }
   function load() {
     if (!shared) return Promise.resolve();
-    return flush().then(() => api("mesures?select=id,jour,pese_le,fuseau,poids_g,taille_cm,pc_cm,note&order=pese_le.asc,cree.asc"))
+    return flush().then(() => api("mesures?select=id,jour,pese_le,fuseau,lieu,poids_g,taille_cm,pc_cm,note&order=pese_le.asc,cree.asc"))
       .then((r) => r.json()).then((data) => { server = data; write(CACHE, server); emit(); })
       .catch(() => {});
   }
@@ -142,6 +183,7 @@
 
   window.Growth = {
     lms, atZ, zScore, phi, pctText, CURVES, nf, DAY_MS, MIN_GAP, tsOf, weights, gainOf, velocity, velWords, velLevel,
+    WINDOWS, trend, trends, headline, LIEUX, lieuName,
     rows, load, save, remove, flush, onChange: (fn) => listeners.push(fn), shared,
     get error() { return error; }, get waiting() { return outbox.length; }
   };
