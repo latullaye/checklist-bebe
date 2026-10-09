@@ -168,3 +168,24 @@ select cron.schedule('sante', '*/5 * * * *', $$
     timeout_milliseconds := 30000
   );
 $$);
+
+-- ---------- Photos and the assistant ----------
+-- Photos of the notes and appointments: object names (<uuid>.jpg) in a private bucket that opens with the family code
+-- (Storage passes the request headers to famille_ok() too). The phone sends them, and deletes them with their note.
+alter table sante_notes add column photos text[];
+alter table sante_rdv add column photos text[];
+insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+values ('sante-photos', 'sante-photos', false, 5242880, array['image/jpeg', 'image/png', 'image/webp']);
+create policy "famille lit les photos" on storage.objects for select to anon
+  using (bucket_id = 'sante-photos' and (select public.famille_ok()));
+create policy "famille ajoute des photos" on storage.objects for insert to anon
+  with check (bucket_id = 'sante-photos' and (select public.famille_ok()));
+create policy "famille supprime des photos" on storage.objects for delete to anon
+  using (bucket_id = 'sante-photos' and (select public.famille_ok()));
+-- What the assistant (function "assistant", Claude) was asked, without the content: when, who, which sheet, tokens, time.
+-- Server only. Its Anthropic key is the function's secret ANTHROPIC_API_KEY (Edge Functions > Secrets), never in the code.
+create table assistant_journal (
+  id bigint generated always as identity primary key, le timestamptz not null default now(),
+  par text, sorte text, modele text, entree integer, sortie integer, ms integer, refus boolean not null default false
+);
+alter table assistant_journal enable row level security;

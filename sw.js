@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v37";
+const VERSION = "thomas911-v38";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -18,6 +18,8 @@ const FILES = [
   "./famille.js",
   "./sante.js",
   "./markdown.js",
+  "./photos.js",
+  "./assistant.js",
   "./habits.js",
   "./thomas.js",
   "./sync.js",
@@ -68,8 +70,9 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      // "thomas911-famille" holds the family code for the reminders' quick actions (famille.js): it stays
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== FAMILLE).map((k) => caches.delete(k))))
+      // "thomas911-famille" holds the family code for the reminders' quick actions (famille.js), "thomas911-photos" the
+      // health photos kept on the phone (photos.js): they stay
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== FAMILLE && k !== "thomas911-photos").map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

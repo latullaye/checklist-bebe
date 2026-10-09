@@ -60,6 +60,18 @@
     return full[k];
   }
   const remove = (t, id) => queue({ t, del: id });
+  // A change the server took goes into its copy here at once: until the next load, the screens don't show the old version
+  function applied(op) {
+    const k = keyOf(op.t), list = server[op.t] || [];
+    if (op.del) server[op.t] = list.filter((r) => r[k] !== op.del);
+    else if (op.t === "agenda") { // sorted: it leaves the list; back to "not sorted": the next load brings it back
+      if (op.row.decision) server[op.t] = list.filter((r) => r.uid !== op.row.uid);
+    } else {
+      const { _pending, ...row } = op.row, i = list.findIndex((r) => r[k] === row[k]);
+      if (i >= 0) list[i] = { ...list[i], ...row }; else list.push(row);
+      server[op.t] = list;
+    }
+  }
   // Send the waiting changes in order. Offline: stop and keep them. Refused by the server: drop it and say so.
   let flushing = null;
   function flush() {
@@ -75,12 +87,14 @@
             const { _pending, ...row } = op.row;
             await api(`${path}?on_conflict=id`, { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify([row]) });
           }
+          applied(op);
         } catch (e) {
           if (!e.http) break; // no network (or no family code yet): try again later
           error = "Un changement n'a pas pu être enregistré (refusé par le serveur).";
         }
         outbox.shift(); write(OUTBOX, outbox);
       }
+      write(CACHE, server);
     })().finally(() => { flushing = null; emit(); });
     return flushing;
   }
@@ -234,7 +248,7 @@
   function posologie(m) {
     if (m.mode === "heures") return `à ${(m.heures || []).map(clock).join(", ").replace(/, ([^,]*)$/, " et $1")}`;
     if (m.mode === "besoin") return `au besoin${m.toutes_h ? `, au moins ${hours(m.toutes_h)} entre deux prises` : ""}${m.max_jour ? `, ${m.max_jour} fois par 24 h au plus` : ""}`;
-    return `toutes les ${hours(m.toutes_h || 24)}`;
+    return m.toutes_h === 1 ? "toutes les heures" : `toutes les ${hours(m.toutes_h || 24)}`;
   }
   const lastDayEnd = (m) => m.fin ? instant(addDays(m.fin, 1), "00:00", m.fuseau || HERE) : Infinity;
   // Taken until when: stopped, or past its last day

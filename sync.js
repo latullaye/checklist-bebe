@@ -10,7 +10,8 @@
     "thomas911-habitudes-attente": (v) => Object.keys(v || {}).length,  // habits
     "thomas911-reglages-attente": (v) => Object.keys(v || {}).length,   // shared settings
     "thomas911-outbox": (v) => (Array.isArray(v) ? v.length : 0),       // growth measures
-    "thomas911-sante-attente": (v) => (Array.isArray(v) ? v.length : 0) // health notes, appointments, medications
+    "thomas911-sante-attente": (v) => (Array.isArray(v) ? v.length : 0), // health notes, appointments, medications
+    "thomas911-photos-attente": (v) => (Array.isArray(v) ? v.length : 0) // their photos
   };
   let online = navigator.onLine !== false, lastOk = 0, el = null;
   const waiting = () => {

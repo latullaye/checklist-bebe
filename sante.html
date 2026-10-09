@@ -222,6 +222,40 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .field .mde textarea { border: 0; border-radius: 0; background: transparent; min-height: 66px; resize: none; }
 .mde-view { padding: 10px 12px; min-height: 66px; }
 .mde-empty { color: var(--muted); }
+/* Telling it: dictation, then the assistant fills the sheet (assistant.js) */
+.tell { border-radius: 14px; background: var(--accent-soft); padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 8px; }
+.tell-head { display: flex; align-items: baseline; gap: 8px; }
+.tell-head .lab { font-size: 0.72rem; font-weight: 800; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.tell-head span:last-child { font-size: 0.78rem; color: var(--muted); line-height: 1.3; }
+.tell textarea { font: inherit; width: 100%; min-height: 88px; resize: none; line-height: 1.4; padding: 10px 11px; border-radius: 11px; border: 1.5px solid transparent;
+  background: var(--surface); color: var(--ink); -webkit-user-select: text; user-select: text; }
+.tell textarea:focus { outline: none; border-color: var(--accent); }
+.tell-acts { display: flex; gap: 8px; }
+.tell-acts .btn { background: var(--surface); }
+.tell-acts .btn.primary { background: var(--accent); }
+.tell-acts .btn:disabled { opacity: .55; cursor: default; }
+.mic.on { background: var(--bad) !important; border-color: var(--bad); color: #fff; }
+.mic.on svg { animation: mic 1s ease-in-out infinite alternate; }
+@keyframes mic { from { transform: scale(.85); } to { transform: scale(1.1); } }
+.spin { width: 15px; height: 15px; border-radius: 50%; border: 2.5px solid currentColor; border-right-color: transparent; animation: spin .8s linear infinite; flex: none; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.tell-msg { margin: 0; font-size: 0.82rem; line-height: 1.35; color: var(--accent); font-weight: 700; }
+.tell-msg.err { color: var(--bad); font-weight: 400; }
+.tell-msg:empty { display: none; }
+.checks { margin: 0; padding: 8px 10px 8px 28px; border-radius: 10px; background: var(--warn-soft); color: var(--ink); font-size: 0.82rem; line-height: 1.35; }
+.checks li { margin: 2px 0; }
+.checks li::marker { color: var(--warn); }
+.filled { animation: filled 1.8s ease-out; }
+@keyframes filled { from { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 45%, transparent); } to { box-shadow: 0 0 0 3px transparent; } }
+/* Medications read by the assistant: each one opens after saving, to check against the prescription */
+.props { display: flex; flex-direction: column; gap: 6px; }
+.prop { font: inherit; text-align: left; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink); cursor: pointer; }
+.prop i { width: 20px; height: 20px; border-radius: 6px; border: 2px solid var(--line); flex: none; margin-top: 1px; display: inline-flex; align-items: center; justify-content: center; font-style: normal; font-size: 0.8rem; font-weight: 800; }
+.prop[aria-pressed="true"] { border-color: var(--accent); }
+.prop[aria-pressed="true"] i { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.prop b { display: block; font-size: 0.92rem; }
+.prop span { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+.from { font-size: 0.82rem; line-height: 1.35; margin: -4px 0 0; padding: 8px 10px; border-radius: 10px; background: var(--warn-soft); }
 /* Who wrote it */
 .by { display: inline-flex; align-items: center; gap: 4px; }
 .by i { width: 16px; height: 16px; border-radius: 50%; font-style: normal; font-size: 0.62rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
@@ -270,6 +304,12 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       <div class="field"><label for="nSince">Depuis le</label><input type="date" id="nSince"></div>
     </div>
     <div class="chips" id="nSinceQuick"></div>
+    <div class="tell">
+      <div class="tell-head"><span class="lab">Raconter</span><span>l'assistant remplit la note</span></div>
+      <textarea class="plain" id="nTell" rows="3" placeholder="Trois selles liquides depuis ce matin, 38,2 ce midi. Il boit bien, quatre couches mouillées. On a donné le Tempra à 13 h."></textarea>
+      <div class="tell-acts"><button type="button" class="btn mic" id="nMic"></button><button type="button" class="btn primary grow" id="nGo"></button></div>
+      <p class="tell-msg" id="nTellMsg"></p><ul class="checks" id="nChecks" hidden></ul>
+    </div>
     <div class="two">
       <div class="field"><label for="nDate">Le</label><input type="date" id="nDate"></div>
       <div class="field"><label for="nTime">À</label><input type="time" id="nTime"></div>
@@ -282,6 +322,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <p class="hint">Les nombres comptent depuis la note d'avant ; le résumé fait le total de la journée.</p>
     <div class="field"><label for="nObs">Ce que j'observe</label><textarea id="nObs" placeholder="Selles très liquides, boit bien, dort plus que d'habitude…"></textarea></div>
     <div class="field"><label for="nFait">Ce qu'on fait</label><textarea id="nFait" placeholder="Solution de réhydratation, biberons plus petits et plus souvent…"></textarea></div>
+    <div class="field"><span class="lab">Photos</span><div id="nPhotos"></div></div>
     <p class="err" id="nErr"></p>
     <div class="actions"><button type="button" class="del" id="nDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
   </form>
@@ -319,6 +360,15 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="field"><label for="rMotif">Pourquoi</label><input id="rMotif" autocomplete="off" placeholder="Diarrhée depuis 3 jours, vaccins des 4 mois…"></div>
     <div class="field" id="rForWrap"><span class="lab">Pour les problèmes</span><div class="chips" id="rFor"></div></div>
     <div class="sep">Après le rendez-vous</div>
+    <div class="field"><span class="lab">Photos (ordonnance, consignes…)</span><div id="rPhotos"></div></div>
+    <div class="tell">
+      <div class="tell-head"><span class="lab">Raconter</span><span>le rendez-vous en quelques phrases ; l'assistant lit aussi l'ordonnance en photo</span></div>
+      <textarea class="plain" id="rTell" rows="3" placeholder="Elle l'a examiné, pas déshydraté, 5,9 kg. C'est une gastro. Continuer le lait, solution de réhydratation après chaque selle, revenir si fièvre plus de 48 h."></textarea>
+      <div class="tell-acts"><button type="button" class="btn mic" id="rMic"></button><button type="button" class="btn primary grow" id="rGo"></button></div>
+      <p class="tell-msg" id="rTellMsg"></p><ul class="checks" id="rChecks" hidden></ul>
+    </div>
+    <div class="field" id="rMedsWrap" hidden><span class="lab">Médicaments trouvés</span><div class="props" id="rMeds"></div>
+      <p class="hint" style="margin-top:8px">Ceux cochés s'ouvrent un par un après « Enregistrer », pour vérifier chaque champ avec l'ordonnance.</p></div>
     <div class="field"><label for="rCR">Ce qui a été dit et fait</label><textarea id="rCR" placeholder="Examen, conseils, ordonnance…"></textarea></div>
     <div class="field"><label for="rDx">Diagnostic</label><input id="rDx" autocomplete="off" placeholder="Gastro-entérite"></div>
     <div class="field"><label for="rSuivi">Et ensuite</label><textarea id="rSuivi" placeholder="- [ ] Revoir si fièvre plus de 48 h&#10;- [ ] Rendez-vous dans 1 semaine"></textarea></div>
@@ -332,6 +382,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <dialog id="medDlg">
   <form class="sheet" id="medForm" method="dialog">
     <h2 id="mTitle">Médicament</h2>
+    <p class="from" id="mFrom" hidden></p>
     <div class="field"><label for="mNom">Nom</label><input id="mNom" autocomplete="off" list="mNoms" placeholder="Paracétamol (Tempra), solution de réhydratation…"><datalist id="mNoms"></datalist></div>
     <div class="field"><label for="mDose">Dose</label><input id="mDose" autocomplete="off" placeholder="2,5 mL, 1 suppositoire de 80 mg…"></div>
     <div class="field"><span class="lab">Quand</span><div class="seg" id="mMode" role="radiogroup">
@@ -382,6 +433,8 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <script src="thomas.js"></script>
 <script src="sante.js"></script>
 <script src="markdown.js"></script>
+<script src="photos.js"></script>
+<script src="assistant.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const S = Sante;
@@ -397,7 +450,9 @@ const IC = {
   heart: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/>'),
   stop: svg('<path d="M5 12h14"/>'), check: svg('<path d="M5 12l5 5L20 7"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
-  share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>')
+  share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
+  mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
+  spark: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7Z"/>')
 };
 const H = S.H, DAY = S.DAY;
 // Time of a record on the clock where it happened, and "(heure de France)" when that's not here
@@ -610,13 +665,16 @@ function head(title) {
 const by = (p) => (p ? `<span class="by"><i class="${p === "Edith" ? "e" : ""}">${esc(p[0])}</i>${esc(p)}</span>` : "");
 // A note in Markdown; its to-dos can be ticked right here (data-t / data-id / data-f: where the text lives)
 const md = (text, t, id, f, cls = "") => `<div class="md${cls ? ` ${cls}` : ""}" data-t="${t}" data-id="${id}" data-f="${f}">${Markdown.html(text)}</div>`;
+// Photos of a note or an appointment: small, full screen on a tap (photos.js)
+const photoRow = (names) => (names && names.length ? `<div class="ph-row" data-photos="${esc(names.join(","))}">${names.map((n, i) =>
+  `<span class="ph-mini"><img data-photo="${esc(n)}" data-i="${i}" alt="Photo ${i + 1}"></span>`).join("")}</div>` : "");
 function dayBlock(d) {
   const tags = [...d.sym].map(([k, c]) => `<span class="tag">${esc(S.symText(k, c))}</span>`);
   if (d.tmax != null) tags.push(`<span class="tag${d.tmax >= 38 ? " hot" : ""}">${S.nf(d.tmax, 1)} °C${d.notes.filter((n) => n.temperature != null).length > 1 ? " au plus" : ""}</span>`);
   if (d.couches != null) tags.push(`<span class="tag">${d.couches} couche${d.couches > 1 ? "s" : ""} mouillée${d.couches > 1 ? "s" : ""}</span>`);
   const notes = d.notes.map((n) => `<div class="note" role="button" tabindex="0" data-edit-note="${n.id}"><span class="when">${S.fmtTime(n.le, n.fuseau)}${n.par ? ` · ${by(n.par)}` : ""}${n._pending ? " · en attente d'envoi" : ""}</span>
       ${n.observe ? md(n.observe, "notes", n.id, "observe") : ""}${n.fait ? `<div class="did"><span class="lab">Ce qu'on fait</span>${md(n.fait, "notes", n.id, "fait")}</div>` : ""}
-      ${!n.observe && !n.fait ? `<span class="muted">${(n.symptomes || []).map(({ k, n: c }) => esc(S.symText(k, c))).join(", ") || "Note"}</span>` : ""}</div>`).join("");
+      ${!n.observe && !n.fait ? `<span class="muted">${(n.symptomes || []).map(({ k, n: c }) => esc(S.symText(k, c))).join(", ") || (n.photos && n.photos.length ? "Photo" : "Note")}</span>` : ""}${photoRow(n.photos)}</div>`).join("");
   const given = d.given.map(({ med, at }) => `<a class="given" href="#m/${med.id}">${IC.pill}<span><b>${esc(med.nom)}</b> ×${at.length} : ${at.map((x) => S.fmtTime(x.le, x.fuseau)).join(", ")}</span></a>`).join("");
   const rdvs = d.rdvs.map((r) => `<a class="given" href="#r/${r.id}">${IC.cal}<span>Rendez-vous ${S.rdvWord(r)} à ${S.fmtTime(r.le, r.fuseau)}${r.diagnostic ? ` : <b>${esc(r.diagnostic)}</b>` : ""}</span></a>`).join("");
   const empty = !d.notes.length && !d.given.length && !d.rdvs.length;
@@ -651,7 +709,7 @@ function viewProblem(p) {
 function viewRdv(r) {
   const t = Date.parse(r.le), future = t > Date.now(), day = S.dayOf(t, r.fuseau);
   const probs = (r.problemes || []).map((id) => S.byId("problemes", id)).filter(Boolean), meds = S.meds().filter((m) => m.rdv === r.id);
-  const done = r.compte_rendu || r.diagnostic || r.suivi;
+  const done = r.compte_rendu || r.diagnostic || r.suivi || (r.photos && r.photos.length);
   return head(S.rdvTitle(r)) + `
   <section class="card hero"><span class="state${r.annule ? " warn" : future ? " on" : ""}">${r.annule ? "Annulé" : future ? "À venir" : "Passé"}</span>
     <h2>${esc(S.rdvTitle(r))}</h2>
@@ -664,7 +722,7 @@ function viewRdv(r) {
         : future ? `<a class="btn" href="${S.agendaLink(r)}" target="_blank" rel="noopener">${IC.cal}Ajouter à l'agenda</a>` : ""}</div>
   </section>
   <section class="card"><div class="label">Compte rendu</div>
-    ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${md(r.compte_rendu, "rdv", r.id, "compte_rendu")}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd class="md"><p><strong>${esc(r.diagnostic)}</strong></p></dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${md(r.suivi, "rdv", r.id, "suivi")}</dd>` : ""}</dl>`
+    ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${md(r.compte_rendu, "rdv", r.id, "compte_rendu")}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd class="md"><p><strong>${esc(r.diagnostic)}</strong></p></dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${md(r.suivi, "rdv", r.id, "suivi")}</dd>` : ""}${r.photos && r.photos.length ? `<dt>Photos</dt><dd>${photoRow(r.photos)}</dd>` : ""}</dl>`
       : `<p class="prose muted">${future ? "À remplir après le rendez-vous : ce qui a été dit, le diagnostic, la suite." : "Rien de noté. Ce qui a été dit, le diagnostic, la suite ?"}</p>`}
     <button class="addline" type="button" data-edit-r>${IC.note}${done ? "Compléter" : "Écrire le compte rendu"}</button></section>
   <section class="card"><div class="label">Médicaments prescrits</div>
@@ -736,7 +794,8 @@ function renderDetail() {
   on("[data-edit-r]", () => openRdv(rec()));
   on("[data-edit-m]", () => openMed(rec()));
   on("[data-stop-m]", () => { const m = rec(); if (confirm(`Arrêter ${m.nom} maintenant ? Les rappels s'arrêtent aussi.`)) S.save("medicaments", { ...strip(m), arrete: new Date().toISOString() }); });
-  on("[data-edit-note]", (e) => { if (!e.target.closest("input, a")) openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }); });
+  on("[data-edit-note]", (e) => { if (!e.target.closest("input, a, .ph-row")) openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }); });
+  Photos.hydrate($("detail"));
   on("[data-note-day]", (e) => openNote({ probleme: view.id, day: e.currentTarget.dataset.noteDay }));
   on("[data-edit-dose]", (e) => { const d = S.byId("prises", e.currentTarget.dataset.editDose); openDose(rec(), d); });
   const copy = $("copy"), share = $("share");
@@ -752,6 +811,8 @@ const strip = (r) => { const { _pending, ...rest } = r; return rest; };
 let lastResume = "";
 // A to-do ticked in a note: saved right away
 $("detail").addEventListener("click", (e) => {
+  const ph = e.target.closest(".ph-row img[data-i]");
+  if (ph) { buzz(); Photos.show(ph.closest(".ph-row").dataset.photos.split(","), Number(ph.dataset.i)); return; }
   const cb = e.target.closest("input[data-task]"); if (!cb) return;
   const box = cb.closest("[data-t]"), rec = box && S.byId(box.dataset.t, box.dataset.id); if (!rec) return;
   buzz();
@@ -768,8 +829,53 @@ setInterval(() => { if (document.visibilityState === "visible" && !document.quer
 
 // ---------- Sheets ----------
 document.querySelectorAll("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
-document.querySelectorAll("dialog textarea").forEach((ta) => Markdown.editor(ta));
+document.querySelectorAll("dialog textarea:not(.plain)").forEach((ta) => Markdown.editor(ta));
 const show = (dlg) => { dlg.showModal(); Markdown.reset(dlg); };
+const flash = (...els) => els.forEach((el) => { const box = el.closest(".mde") || el; box.classList.remove("filled"); void box.offsetWidth; box.classList.add("filled"); });
+
+// "Raconter": dictate (or type) a few sentences, then the assistant fills the sheet (assistant.js). The parents check, then save.
+//   p: the ids' prefix ("n" for the note, "r" for the appointment); collect(): what to send; apply(answer): fill the sheet
+function tellBox(p, { sorte, label, collect, apply, hasInput = () => false }) {
+  const ta = $(`${p}Tell`), mic = $(`${p}Mic`), goBtn = $(`${p}Go`), msg = $(`${p}TellMsg`), checks = $(`${p}Checks`);
+  let run = 0; // a new sheet, or a new request: an older answer is dropped
+  const say = (text, err = false) => { msg.textContent = text; msg.classList.toggle("err", err); };
+  const idle = () => { goBtn.disabled = false; goBtn.innerHTML = `${IC.spark}${label}`; };
+  const micIdle = () => { mic.classList.remove("on"); mic.innerHTML = `${IC.mic}Dicter`; mic.setAttribute("aria-pressed", "false"); };
+  if (!Assistant.canDictate) { mic.hidden = true; ta.placeholder += " Le micro du clavier marche aussi."; }
+  ta.addEventListener("input", () => Markdown.fit(ta));
+  mic.addEventListener("click", () => {
+    buzz();
+    Assistant.dictate(ta, (state) => {
+      if (state === "ecoute") { mic.classList.add("on"); mic.innerHTML = `${IC.mic}Arrêter`; mic.setAttribute("aria-pressed", "true"); say(""); return; }
+      micIdle();
+      if (state === "refus") say("Le micro est refusé pour l'app : touche le micro du clavier pour dicter.", true);
+      if (state === "reseau") say("La dictée a besoin d'internet : le micro du clavier peut marcher sans.", true);
+      if (state === "erreur") say("La dictée s'est arrêtée : touche « Dicter » pour reprendre.", true);
+      if (state === "clavier") say("Touche le micro du clavier pour dicter.");
+    });
+  });
+  goBtn.addEventListener("click", async () => {
+    Assistant.stopDictation(); buzz();
+    if (!ta.value.trim() && !hasInput()) { say("Dis ou écris d'abord ce qui se passe.", true); ta.focus(); return; }
+    const mine = ++run;
+    goBtn.disabled = true; goBtn.innerHTML = `<span class="spin" aria-hidden="true"></span>Mise en forme…`; say(""); checks.hidden = true;
+    try {
+      const answer = await Assistant.ask(sorte, await collect(ta.value.trim()));
+      if (mine !== run) return;
+      apply(answer);
+      say("Rempli par l'assistant : relis avant d'enregistrer.");
+      checks.innerHTML = (answer.a_verifier || []).map((c) => `<li>${esc(c)}</li>`).join("");
+      checks.hidden = !(answer.a_verifier || []).length;
+    } catch (e) {
+      if (mine === run) say(e.message || "L'assistant ne répond pas pour le moment.", true);
+    } finally {
+      if (mine === run) idle();
+    }
+  });
+  return { reset() { run++; Assistant.stopDictation(); ta.value = ""; Markdown.fit(ta); say(""); checks.hidden = true; idle(); micIdle(); } };
+}
+const nowText = () => `${S.fmtDay(S.today(), { weekday: "long", month: "long", year: "numeric" })} (${S.today()}), ${S.fmtTime(Date.now())} (heure de ${CITY[S.HERE] || S.HERE.split("/").pop().replace(/_/g, " ")})`;
+const ageText = () => (window.Thomas ? Thomas.age().text.monthsWeeks : "");
 const pressGroup = (el, value, attr = "aria-checked") => el.querySelectorAll("button").forEach((b) => b.setAttribute(attr, b.dataset.v === String(value)));
 const nowParts = () => S.partsIn(Date.now());
 const num = (s) => { const n = Number(String(s || "").replace(",", ".").trim()); return String(s || "").trim() && isFinite(n) ? n : null; };
@@ -792,9 +898,39 @@ function openNote({ probleme = null, note: existing = null, day = null }) {
   $("nTemp").value = existing && existing.temperature != null ? String(existing.temperature).replace(".", ",") : "";
   $("nObs").value = existing ? existing.observe || "" : ""; $("nFait").value = existing ? existing.fait || "" : "";
   $("nDel").hidden = !existing; $("nErr").textContent = "";
+  notePhotos.set(existing ? existing.photos : []); noteTell.reset(); note.saved = false;
   renderSyms(); renderCouches();
   show($("noteDlg"));
 }
+const notePhotos = Photos.field($("nPhotos"));
+$("noteDlg").addEventListener("close", () => { Assistant.stopDictation(); if (note && !note.saved) notePhotos.cancel(); });
+const noteTell = tellBox("n", {
+  sorte: "note", label: "Remplir la note",
+  collect: (texte) => {
+    const p = !note.isNew && S.byId("problemes", note.probleme);
+    return {
+      texte, maintenant: nowText(), age: ageText(), nouveau: note.isNew,
+      probleme: p ? { nom: S.nameOf(p), depuis: `le ${S.fmtDay(p.debut, { weekday: "long", month: "long" })} (${p.debut})` } : null,
+      catalogue: S.SYMPTOMES.map(([k, l, u]) => [k, l, u || null]), autres: S.customWords(),
+      actuel: { symptomes: [...note.sym].map(([k, n]) => ({ k, n })), temperature: num($("nTemp").value), couches: note.couches,
+        observe: $("nObs").value.trim(), fait: $("nFait").value.trim() }
+    };
+  },
+  apply: (a) => {
+    // The assistant gives back the whole note (what was there, plus what was told); a count it didn't hear stays
+    const sym = new Map();
+    (a.symptomes || []).forEach(({ k, n }) => sym.set(k, n != null ? n : note.sym.has(k) ? note.sym.get(k) : null));
+    note.sym = sym;
+    if (a.temperature != null) $("nTemp").value = String(a.temperature).replace(".", ",");
+    if (a.couches != null) note.couches = a.couches;
+    if (a.observe || !$("nObs").value.trim()) $("nObs").value = a.observe || "";
+    if (a.fait || !$("nFait").value.trim()) $("nFait").value = a.fait || "";
+    if (note.isNew && a.probleme_nom) note.aiName = a.probleme_nom;
+    if (note.isNew && a.depuis && a.depuis <= S.today()) { $("nSince").value = a.depuis; pressGroup($("nSinceQuick"), a.depuis, "aria-pressed"); }
+    renderSyms(); renderCouches(); Markdown.fit($("nObs")); Markdown.fit($("nFait"));
+    flash($("nSyms"), $("nTemp"), $("nObs"), $("nFait"));
+  }
+});
 function setFor(v) {
   note.probleme = v === "new" ? null : v; note.isNew = v === "new";
   pressGroup($("nFor"), v);
@@ -814,8 +950,8 @@ function renderSyms() {
     + `<button type="button" class="chip ghost" data-k="+">+ Autre…</button>`;
   $("nCounts").innerHTML = [...note.sym].filter(([k]) => S.SYM[k] && S.SYM[k].unit).map(([k, n]) =>
     `<div class="count"><b>${S.SYM[k].label}</b><span class="step"><button type="button" data-c="${k}" data-d="-1" aria-label="Un de moins">−</button><output>${n == null ? "—" : n}</output><button type="button" data-c="${k}" data-d="1" aria-label="Un de plus">+</button></span><small>${S.SYM[k].unit}</small></div>`).join("");
-  // A new problem takes the name of the first symptom, until it's typed
-  if (note.isNew && !note.nameTouched) $("nName").value = note.sym.size ? S.symLabel([...note.sym.keys()][0]) : "";
+  // A new problem takes the name the assistant gave, or of the first symptom, until it's typed
+  if (note.isNew && !note.nameTouched) $("nName").value = note.aiName || (note.sym.size ? S.symLabel([...note.sym.keys()][0]) : "");
 }
 $("nSyms").addEventListener("click", (e) => {
   const b = e.target.closest("button"); if (!b) return; buzz();
@@ -836,14 +972,21 @@ $("nTemp").addEventListener("input", () => { // 38 °C and more: fever
   const t = num($("nTemp").value);
   if (t != null && t >= 38 && !note.sym.has("fievre")) { note.sym.set("fievre", null); renderSyms(); }
 });
-$("nDel").addEventListener("click", () => { if (confirm("Supprimer cette note ?")) { S.remove("notes", note.id); $("noteDlg").close(); } });
+$("nDel").addEventListener("click", () => {
+  if (!confirm("Supprimer cette note ?")) return;
+  const old = S.byId("notes", note.id); if (old) Photos.remove(old.photos);
+  notePhotos.cancel(); notePhotos.clear(); note.saved = true;
+  S.remove("notes", note.id); $("noteDlg").close();
+});
 $("noteForm").addEventListener("submit", (e) => {
   e.preventDefault();
   const bad = (m) => { $("nErr").textContent = m; };
   const temp = num($("nTemp").value);
   if ($("nTemp").value.trim() && (temp == null || temp < 34 || temp > 43)) return bad("Température à vérifier : entre 34 et 43 °C.");
-  const obs = $("nObs").value.trim(), fait = $("nFait").value.trim();
-  if (!note.sym.size && temp == null && note.couches == null && !obs && !fait) return bad("Note au moins un symptôme ou quelques mots.");
+  const obs = $("nObs").value.trim(), fait = $("nFait").value.trim(), photos = notePhotos.get();
+  if (!note.sym.size && temp == null && note.couches == null && !obs && !fait && !photos.length) {
+    return bad($("nTell").value.trim() ? "Touche « Remplir la note », ou remplis les champs." : "Note au moins un symptôme ou quelques mots.");
+  }
   if (!$("nDate").value || !/^\d\d:\d\d/.test($("nTime").value)) return bad("Indique le jour et l'heure.");
   const le = S.instant($("nDate").value, $("nTime").value.slice(0, 5), S.HERE);
   if (le > Date.now() + 10 * 6e4) return bad("C'est dans le futur : vérifie le jour et l'heure.");
@@ -858,7 +1001,9 @@ $("noteForm").addEventListener("submit", (e) => {
     if (p && $("nDate").value < p.debut) S.save("problemes", { ...strip(p), debut: $("nDate").value }); // seen earlier than we thought
   }
   S.save("notes", { ...(note.id ? { id: note.id } : {}), probleme: pid, le: new Date(le).toISOString(), jour: S.dayOf(le), fuseau: S.HERE,
-    symptomes: [...note.sym].map(([k, n]) => (n == null ? { k } : { k, n })), temperature: temp, couches: note.couches, observe: obs || null, fait: fait || null });
+    symptomes: [...note.sym].map(([k, n]) => (n == null ? { k } : { k, n })), temperature: temp, couches: note.couches, observe: obs || null, fait: fait || null,
+    photos: photos.length ? photos : null });
+  notePhotos.save(); note.saved = true;
   $("noteDlg").close();
   if (note.isNew) go(`#p/${pid}`);
   else toast("Noté.");
@@ -883,6 +1028,7 @@ $("probForm").addEventListener("submit", (e) => {
 });
 $("pDel").addEventListener("click", () => {
   if (!confirm("Supprimer ce problème et toutes ses notes ? Les rendez-vous et médicaments restent.")) return;
+  Photos.remove(S.notesOf(probEdit.id).flatMap((n) => n.photos || []));
   S.remove("problemes", probEdit.id); $("probDlg").close(); back();
 });
 
@@ -902,8 +1048,48 @@ function openRdv(r, preset = {}) {
   $("rForWrap").hidden = !recent.length;
   $("rCR").value = base.compte_rendu || ""; $("rDx").value = base.diagnostic || ""; $("rSuivi").value = base.suivi || "";
   $("rCancel").checked = !!(r && r.annule); $("rCancelWrap").hidden = !r; $("rDel").hidden = !r; $("rErr").textContent = "";
+  rdvPhotos.set(r ? r.photos : []); rdvTell.reset(); rdvSaved = false; found = []; renderFound();
   show($("rdvDlg"));
 }
+let rdvSaved = false, found = []; // found: the medications the assistant read, { med, on }
+const rdvPhotos = Photos.field($("rPhotos"));
+$("rdvDlg").addEventListener("close", () => { Assistant.stopDictation(); if (!rdvSaved) rdvPhotos.cancel(); });
+const rdvTell = tellBox("r", {
+  sorte: "rdv", label: "Mettre en forme", hasInput: () => rdvPhotos.get().length > 0,
+  collect: async (texte) => {
+    const type = $("rType").querySelector('[aria-checked="true"]'), id = rdvEdit && rdvEdit.id;
+    return {
+      texte, maintenant: nowText(), age: ageText(),
+      rdv: { quand: $("rDate").value ? `${S.fmtDay($("rDate").value, { weekday: "long", month: "long", year: "numeric" })}${$("rTime").value ? ` à ${$("rTime").value.slice(0, 5).replace(":", " h ")}` : ""}` : "",
+        type: type ? S.rdvType(type.dataset.v) : "", lieu: $("rLieu").value.trim(), pro: $("rPro").value.trim(), motif: $("rMotif").value.trim() },
+      problemes: [...$("rFor").querySelectorAll('[aria-pressed="true"]')].map((b) => b.textContent),
+      medicaments: S.meds().filter((m) => S.isActive(m) || (id && m.rdv === id)).map((m) => [m.nom, m.dose].filter(Boolean).join(", ")),
+      actuel: { compte_rendu: $("rCR").value.trim(), diagnostic: $("rDx").value.trim(), suivi: $("rSuivi").value.trim(), pro: $("rPro").value.trim(), lieu: $("rLieu").value.trim() },
+      photos: await Promise.all(rdvPhotos.get().slice(0, 4).map((n) => Photos.base64(n)))
+    };
+  },
+  apply: (a) => {
+    if (a.compte_rendu || !$("rCR").value.trim()) $("rCR").value = a.compte_rendu || "";
+    if (a.diagnostic) $("rDx").value = a.diagnostic;
+    if (a.suivi || !$("rSuivi").value.trim()) $("rSuivi").value = a.suivi || "";
+    if (a.pro && !$("rPro").value.trim()) $("rPro").value = a.pro;
+    if (a.lieu && !$("rLieu").value.trim()) $("rLieu").value = a.lieu;
+    // Already noted for this appointment: shown, not ticked
+    const known = new Set(S.meds().filter((m) => rdvEdit && m.rdv === rdvEdit.id).map((m) => m.nom.toLowerCase()));
+    found = (a.medicaments || []).map((med) => ({ med, known: known.has(med.nom.toLowerCase()), on: !known.has(med.nom.toLowerCase()) }));
+    renderFound(); Markdown.fit($("rCR")); Markdown.fit($("rSuivi"));
+    flash($("rCR"), $("rDx"), $("rSuivi"));
+    if (found.length) flash($("rMeds"));
+  }
+});
+// "4 mL · toutes les 8 h · 10 jours"
+const foundText = (m) => [m.dose || "dose à préciser", m.mode === "intervalle" && !m.toutes_h ? "rythme à préciser" : S.posologie(m),
+  m.jours ? `${m.jours} jour${m.jours > 1 ? "s" : ""}` : ""].filter(Boolean).join(" · ");
+function renderFound() {
+  $("rMedsWrap").hidden = !found.length;
+  $("rMeds").innerHTML = found.map(({ med, on, known }, i) => `<button type="button" class="prop" data-i="${i}" aria-pressed="${on}"><i>${on ? "✓" : ""}</i><span style="margin:0"><b>${esc(med.nom)}</b><span>${esc(foundText(med))}${known ? " · déjà noté pour ce rendez-vous" : ""}</span></span></button>`).join("");
+}
+$("rMeds").addEventListener("click", (e) => { const b = e.target.closest(".prop"); if (!b) return; buzz(); const f = found[Number(b.dataset.i)]; f.on = !f.on; renderFound(); });
 $("rType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("rType"), b.dataset.v); } });
 $("rFor").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); } });
 $("rdvForm").addEventListener("submit", (e) => {
@@ -915,7 +1101,8 @@ $("rdvForm").addEventListener("submit", (e) => {
   const dx = $("rDx").value.trim() || null;
   const id = S.save("rdv", { ...(rdvEdit ? strip(rdvEdit) : {}), le: new Date(le).toISOString(), fuseau: tz, type, lieu: $("rLieu").value.trim() || null,
     pro: $("rPro").value.trim() || null, motif: $("rMotif").value.trim() || null, problemes, compte_rendu: $("rCR").value.trim() || null, diagnostic: dx,
-    suivi: $("rSuivi").value.trim() || null, annule: $("rCancel").checked });
+    suivi: $("rSuivi").value.trim() || null, annule: $("rCancel").checked, photos: rdvPhotos.get().length ? rdvPhotos.get() : null });
+  rdvPhotos.save(); rdvSaved = true;
   // The diagnosis names the problems it is about
   if (dx) problemes.forEach((pid) => {
     const p = S.byId("problemes", pid);
@@ -923,18 +1110,29 @@ $("rdvForm").addEventListener("submit", (e) => {
   });
   $("rdvDlg").close();
   if (!rdvEdit) go(`#r/${id}`);
+  // The medications the assistant read: one sheet each, to check against the prescription
+  const todo = found.filter((f) => f.on);
+  medQueue = todo.map(({ med }, i) => ({ preset: { ...med, rdv: id, probleme: problemes[0] || null }, step: todo.length > 1 ? `${i + 1} sur ${todo.length}` : "à vérifier" }));
+  nextMed();
 });
 $("rDel").addEventListener("click", () => {
   if (!confirm("Supprimer ce rendez-vous ? (Les médicaments prescrits restent.)")) return;
+  Photos.remove(rdvEdit.photos); rdvPhotos.cancel(); rdvPhotos.clear(); rdvSaved = true;
   if (rdvEdit.agenda_uid) S.save("agenda", { uid: rdvEdit.agenda_uid, decision: "ignore" });
   S.remove("rdv", rdvEdit.id); $("rdvDlg").close(); back();
 });
 
 // A medication
 let medEdit = null, mode = "intervalle", len = "ouvert";
-function openMed(m, preset = {}) {
-  medEdit = m; const base = m || preset;
-  $("mTitle").textContent = m ? "Modifier le médicament" : "Nouveau médicament";
+// From an appointment's report: the medications the assistant read, one sheet after the other
+let medQueue = [], medFrom = null;
+function nextMed() { const n = medQueue.shift(); if (n) setTimeout(() => openMed(null, n.preset, n.step), 300); }
+$("medDlg").addEventListener("close", () => { if (medFrom) { medFrom = null; nextMed(); } });
+function openMed(m, preset = {}, from = null) {
+  medEdit = m; medFrom = from; const base = m || preset;
+  $("mTitle").textContent = m ? "Modifier le médicament" : from ? `Médicament ${from}` : "Nouveau médicament";
+  $("mFrom").hidden = !from;
+  $("mFrom").textContent = from ? "Lu par l'assistant dans le compte rendu : vérifie le nom, la dose et le rythme avec l'ordonnance, puis le début." : "";
   $("mNoms").innerHTML = [...new Set(S.meds().map((x) => x.nom))].map((n) => `<option value="${esc(n)}">`).join("");
   $("mNom").value = base.nom || ""; $("mDose").value = base.dose || "";
   mode = base.mode || "intervalle"; setMode(mode);
@@ -943,7 +1141,7 @@ function openMed(m, preset = {}) {
   renderTimes(base.heures && base.heures.length ? base.heures : ["08:00", "20:00"]);
   const at = m ? S.partsIn(Date.parse(m.debut), m.fuseau) : nowParts();
   $("mDate").value = at.day; $("mTime").value = at.time;
-  len = base.fin ? "date" : "ouvert"; $("mFin").value = base.fin || ""; $("mDays").value = "";
+  len = base.fin ? "date" : base.jours ? "jours" : "ouvert"; $("mFin").value = base.fin || ""; $("mDays").value = base.jours || "";
   setLen(len);
   const probs = S.problems().filter((p) => S.isOpen(p) || p.id === base.probleme);
   $("mFor").innerHTML = probs.map((p) => `<button type="button" class="chip" role="radio" data-v="${p.id}">${esc(S.nameOf(p))}</button>`).join("") + `<button type="button" class="chip" role="radio" data-v="">Aucun</button>`;
@@ -995,8 +1193,9 @@ $("medForm").addEventListener("submit", (e) => {
     toutes_h: mode === "intervalle" ? every : mode === "besoin" ? gap : null, heures: mode === "heures" ? heures : null, max_jour: mode === "besoin" ? max : null,
     debut: new Date(debut).toISOString(), fuseau: tz, fin, probleme: pick($("mFor")), rdv: pick($("mRdv")),
     consignes: $("mConsignes").value.trim() || null, rappels: mode === "besoin" ? false : $("mRemind").checked });
+  const queued = !!medFrom;
   $("medDlg").close();
-  if (!medEdit) go(`#m/${id}`);
+  if (!medEdit && !queued) go(`#m/${id}`);
 });
 $("mDel").addEventListener("click", () => {
   if (!confirm("Supprimer ce médicament et toutes ses prises notées ?")) return;

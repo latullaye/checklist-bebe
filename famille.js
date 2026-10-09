@@ -23,12 +23,12 @@
       { headers: { "Content-Type": "application/json" } }))).catch(() => {});
   }
 
-  // Every call to the database tables carries the code; none goes out without it
+  // Every call to the database (tables, photos, assistant) carries the code; none goes out without it
   const rest = `${cfg.SUPABASE_URL}/rest/v1/`;
   const realFetch = window.fetch.bind(window);
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
-    if (!url || !url.startsWith(rest)) return realFetch(input, init);
+    if (!url || !url.startsWith(`${cfg.SUPABASE_URL}/`)) return realFetch(input, init);
     if (!code()) return Promise.reject(new TypeError("Code de la famille manquant"));
     const headers = new Headers((init && init.headers) || (typeof input !== "string" && input.headers) || {});
     headers.set("x-famille", code());
