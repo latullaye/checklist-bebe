@@ -92,12 +92,12 @@ language sql stable security definer set search_path = public, extensions as $$
     false)
 $$;
 grant execute on function public.famille_ok() to anon, authenticated;
--- The first tables (open until the app sent the code) get the same lock:
-drop policy "app" on habitudes;   create policy famille on habitudes for all to anon using ((select famille_ok())) with check ((select famille_ok()));
-drop policy "app" on abonnements; create policy famille on abonnements for all to anon using ((select famille_ok())) with check ((select famille_ok()));
-drop policy "app" on checklist;   create policy famille on checklist for all to anon using ((select famille_ok())) with check ((select famille_ok()));
-drop policy "app" on reglages;    create policy famille on reglages for all to anon using ((select famille_ok())) with check ((select famille_ok()));
-drop policy "app" on mesures;     create policy famille on mesures for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+-- The first tables (open until the app sent the code) get the same lock, on their policy "app" (applied after PR #29):
+alter policy "app" on habitudes using ((select famille_ok())) with check ((select famille_ok()));
+alter policy "app" on abonnements using ((select famille_ok())) with check ((select famille_ok()));
+alter policy "app" on checklist using ((select famille_ok())) with check ((select famille_ok()));
+alter policy "app" on reglages using ((select famille_ok())) with check ((select famille_ok()));
+alter policy "app" on mesures using ((select famille_ok())) with check ((select famille_ok()));
 
 -- ---------- Health ----------
 -- Problems: start as a symptom ("Diarrhée"), get a diagnosis later ("Gastro-entérite").
