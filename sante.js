@@ -3,6 +3,7 @@
 // - Notes, day by day: symptoms (with counts since the note before), temperature, wet diapers, what is seen, what is done.
 // - Medical appointments, past or to come, linked to problems; events found in the Family calendar (table agenda).
 // - Medications as prescribed, and each dose given.
+// - The address book of health professionals and places, to pick for an appointment.
 // Shared between both phones (tables sante_*). The phone keeps a copy; changes go through one ordered outbox, so a note
 // written offline right after its new problem reaches the server after it.
 (function () {
@@ -14,6 +15,7 @@
     rdv: { path: "sante_rdv", order: "le.asc" },
     medicaments: { path: "sante_medicaments", order: "debut.asc" },
     prises: { path: "sante_prises", order: "le.asc" },
+    pros: { path: "sante_pros", order: "nom.asc" },
     agenda: { path: "agenda", order: "debut.asc", key: "uid", filter: "&decision=is.null" } // only the ones not sorted yet
   };
   const CACHE = "thomas911-sante", OUTBOX = "thomas911-sante-attente";
@@ -54,7 +56,7 @@
     if (t !== "agenda") {
       if (!full.id) full.id = uuid();
       if (!full.par && window.Famille) full.par = Famille.qui() || null;
-      if (["problemes", "rdv", "medicaments"].includes(t)) full.maj = new Date().toISOString();
+      if (["problemes", "rdv", "medicaments", "pros"].includes(t)) full.maj = new Date().toISOString();
     }
     queue({ t, row: full });
     return full[k];
@@ -223,12 +225,16 @@
   const rdvTitle = (r) => r.motif || r.pro || r.lieu || rdvType(r.type);
   const appointments = () => rows("rdv").sort((a, b) => Date.parse(a.le) - Date.parse(b.le));
   const upcoming = (now = Date.now()) => appointments().filter((r) => !r.annule && Date.parse(r.le) >= now - 2 * H);
-  // A calendar event becomes an appointment: guess its kind from its words
+  // A calendar event becomes an appointment: who it is with (the address book), else its kind guessed from its words
   function fromAgenda(ev) {
     const t = `${ev.titre} ${ev.lieu || ""}`.toLowerCase();
     const type = /urgence/.test(t) ? "urgences" : /clsc|vaccin/.test(t) ? "clsc" : /ost[ée]o|lactation|allaitement|physio|masso|chiro/.test(t) ? "soin"
       : /h[ôo]pital|hospital|clinique|shriners|[ée]chograph|fr[ée]notomie/.test(t) ? "hopital" : "medecin";
-    return { le: ev.debut, fuseau: ev.fuseau || HERE, type, motif: ev.titre, lieu: ev.lieu || null, agenda_uid: ev.uid, problemes: [] };
+    const r = { le: ev.debut, fuseau: ev.fuseau || HERE, type, motif: ev.titre, lieu: ev.lieu || null, agenda_uid: ev.uid, problemes: [] };
+    const p = proFor(`${ev.titre} ${ev.lieu || ""}`);
+    if (!p) return r;
+    const f = fromPro(p);
+    return { ...r, pro_id: p.id, type: type === "urgences" ? type : f.type, pro: f.pro, lieu: ev.lieu || f.lieu };
   }
   // Opens Google Calendar with the appointment filled in (pick the Family calendar and save)
   function agendaLink(r) {
@@ -239,6 +245,43 @@
     if (why) q.set("details", why);
     return `https://calendar.google.com/calendar/render?${q}`;
   }
+
+  // ---------- The address book ----------
+  // A person (Dre Mauguière, an osteopath) or a place (a CLSC, a hospital: personne false). type: the kind of appointment
+  // they give; mots: other words the calendar uses for them ("GMF HMR"). Not followed any more (actif false): kept for the past.
+  const bare = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  const nameKey = (p) => bare(p.nom).replace(/^(dre?|docteure?|mme|m) /, ""); // "dre edith mauguiere" -> "edith mauguiere"
+  const isPlace = (p) => p.personne === false;
+  const pros = () => rows("pros").sort((a, b) => (b.actif !== false) - (a.actif !== false) || nameKey(a).localeCompare(nameKey(b), "fr"));
+  const proOf = (r) => (r && r.pro_id ? byId("pros", r.pro_id) : null);
+  const rdvsWith = (id) => appointments().filter((r) => r.pro_id === id);
+  // "Mylène Savoie, ostéopathe D.O." (a place is just its name)
+  const proLabel = (p) => (isPlace(p) || !p.role ? p.nom : `${p.nom}, ${p.role.replace(/^\p{Lu}(?=\p{Ll})/u, (c) => c.toLowerCase())}`);
+  // "Clinique Sauge, 319 rue Saint-Zotique Est, Montréal QC H2S 1L5", "Hôpital général juif, 3755 chemin…"
+  const proPlace = (p) => [p.lieu || (isPlace(p) ? p.nom : ""), p.adresse].filter(Boolean).join(", ");
+  // What an appointment takes from its entry
+  const fromPro = (p) => ({ pro_id: p.id, type: p.type || "medecin", pro: isPlace(p) ? null : proLabel(p), lieu: proPlace(p) || null });
+  // Who some words are about (a calendar event, an appointment): its name or its words (4), a last name (3),
+  // its clinic or its street address (2 each); a word of its role settles two at the same address. null: unsure.
+  const STREET = /^(\d+) (?:(?:rue|boulevard|boul|bd|chemin|ch|avenue|av|de|du|des|la|le|saint|sainte|st|ste) )*([a-z]+)/;
+  function proFor(text, list = pros().filter((p) => p.actif !== false)) {
+    const t = ` ${bare(text)} `;
+    if (!t.trim()) return null;
+    const has = (w) => { const b = bare(w); return b.length >= 3 && t.includes(` ${b} `); };
+    const best = list.map((p) => {
+      let s = 0;
+      if ((p.mots || []).some(has) || has(nameKey(p))) s += 4;
+      else if (!isPlace(p) && bare(p.nom.split(/\s+/).pop()).length >= 4 && has(p.nom.split(/\s+/).pop())) s += 3;
+      if (p.lieu && p.adresse && has(p.lieu)) s += 2;
+      const street = (p.adresse || "").split(",").map(bare).map((x) => x.match(STREET)).find(Boolean);
+      if (street && t.includes(` ${street[1]} `) && t.includes(` ${street[2]} `)) s += 2;
+      if (s && bare(p.role).split(" ").some((w) => w.length >= 5 && t.includes(` ${w.slice(0, 5)}`))) s += 1;
+      return { p, s };
+    }).filter((x) => x.s >= 2).sort((a, b) => b.s - a.s);
+    return best.length && (best.length === 1 || best[0].s > best[1].s) ? best[0].p : null;
+  }
+  // "tel:+15142523814" (a Québec number without its +1), "tel:0559…" as written otherwise
+  const telLink = (n) => { const d = String(n || "").replace(/[^\d+]/g, ""); return d ? `tel:${/^[2-9]\d{9}$/.test(d) ? `+1${d}` : /^1[2-9]\d{9}$/.test(d) ? `+${d}` : d}` : ""; };
 
   // ---------- Medications ----------
   const meds = () => rows("medicaments").sort((a, b) => Date.parse(b.debut) - Date.parse(a.debut));
@@ -320,6 +363,7 @@
     SYMPTOMES, SYM, symLabel, symText, customWords,
     nameOf, isOpen, problems, openProblems, dayNumber, notesOf, medsOf, rdvOf, journal, resume,
     RDV_TYPES, rdvType, shortPlace, rdvWord, rdvTitle, appointments, upcoming, fromAgenda, agendaLink,
+    pros, proOf, rdvsWith, proLabel, proPlace, fromPro, proFor, isPlace, telLink,
     meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, clock, hours
   };
 })();
