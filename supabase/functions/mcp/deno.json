@@ -1,0 +1,7 @@
+{
+  "imports": {
+    "@modelcontextprotocol/sdk/": "npm:/@modelcontextprotocol/sdk@1.30.1/",
+    "zod": "npm:zod@4.6.5",
+    "postgres": "npm:postgres@3.4.5"
+  }
+}
