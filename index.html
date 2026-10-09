@@ -208,9 +208,10 @@ function renderAge() {
 function renderWeight() {
   const pts = Growth.weights(Growth.rows()), last = pts.at(-1);
   if (!last) return;
-  const g = Growth.gainOf(pts, pts.length - 1);
+  // The trend over about a week (several weighings), else the gain since the weighing before
+  const t = Growth.headline(Growth.trends(pts)), g = t ? { g: t.g, days: t.nominal ? t.days : t.span } : Growth.gainOf(pts, pts.length - 1);
   $("wBig").innerHTML = `${nf(last.v, 3)} kg${last.z == null ? "" : `<span class="pct">${Growth.pctText(last.z)}</span>`}`;
-  $("wSub").innerHTML = (g ? `<b>${g.g >= 0 ? "+" : "−"}${nf(Math.abs(g.g))} g/j</b> · ` : "")
+  $("wSub").innerHTML = (g ? `<b>${g.g >= 0 ? "+" : "−"}${nf(Math.abs(g.g))} g/j</b> sur ${Math.max(1, Math.round(g.days))} j · ` : "")
     + `pesé le ${Thomas.fmtDay(last.day, { day: "numeric", month: "short" })}` + (last.row._pending ? " · en attente d'envoi" : "");
 }
 Growth.onChange(renderWeight);

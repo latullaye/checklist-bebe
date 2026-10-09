@@ -129,10 +129,17 @@ table.m td small.early { font-size: 0.66rem; }
 .vel-scale span { position: absolute; top: 2px; transform: translateX(-50%); }
 .vel-say { margin: 4px 0 0; font-size: 0.86rem; font-weight: 700; }
 .vel-say.ok { color: #2f8f55; } .vel-say.near { color: #b36b12; } .vel-say.out { color: #c4553f; }
-.vel-note { margin: 2px 0 0; font-size: 0.74rem; color: var(--muted); line-height: 1.35; }
 .legend { font-size: 0.72rem; color: var(--muted); margin: 8px 0 0; line-height: 1.4; display: flex; align-items: center; gap: 8px; }
 .legend .gauge { flex: none; margin: 0; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .vel-say.ok { color: #6fd39a; } :root:not([data-theme="light"]) .vel-say.near { color: #f0b860; } :root:not([data-theme="light"]) .vel-say.out { color: #f08a75; } }
+/* Trend of the weight gain */
+.vel.first { margin-top: 4px; padding-top: 0; border-top: 0; }
+table.t td small { display: inline; margin-left: 4px; }
+table.t td small.real { display: block; margin: 1px 0 0; }
+.how { font-size: 0.74rem; color: var(--muted); margin-top: 8px; line-height: 1.4; }
+.how summary { font-weight: 700; color: var(--accent); cursor: pointer; font-size: 0.8rem; }
+.how p { margin: 6px 0 0; }
+#scaleChips { margin: 6px 0 4px; }
 table.m td.note { white-space: normal; color: var(--muted); font-size: 0.74rem; padding-top: 0; border-top: 0; }
 
 /* Entry sheet */
@@ -158,6 +165,10 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .actions .save { flex: 1; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .actions .del { color: #c4553f; }
 .err { color: #c4553f; font-size: 0.85rem; min-height: 1em; margin: 0; }
+/* Where it was taken */
+.lieux { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 12px; background: var(--group); }
+.lieux button { font: inherit; font-weight: 700; font-size: 0.9rem; color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 9px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.lieux button[aria-checked="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 </style>
 </head>
 <body>
@@ -174,6 +185,12 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   </div>
 
   <section class="card" id="sumCard"></section>
+
+  <section class="card" id="trendCard" hidden>
+    <div class="label">Gain de poids par 24 h</div>
+    <div class="chips" id="scaleChips" hidden></div>
+    <div id="trend"></div>
+  </section>
 
   <section class="card">
     <div class="chart-head"><div class="label" id="chartTitle"></div>
@@ -224,7 +241,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   <div class="sheet">
     <h2>Image des courbes</h2>
     <p class="msg" id="expMsg"></p>
-    <img class="preview" id="expImg" alt="Aperçu : courbes de poids, taille et périmètre crânien, et tableau des mesures">
+    <img class="preview" id="expImg" alt="Aperçu : tendance du gain, courbes de poids, taille et périmètre crânien, et tableau des mesures">
     <div class="actions">
       <button type="button" id="expClose">Fermer</button>
       <button type="button" id="expSave">Enregistrer</button>
@@ -241,6 +258,9 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       <div class="field"><label for="fHeure">Heure</label><input type="time" id="fHeure" required></div>
     </div>
     <p class="read" id="tzNote" hidden></p>
+    <div class="field"><label id="lieuLab">Lieu</label>
+      <div class="lieux" id="fLieu" role="radiogroup" aria-labelledby="lieuLab"><button type="button" role="radio" data-buzz data-l="clsc">CLSC</button><button type="button" role="radio" data-buzz data-l="medecin">Médecin</button><button type="button" role="radio" data-buzz data-l="maison">Maison</button></div>
+    </div>
     <div class="field">
       <label for="fPoids">Poids</label>
       <div class="weight"><input id="fPoids" inputmode="decimal" autocomplete="off" placeholder="5850"><span>g</span></div>
@@ -252,7 +272,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       <div class="field"><label for="fTaille">Taille (cm)</label><input id="fTaille" inputmode="decimal" autocomplete="off" placeholder="63,0"></div>
       <div class="field"><label for="fPc">Périm. crânien (cm)</label><input id="fPc" inputmode="decimal" autocomplete="off" placeholder="40,0"></div>
     </div>
-    <div class="field"><label for="fNote">Note (facultatif)</label><input id="fNote" autocomplete="off" placeholder="Pesée chez le pédiatre…"></div>
+    <div class="field"><label for="fNote">Note (facultatif)</label><input id="fNote" autocomplete="off" placeholder="Avant le boire, sans couche…"></div>
     <p class="err" id="err"></p>
     <div class="actions">
       <button type="button" class="del" id="del" hidden>Supprimer</button>
@@ -344,24 +364,65 @@ function renderSummary() {
   if (!pts.length) { $("sumCard").innerHTML = `<p class="empty">Aucune ${K.what} pour l'instant. Touche « Nouvelle mesure ».</p>`; return; }
   const last = pts.at(-1);
   const nb = (t) => `<span class="nw">${t}</span>`; // keep "12 sem 4 j" or "+36 g/j" on one line
-  let sub = `Dernière ${K.what} le <b>${nb(when(last, true))}</b>, à ${nb(Thomas.short(last.day))} ${nb(`(${last.age} j)`)}`;
+  const where = last.row.lieu ? ` (${Growth.lieuName(last.row.lieu, true)})` : "";
+  let sub = `Dernière ${K.what}${where} le <b>${nb(when(last, true))}</b>, à ${nb(Thomas.short(last.day))} ${nb(`(${last.age} j)`)}`;
   const gain = kind === "poids" && gainOf(pts, pts.length - 1);
-  if (gain) {
-    sub += `<br><b>${nb(`${sign(gain.g, 0)} g/j`)}</b> sur ${nb(span(gain.days))}, depuis la pesée du ${nb(when(gain.from))}`;
-    // Average over the last ~4 weeks, when there's a measure that far back
-    const back = [...pts].reverse().find((p) => (last.t - p.t) / DAY_MS >= 21);
-    if (back) { const d = (last.t - back.t) / DAY_MS; sub += `<br>${nb(`${sign((last.v - back.v) * 1000 / d, 0)} g/j`)} en moyenne sur ${nb(span(d))}`; }
-    const v = velOf(gain);
-    if (v) sub += `<div class="vel"><div class="vel-head"><span>Gain habituel à cet âge (OMS)</span><b>${usual(v)}</b></div>${gauge(v)}
-      <div class="vel-scale"><span style="left:29.3%">${nf(Math.max(0, v.lo))}</span><span style="left:70.7%">${nf(v.hi)}</span></div>
-      <p class="vel-say ${Growth.velLevel(v.z)}">${sign(gain.g, 0)} g/j : ${Growth.velWords(v.z)}</p>
-      <p class="vel-note">Zone verte : ce que font 70 % des garçons de cet âge (P15 à P85). Repère calculé sur un mois : sur quelques jours, les écarts sont fréquents ; c'est la tendance qui compte.</p></div>`;
-  }
+  // Since the weighing before (the trend over several days is in the card below)
+  if (gain) sub += `<br><b>${nb(`${sign(gain.g, 0)} g/j`)}</b> sur ${nb(span(gain.days))}, depuis la pesée du ${nb(when(gain.from))}`;
   if (kind === "taille" && wfl(last.row)) sub += `<br>Poids-pour-taille : <b>${wfl(last.row)}</b>`;
   $("sumCard").innerHTML = `<div class="sum"><div class="val">${nf(last.v, K.dec)}<small>${K.unit}</small></div>
     <div class="pct"><b>${last.z == null ? "—" : pctText(last.z)}</b><span>${last.z == null ? "" : `score-z ${sign(last.z)}`}</span></div></div>
     <div class="sub">${sub}</div>`;
 }
+
+// ---------- Trend: average gain per 24 h over 3, 5, 7, 10, 14 and 30 days (growth.js) ----------
+// The scales of the CLSC, the doctor and home differ a little: the trend can use one of them only.
+const SCALE_KEY = "thomas911-balance";
+let scale = ""; try { scale = localStorage.getItem(SCALE_KEY) || ""; } catch (e) {}
+// A scale can be picked once it has at least two weighings, and there are two kinds of scale
+const scales = (all) => { const n = (k) => all.filter((p) => p.row.lieu === k).length, known = Growth.LIEUX.filter(([k]) => n(k));
+  return known.length < 2 ? [] : known.filter(([k]) => n(k) >= 2); };
+const scalePts = (all) => scale ? all.filter((p) => p.row.lieu === scale) : all;
+const range = (v) => `${nf(Math.max(0, v.lo))} à ${nf(v.hi)}`;
+// "7 jours"; when the weighings cover quite another span (none near the start), the real one too
+const offSpan = (t) => !t.nominal;
+const period = (t) => `${t.days} jours` + (offSpan(t) ? ` (en fait ${Math.round(t.span)} j)` : "");
+const TREND_HOW = "Pour chaque période qui se termine à la dernière pesée : pente de la droite qui passe au plus près de toutes ses pesées "
+  + "(à la minute près), ramenée à 24 h. Une pesée un peu haute ou basse (boire, couche) y compte moins que dans un simple écart entre deux pesées.";
+const TREND_WHO = "Habituel : gain de 70 % des garçons de cet âge (OMS 2009, P15 à P85), repère calculé sur un mois : sur 3 à 5 jours, les écarts sont fréquents.";
+const TREND_MIX = "* Balances différentes dans la période : leur écart fausse surtout les courtes périodes.";
+const TREND_HOME = "À la maison, pour une tendance fiable : même balance, même moment (par exemple avant le boire du matin), même tenue.";
+function renderTrend() {
+  const all = points("poids");
+  $("trendCard").hidden = kind !== "poids" || all.length < 2;
+  if ($("trendCard").hidden) return;
+  const pick = scales(all);
+  if (!pick.some(([k]) => k === scale)) scale = "";
+  $("scaleChips").hidden = !pick.length;
+  $("scaleChips").innerHTML = `<span class="lab">Balance :</span>` + [["", "Toutes"], ...pick].map(([k, name]) =>
+    `<button type="button" class="chip" data-buzz data-s="${k}" aria-pressed="${k === scale}">${name}</button>`).join("");
+  const list = Growth.trends(scalePts(all)), head = Growth.headline(list);
+  if (!head) {
+    $("trend").innerHTML = `<p class="empty">Pas encore assez de pesées${scale ? ` ${Growth.lieuName(scale, true)}` : ""} pour une tendance : il en faut au moins deux, à un jour d'écart ou plus.</p>`;
+    return;
+  }
+  const v = head.vel;
+  let html = `<div class="vel first"><div class="vel-head"><span>Sur ${period(head)} · ${head.n} pesées</span><b>${sign(head.g, 0)} g/j</b></div>`
+    + (v ? `${gauge(v)}<div class="vel-scale"><span style="left:29.3%">${nf(Math.max(0, v.lo))}</span><span style="left:70.7%">${nf(v.hi)}</span></div>
+      <p class="vel-say ${Growth.velLevel(v.z)}">${Growth.velWords(v.z).replace(/^./, (c) => c.toUpperCase())} (${range(v)} g/j à cet âge)</p>` : "") + "</div>";
+  html += `<table class="m t"><tr><th>Sur</th><th>Depuis le</th><th>Pesées</th><th>g/jour</th></tr>`
+    + list.map((t) => `<tr${t === head ? ' class="latest"' : ""}><td>${t.days} j${t.mixed ? "*" : ""}${offSpan(t) ? `<small class="real">en fait ${Math.round(t.span)} j</small>` : ""}</td><td>${fmtDate(t.from.day)}<small>${fmtTime(t.from.t, t.from.row.fuseau)}</small></td>
+      <td>${t.n}</td><td class="${t.g < 0 ? "neg" : ""}">${sign(t.g, 0)}${t.vel ? gauge(t.vel) : ""}</td></tr>`).join("")
+    + `</table><p class="legend"><span class="gauge" aria-hidden="true"></span><span>Zone verte : gain habituel à cet âge (OMS, P15 à P85), trait : celui de Thomas.${list.some((t) => t.mixed) ? ` ${TREND_MIX}` : ""}</span></p>`
+    + `<details class="how"><summary>Comment c'est calculé</summary><p>${TREND_HOW}</p><p>${TREND_WHO}</p>${all.some((p) => p.row.lieu === "maison") ? `<p>${TREND_HOME}</p>` : ""}</details>`;
+  $("trend").innerHTML = html;
+}
+$("scaleChips").addEventListener("click", (e) => {
+  const c = e.target.closest(".chip"); if (!c) return;
+  scale = c.dataset.s;
+  try { localStorage.setItem(SCALE_KEY, scale); } catch (e) {}
+  renderTrend();
+});
 
 // ---------- Chart ----------
 // One drawing function for the card (birth to now, P3-P97 always shown) and the full-screen view
@@ -463,7 +524,7 @@ function tipText(pts, i, oneLine) {
   const v = velOf(g);
   const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})`}`
     + (v ? ` · <span class="nw">habituel ${usual(v)}</span>` : "") : "";
-  return `<b>${when(sp, true)}</b> · ${Thomas.short(sp.day)}${br}<b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
+  return `<b>${when(sp, true)}</b>${sp.row.lieu ? ` · ${Growth.lieuName(sp.row.lieu)}` : ""} · ${Thomas.short(sp.day)}${br}<b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
 }
 function renderChart() {
   const K = KINDS[kind], pts = points(), box = $("chart");
@@ -661,7 +722,7 @@ function renderTable() {
     }
     if (kind === "taille") more = `<td>${wfl(p.row) || "—"}</td>`;
     const note = p.row.note ? `<tr class="r" data-id="${p.row.id}"><td class="note" colspan="6">${p.row.note.replace(/</g, "&lt;")}</td></tr>` : "";
-    return `<tr class="r${i === pts.length - 1 ? " latest" : ""}" data-id="${p.row.id}"><td>${fmtDate(p.day)}<small>${fmtTime(p.t, p.row.fuseau)}</small>${p.row._pending ? '<small class="wait">en attente</small>' : ""}</td><td>${p.age} j</td><td>${nf(p.v, K.dec)}</td>
+    return `<tr class="r${i === pts.length - 1 ? " latest" : ""}" data-id="${p.row.id}"><td>${fmtDate(p.day)}<small>${fmtTime(p.t, p.row.fuseau)}${p.row.lieu ? ` · ${Growth.lieuName(p.row.lieu)}` : ""}</small>${p.row._pending ? '<small class="wait">en attente</small>' : ""}</td><td>${p.age} j</td><td>${nf(p.v, K.dec)}</td>
       <td>${p.z == null ? "—" : pctText(p.z)}</td><td>${p.z == null ? "—" : sign(p.z)}</td>${more}</tr>${note}`;
   }).reverse().join("");
   $("table").innerHTML = `<table class="m"><tr><th>Date</th><th>Âge</th><th>${K.unit}</th><th>Perc.</th><th>z</th>${extra}</tr>${lines}</table>`
@@ -721,7 +782,7 @@ $("feedPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lai
 
 function render() {
   document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", t.dataset.k === kind));
-  renderSummary(); renderMilk(); renderChart(); renderTable();
+  renderSummary(); renderTrend(); renderMilk(); renderChart(); renderTable();
   $("err2").textContent = Growth.error;
 }
 document.querySelectorAll(".tab").forEach((t) => t.addEventListener("click", () => {
@@ -733,6 +794,11 @@ let resizeTimer; window.addEventListener("resize", () => { clearTimeout(resizeTi
 
 // ---------- Entry sheet ----------
 let editing = null;
+// Where it was taken: a new measure starts with the place of the last one entered on this phone
+const LIEU_KEY = "thomas911-lieu";
+let sheetLieu = null;
+function setLieu(l) { sheetLieu = l; document.querySelectorAll("#fLieu button").forEach((b) => b.setAttribute("aria-checked", b.dataset.l === l)); }
+$("fLieu").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) setLieu(b.dataset.l); });
 // "5850", "5 850", "5,85", "5.850" -> grams; anything under 100 is read as kilograms
 function grams(text) {
   const t = String(text || "").replace(/\s|g/gi, "").replace(",", ".");
@@ -785,6 +851,8 @@ function openSheet(row) {
   $("fTaille").value = row && row.taille_cm != null ? String(row.taille_cm).replace(".", ",") : "";
   $("fPc").value = row && row.pc_cm != null ? String(row.pc_cm).replace(".", ",") : "";
   $("fNote").value = row && row.note || "";
+  let lastLieu = null; try { lastLieu = localStorage.getItem(LIEU_KEY); } catch (e) {}
+  setLieu(row ? row.lieu || null : Growth.lieuName(lastLieu) ? lastLieu : "maison");
   const more = !!(row && (row.taille_cm != null || row.pc_cm != null));
   $("moreFields").hidden = !more; $("more").hidden = more;
   $("del").hidden = !row;
@@ -810,7 +878,8 @@ $("form").addEventListener("submit", (e) => {
   if (Number.isNaN(h) || (h != null && (h < 30 || h > 60))) return bad("Périmètre crânien à vérifier : entre 30 et 60 cm.");
   if (g == null && t == null && h == null) return bad("Entre au moins une mesure.");
   const row = { id: editing ? editing.id : undefined, jour: $("fDate").value, pese_le: new Date(stamp).toISOString(), fuseau: sheetTZ,
-    poids_g: g, taille_cm: t, pc_cm: h, note: $("fNote").value.trim() || null };
+    lieu: sheetLieu, poids_g: g, taille_cm: t, pc_cm: h, note: $("fNote").value.trim() || null };
+  if (sheetLieu) try { localStorage.setItem(LIEU_KEY, sheetLieu); } catch (e) {}
   // Shows right away; sent now, or as soon as the network is back
   $("dlg").close(); selected = null;
   Growth.save(row);
@@ -821,7 +890,7 @@ $("del").addEventListener("click", () => {
   Growth.remove(editing.id);
 });
 
-// ---------- Image export: the three charts and the table, as one PNG to send or keep ----------
+// ---------- Image export: the trend of the gain, the three charts and the table, as one PNG to send or keep ----------
 const EXPORT_CSS = `text{font-family:Helvetica,Arial,sans-serif}.grid{stroke:#d5e0dc;stroke-width:1}text.axis,.curve-label{fill:#5d706d;font-size:13px}
 .axis-title{fill:#5d706d;font-size:13px;font-weight:700}.band{fill:#5d706d;opacity:.09}.p50{stroke:#1d2b2a;stroke-width:2;fill:none;opacity:.7}
 .p15{stroke:#5d706d;stroke-width:1.5;fill:none;stroke-dasharray:6 4}.p3{stroke:#5d706d;stroke-width:1.2;fill:none;stroke-dasharray:1.5 3;stroke-linecap:round}
@@ -831,67 +900,137 @@ const svgImage = (svg) => new Promise((res, rej) => {
   img.onload = () => res(img); img.onerror = rej;
   img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg.replace("<svg ", `<svg xmlns="http://www.w3.org/2000/svg" `).replace(/(<svg[^>]*>)/, `$1<style>${EXPORT_CSS}</style>`));
 });
+// Column widths from their content: the header or the longest cell (rows: [[text, color], ...])
+function colWidths(c, cols, rows, head, body, max = 1e9) {
+  return cols.map((name, i) => {
+    c.font = head; let w = c.measureText(name.toUpperCase()).width;
+    c.font = body; rows.forEach((r) => { w = Math.max(w, c.measureText(r[i][0]).width); });
+    return Math.ceil(Math.min(max, w)) + 22;
+  });
+}
+// Lines of a paragraph that fit a width
+function wrap(c, text, width) {
+  const out = []; let line = "";
+  for (const word of text.split(" ")) { const t = line ? `${line} ${word}` : word; if (line && c.measureText(t).width > width) { out.push(line); line = word; } else line = t; }
+  return line ? [...out, line] : out;
+}
+// Keep only what is drawn: white borders cut to the same small margin all around
+function cropToContent(src, margin) {
+  const ctx = src.getContext("2d"), W = src.width, H = src.height, BAND = 128;
+  let x0 = W, x1 = -1, y0 = -1, y1 = -1;
+  const ink = (d, k) => d[k] < 246 || d[k + 1] < 246 || d[k + 2] < 246;
+  for (let y = 0; y < H; y += BAND) {
+    const h = Math.min(BAND, H - y), d = ctx.getImageData(0, y, W, h).data;
+    for (let j = 0; j < h; j++) {
+      const row = j * W * 4; let a = 0;
+      while (a < W && !ink(d, row + a * 4)) a++;
+      if (a === W) continue;
+      let b = W - 1; while (b > a && !ink(d, row + b * 4)) b--;
+      x0 = Math.min(x0, a); x1 = Math.max(x1, b); if (y0 < 0) y0 = y + j; y1 = y + j;
+    }
+  }
+  if (x1 < 0) return src;
+  const w = x1 - x0 + 1, h = y1 - y0 + 1, out = document.createElement("canvas");
+  out.width = w + 2 * margin; out.height = h + 2 * margin;
+  const o = out.getContext("2d"); o.fillStyle = "#fff"; o.fillRect(0, 0, out.width, out.height);
+  o.drawImage(src, x0, y0, w, h, margin, margin, w, h);
+  src.width = src.height = 0; // frees its memory right away (iPhone)
+  return out;
+}
 async function buildExport() {
   try { await document.fonts.ready; } catch (e) {}
-  const W = 1080, pad = 44, cw = W - 2 * pad, ch = 430, SC = 2;
+  const INK = "#1d2b2a", MUTED = "#5d706d", ACC = "#1f6f78", LINE = "#d5e0dc", LVL = { ok: "#2f8f55", near: "#b36b12", out: "#c4553f" }, RED = "#c4553f";
+  const BODY = '"Atkinson Hyperlegible", Helvetica, Arial, sans-serif', DISP = '"Ubuntu", Helvetica, Arial, sans-serif';
+  const HEAD = `700 13px ${BODY}`, CELL = `15px ${BODY}`, NOTE = `13px ${BODY}`;
+  const m = document.createElement("canvas").getContext("2d"); // to measure text before the page size is known
+  const pad = 40, ch = 430, rowH = 30;
   const kinds = Object.keys(KINDS).filter((k) => points(k).length);
   const all = Growth.rows().sort((a, b) => tsOf(a) - tsOf(b)), weightsPts = points("poids");
-  const rowH = 30, tableH = 44 + all.length * rowH;
-  const H = 150 + kinds.length * (ch + 56) + tableH + 90;
-  const cv = document.createElement("canvas"); cv.width = W * SC; cv.height = H * SC;
+  const at = (p) => `${fmtDate(p.day, true)} ${fmtTime(p.t, p.row.fuseau)}`;
+
+  // Trend of the weight gain (with the scale chosen on screen)
+  const trendList = weightsPts.length ? Growth.trends(scalePts(weightsPts)) : [];
+  const T_COLS = ["Période", "Du", "Au", "Pesées", "Poids (kg)", "Gain moyen", "Habituel (OMS)", "Lecture"];
+  const tRows = trendList.map((t) => {
+    const lvl = t.vel && Growth.velLevel(t.vel.z);
+    return [[`${t.days} jours${t.mixed ? " *" : ""}${offSpan(t) ? ` (${Math.round(t.span)} j)` : ""}`, INK], [at(t.from), INK], [at(t.to), INK], [String(t.n), INK],
+      [`${nf(t.from.v, 3)} → ${nf(t.to.v, 3)}`, INK], [`${sign(t.g, 0)} g/j`, lvl ? LVL[lvl] : t.g < 0 ? RED : INK],
+      [t.vel ? `${range(t.vel)} g/j` : "—", MUTED], [t.vel ? Growth.velWords(t.vel.z) : "", lvl ? LVL[lvl] : MUTED]];
+  });
+  // Every measure, oldest first, like the health record; the place and note columns only when there is one
+  const pct = (table, x, v) => { const z = v == null ? null : zScore(table, x, v); return z == null ? "" : pctText(z); };
+  let M_COLS = ["Date", "Heure", "Lieu", "Âge", "Poids (kg)", "P", "g/j", "Habituel", "Taille (cm)", "P", "P. crânien (cm)", "P", "Note"];
+  let mRows = all.map((r) => {
+    const age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), wi = weightsPts.findIndex((p) => p.row.id === r.id), g = wi >= 0 ? gainOf(weightsPts, wi) : null;
+    const v = velOf(g), lvl = v && Growth.velLevel(v.z);
+    return [[fmtDate(r.jour, true), INK], [fmtTime(tsOf(r), r.fuseau), INK], [Growth.lieuName(r.lieu), INK], [`${age} j`, INK],
+      [r.poids_g == null ? "" : nf(r.poids_g / 1000, 3), INK], [r.poids_g == null ? "" : pct("wfa", age, r.poids_g / 1000), INK],
+      [g ? sign(g.g, 0) : "", lvl ? LVL[lvl] : g && g.g < 0 ? RED : INK], [v ? `${nf(Math.max(0, v.lo))}–${nf(v.hi)}` : g ? "1res sem." : "", MUTED],
+      [r.taille_cm == null ? "" : nf(Number(r.taille_cm), 1), INK], [pct("lhfa", age, r.taille_cm == null ? null : Number(r.taille_cm)), INK],
+      [r.pc_cm == null ? "" : nf(Number(r.pc_cm), 1), INK], [pct("hcfa", age, r.pc_cm == null ? null : Number(r.pc_cm)), INK], [r.note || "", MUTED]];
+  });
+  const keep = M_COLS.map((n, i) => !["Lieu", "Note"].includes(n) || mRows.some((r) => r[i][0]));
+  M_COLS = M_COLS.filter((n, i) => keep[i]); mRows = mRows.map((r) => r.filter((x, i) => keep[i]));
+
+  const tW = colWidths(m, T_COLS, tRows, HEAD, CELL), mW = colWidths(m, M_COLS, mRows, HEAD, CELL, 340);
+  const sum = (a) => a.reduce((x, y) => x + y, 0);
+  const CW = Math.max(980, sum(tW), sum(mW)), W = CW + 2 * pad;
+  m.font = NOTE;
+  const scaleWord = scale ? ` (balance : ${Growth.lieuName(scale, true)} seulement)` : "";
+  const tNotes = [TREND_HOW, TREND_WHO, ...(trendList.some((t) => t.mixed) ? [TREND_MIX] : [])].flatMap((t) => wrap(m, t, CW));
+  const mNotes = [`THOMAS911 · percentiles OMS 2006 (garçons) · g/j : gain par 24 h depuis la pesée d'avant, calculé entre les heures de pesée (au moins 12 h d'écart).`,
+    `Habituel : gain des garçons du même âge entre P15 et P85 (OMS 2009) ; g/j en vert dedans, orange un peu en dehors, rouge au-delà de P5–P95.`].flatMap((t) => wrap(m, t, CW));
+  const H = 140 + (trendList.length ? 50 + 34 + trendList.length * rowH + 16 + tNotes.length * 19 + 40 : 0)
+    + kinds.length * (ch + 56) + 34 + mRows.length * rowH + 30 + mNotes.length * 19 + 40;
+  // Big enough to be sharp, small enough for the iPhone (about 16 million pixels per image at most)
+  const SC = Math.max(1, Math.min(2, Math.sqrt(14e6 / (W * H))));
+  const cv = document.createElement("canvas"); cv.width = Math.ceil(W * SC); cv.height = Math.ceil(H * SC);
   const c = cv.getContext("2d"); c.scale(SC, SC);
-  const INK = "#1d2b2a", MUTED = "#5d706d", ACC = "#1f6f78", LINE = "#d5e0dc";
-  const BODY = '"Atkinson Hyperlegible", Helvetica, Arial, sans-serif', DISP = '"Ubuntu", Helvetica, Arial, sans-serif';
   c.fillStyle = "#fff"; c.fillRect(0, 0, W, H);
+  const table = (cols, widths, rows, y) => {
+    let x = pad; const xs = widths.map((w) => { const at = x; x += w; return at; }), right = x;
+    c.font = HEAD; c.fillStyle = MUTED; cols.forEach((name, i) => c.fillText(name.toUpperCase(), xs[i], y + 22));
+    y += 34; c.font = CELL;
+    rows.forEach((r) => {
+      c.strokeStyle = LINE; c.lineWidth = 1; c.beginPath(); c.moveTo(pad, y); c.lineTo(right, y); c.stroke();
+      r.forEach(([t, color], i) => {
+        let text = String(t);
+        while (text && c.measureText(text).width > widths[i] - 12) text = text.slice(0, -2) + "…";
+        c.fillStyle = color; c.fillText(text, xs[i], y + 21);
+      });
+      y += rowH;
+    });
+    c.strokeStyle = LINE; c.beginPath(); c.moveTo(pad, y); c.lineTo(right, y); c.stroke();
+    return y;
+  };
+  const notes = (lines, y) => { c.fillStyle = MUTED; c.font = NOTE; lines.forEach((l, i) => c.fillText(l, pad, y + i * 19)); return y + lines.length * 19; };
   // Title block
   const a = Thomas.age(), birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: "America/Toronto", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
-  c.fillStyle = INK; c.font = `800 30px ${DISP}`; c.fillText("Courbes de croissance de Thomas", pad, 58);
+  c.fillStyle = INK; c.font = `800 30px ${DISP}`; c.fillText("Courbes de croissance de Thomas", pad, 50);
   c.fillStyle = MUTED; c.font = `16px ${BODY}`;
-  c.fillText(`Né le ${birth} (heure de Montréal) · garçon · référentiel OMS 2006`, pad, 90);
-  c.fillText(`${a.text.months} (${a.days} jours) le ${Thomas.fmtDay(Thomas.today(), { day: "numeric", month: "long", year: "numeric" })}`, pad, 114);
-  let y = 150;
+  c.fillText(`Né le ${birth} (heure de Montréal) · garçon · référentiel OMS 2006`, pad, 82);
+  c.fillText(`${a.text.months} (${a.days} jours) le ${Thomas.fmtDay(Thomas.today(), { day: "numeric", month: "long", year: "numeric" })}`, pad, 106);
+  let y = 140;
+  // Trend first: what the doctor asks about
+  if (trendList.length) {
+    c.fillStyle = INK; c.font = `700 19px ${BODY}`; c.fillText(`Gain de poids moyen par 24 h${scaleWord}`, pad, y + 20);
+    y = table(T_COLS, tW, tRows, y + 34);
+    y = notes(tNotes, y + 24) + 30;
+  }
   for (const k of kinds) {
     const K = KINDS[k], pts = points(k), last = pts.at(-1);
-    c.fillStyle = INK; c.font = `700 19px ${BODY}`;
+    c.fillStyle = INK; c.font = `700 19px ${BODY}`; c.textAlign = "left";
     c.fillText(`${K.title} (${K.unit})`, pad, y + 20);
     c.fillStyle = ACC; c.font = `700 16px ${BODY}`; c.textAlign = "right";
-    c.fillText(`${fmtV(last.v, k)}${last.z == null ? "" : ` · ${pctText(last.z)}`} le ${fmtDate(last.day, true)}`, W - pad, y + 20);
+    c.fillText(`${fmtV(last.v, k)}${last.z == null ? "" : ` · ${pctText(last.z)}`} le ${fmtDate(last.day, true)}`, pad + CW, y + 20);
     c.textAlign = "left";
-    const g = drawChart({ pts, K, W: cw, H: ch, x0: 0, x1: fullSpan(pts), fit: "curves", id: "x" + k, big: true, plain: true });
-    c.drawImage(await svgImage(g.svg), pad, y + 32, cw, ch);
+    const g = drawChart({ pts, K, W: CW, H: ch, x0: 0, x1: fullSpan(pts), fit: "curves", id: "x" + k, big: true, plain: true });
+    c.drawImage(await svgImage(g.svg), pad, y + 32, CW, ch);
     y += ch + 56;
   }
-  // Table: every measure, oldest first, like the health record
-  const cols = [["Date", 108], ["Heure", 60], ["Âge", 56], ["Poids (kg)", 86], ["P", 46], ["g/j", 50], ["Habituel", 74], ["Taille (cm)", 88], ["P", 46], ["P. crânien (cm)", 120], ["P", 46], ["Note", 0]];
-  let x = pad; const xs = cols.map(([, w]) => { const at = x; x += w; return at; });
-  c.font = `700 13px ${BODY}`; c.fillStyle = MUTED;
-  cols.forEach(([name], i) => c.fillText(name.toUpperCase(), xs[i], y + 22));
-  y += 34;
-  c.font = `15px ${BODY}`;
-  const pct = (table, x, v) => { const z = v == null ? null : zScore(table, x, v); return z == null ? "" : pctText(z); };
-  all.forEach((r) => {
-    c.strokeStyle = LINE; c.lineWidth = 1; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke();
-    const age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), wi = weightsPts.findIndex((p) => p.row.id === r.id), g = wi >= 0 ? gainOf(weightsPts, wi) : null;
-    const v = velOf(g);
-    const cells = [fmtDate(r.jour, true), fmtTime(tsOf(r), r.fuseau), `${age} j`,
-      r.poids_g == null ? "" : nf(r.poids_g / 1000, 3), r.poids_g == null ? "" : pct("wfa", age, r.poids_g / 1000), g ? sign(g.g, 0) : "",
-      v ? `${nf(Math.max(0, v.lo))}–${nf(v.hi)}` : g ? "1res sem." : "",
-      r.taille_cm == null ? "" : nf(Number(r.taille_cm), 1), pct("lhfa", age, r.taille_cm == null ? null : Number(r.taille_cm)),
-      r.pc_cm == null ? "" : nf(Number(r.pc_cm), 1), pct("hcfa", age, r.pc_cm == null ? null : Number(r.pc_cm)), r.note || ""];
-    cells.forEach((t, i) => {
-      const lvl = v && Growth.velLevel(v.z);
-      c.fillStyle = i === 5 && lvl ? { ok: "#2f8f55", near: "#b36b12", out: "#c4553f" }[lvl] : i === 5 && g && g.g < 0 ? "#c4553f" : i === 6 || i === 11 ? MUTED : INK;
-      let text = String(t);
-      if (i === 11) { const room = W - pad - xs[11]; while (text && c.measureText(text).width > room) text = text.slice(0, -2) + "…"; }
-      c.fillText(text, xs[i], y + 21);
-    });
-    y += rowH;
-  });
-  c.strokeStyle = LINE; c.beginPath(); c.moveTo(pad, y); c.lineTo(W - pad, y); c.stroke();
-  c.fillStyle = MUTED; c.font = `13px ${BODY}`;
-  c.fillText("THOMAS911 · percentiles OMS 2006 (garçons) · gain par jour calculé entre les heures de pesée (au moins 12 h d'écart)", pad, y + 38);
-  c.fillText("Habituel : gain des garçons du même âge entre P15 et P85 (OMS 2009) ; g/j en vert dedans, orange un peu en dehors, rouge au-delà de P5–P95.", pad, y + 58);
-  return new Promise((res) => cv.toBlob(res, "image/png"));
+  y = table(M_COLS, mW, mRows, y);
+  notes(mNotes, y + 30);
+  return new Promise((res) => cropToContent(cv, Math.round(18 * SC)).toBlob(res, "image/png"));
 }
 let exportFile = null, exportURL = null;
 $("exportBtn").addEventListener("click", async () => {
@@ -904,7 +1043,7 @@ $("exportBtn").addEventListener("click", async () => {
     if (exportURL) URL.revokeObjectURL(exportURL);
     exportURL = URL.createObjectURL(blob);
     $("expImg").src = exportURL;
-    $("expMsg").textContent = "Les trois courbes et le tableau des mesures, sur fond blanc.";
+    $("expMsg").textContent = "La tendance du gain, les trois courbes et le tableau des mesures, sur fond blanc.";
     $("expShare").hidden = !(navigator.canShare && navigator.canShare({ files: [exportFile] }));
     $("expSave").disabled = false;
   } catch (e) { $("expMsg").textContent = "Impossible de préparer l'image."; }
