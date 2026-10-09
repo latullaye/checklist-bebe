@@ -183,7 +183,7 @@ create policy "famille ajoute des photos" on storage.objects for insert to anon
 create policy "famille supprime des photos" on storage.objects for delete to anon
   using (bucket_id = 'sante-photos' and (select public.famille_ok()));
 -- What the assistant (function "assistant", Claude) was asked, without the content: when, who, which sheet, tokens, time.
--- Server only. Its Anthropic key is the function's secret ANTHROPIC_API_KEY (Edge Functions > Secrets), never in the code.
+-- Server only. Its Anthropic key goes in prive, key anthropic_api_key (or the function's secret ANTHROPIC_API_KEY), never in the code.
 create table assistant_journal (
   id bigint generated always as identity primary key, le timestamptz not null default now(),
   par text, sorte text, modele text, entree integer, sortie integer, ms integer, refus boolean not null default false
