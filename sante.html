@@ -71,6 +71,17 @@
 .agenda-head { display: flex; align-items: center; gap: 8px; padding: 13px 14px 4px; }
 .agenda-head .label { flex: 1; }
 .agenda-head span { font-size: 0.78rem; color: var(--muted); }
+/* The address book */
+.li .ic { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.li .ic svg { width: 21px; height: 21px; }
+.kv a, .sub a { color: var(--accent); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
+.tag.pro { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+.tag.pro svg { width: 14px; height: 14px; }
+.picked { display: flex; gap: 10px; align-items: center; margin-top: 8px; padding: 9px 11px; border-radius: 12px; background: var(--accent-soft); font-size: 0.84rem; line-height: 1.35; }
+.picked .txt { flex: 1; min-width: 0; }
+.picked b { display: block; font-size: 0.9rem; }
+.picked a { flex: none; font-weight: 800; color: var(--accent); text-decoration: none; font-size: 0.84rem; display: inline-flex; align-items: center; gap: 5px; }
+.picked svg { width: 15px; height: 15px; }
 
 /* Problem and medication cards */
 .prob, .med { display: flex; flex-direction: column; gap: 10px; }
@@ -354,7 +365,9 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       <div class="field"><label for="rTime">À</label><input type="time" id="rTime" required></div>
     </div>
     <p class="hint" id="rAgenda" hidden>Lié à l'agenda Family : s'il y est déplacé, l'app suit.</p>
-    <div class="field"><span class="lab">Avec</span><div class="chips" id="rType" role="radiogroup"></div></div>
+    <div class="field"><label for="rCarnet">Avec qui</label><select id="rCarnet"></select>
+      <div class="chips" id="rRecent" style="margin-top:8px"></div><div class="picked" id="rPicked" hidden></div></div>
+    <div class="field"><span class="lab">Type</span><div class="chips" id="rType" role="radiogroup"></div></div>
     <div class="field"><label for="rLieu">Où</label><input id="rLieu" autocomplete="off" placeholder="CLSC de la Petite-Patrie, cabinet du Dr…"></div>
     <div class="field"><label for="rPro">Qui</label><input id="rPro" autocomplete="off" placeholder="Dre Tremblay, pédiatre"></div>
     <div class="field"><label for="rMotif">Pourquoi</label><input id="rMotif" autocomplete="off" placeholder="Diarrhée depuis 3 jours, vaccins des 4 mois…"></div>
@@ -375,6 +388,29 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <label class="check" id="rCancelWrap"><input type="checkbox" id="rCancel"> Rendez-vous annulé</label>
     <p class="err" id="rErr"></p>
     <div class="actions"><button type="button" class="del" id="rDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<!-- An entry of the address book: a person or a place -->
+<dialog id="proDlg">
+  <form class="sheet" id="proForm" method="dialog">
+    <h2 id="cTitle">Carnet</h2>
+    <div class="field"><span class="lab">C'est</span><div class="seg" id="cKind" role="radiogroup">
+      <button type="button" role="radio" data-v="personne">Une personne</button><button type="button" role="radio" data-v="endroit">Un endroit</button></div></div>
+    <div class="field"><label for="cNom" id="cNomLab">Nom</label><input id="cNom" autocomplete="off"></div>
+    <div class="field"><label for="cRole" id="cRoleLab">Métier, spécialité</label><input id="cRole" autocomplete="off"></div>
+    <div class="field"><span class="lab">Ses rendez-vous</span><div class="chips" id="cType" role="radiogroup"></div></div>
+    <div class="field" id="cLieuWrap"><label for="cLieu">Clinique, établissement</label><input id="cLieu" autocomplete="off" placeholder="Clinique Sauge, à domicile…"></div>
+    <div class="field"><label for="cAdresse">Adresse</label><input id="cAdresse" autocomplete="off" placeholder="319 rue Saint-Zotique Est, Montréal QC H2S 1L5"></div>
+    <div class="field"><label for="cTel">Téléphone</label><input id="cTel" type="tel" autocomplete="off" placeholder="514 555-1234"></div>
+    <div class="field"><label for="cMail">Courriel</label><input id="cMail" inputmode="email" autocomplete="off" autocapitalize="off"></div>
+    <div class="field"><label for="cSite">Prise de rendez-vous (lien)</label><input id="cSite" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="https://…"></div>
+    <div class="field"><label for="cMots">Reconnu dans l'agenda par</label><input id="cMots" autocomplete="off" placeholder="GMF HMR, Shriners… (séparés par des virgules)"></div>
+    <p class="hint">Le nom, la clinique ou l'adresse suffisent le plus souvent ; ces mots servent quand l'agenda dit autre chose.</p>
+    <div class="field"><label for="cNotes">Notes</label><textarea id="cNotes" placeholder="Horaires, tarif, numéro de membre…"></textarea></div>
+    <label class="check" id="cOldWrap"><input type="checkbox" id="cOld"> Plus suivi : caché du choix, gardé pour ses rendez-vous</label>
+    <p class="err" id="cErr"></p>
+    <div class="actions"><button type="button" class="del" id="cDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
   </form>
 </dialog>
 
@@ -452,7 +488,10 @@ const IC = {
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
   mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
-  spark: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7Z"/>')
+  spark: svg('<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8Z"/><path d="M19 15l.7 1.8 1.8.7-1.8.7L19 20l-.7-1.8-1.8-.7 1.8-.7Z"/>'),
+  book: svg('<rect x="4.5" y="3" width="15" height="18" rx="3"/><circle cx="12" cy="10" r="2.8"/><path d="M7.8 17a4.2 4.2 0 0 1 8.4 0"/>'),
+  phone: svg('<path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16.5 16.5 0 0 1 4.5 5.5a2 2 0 0 1 2-2Z"/>'),
+  pin: svg('<path d="M12 21s-6.5-6.1-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 14.9 12 21 12 21Z"/><circle cx="12" cy="9.8" r="2.3"/>')
 };
 const H = S.H, DAY = S.DAY;
 // Time of a record on the clock where it happened, and "(heure de France)" when that's not here
@@ -480,7 +519,7 @@ function toast(text, undo) {
 $("toastUndo").addEventListener("click", () => { if (toastUndo) toastUndo(); toastUndo = null; $("toast").hidden = true; });
 
 // ---------- Views: the main screen, or one problem / appointment / medication ----------
-// "#p/<id>", "#r/<id>", "#m/<id>", "#chrono"; from a reminder or the home page also "#noter", "#noter/<problem>", "#donne/<medication>"
+// "#p/<id>", "#r/<id>", "#m/<id>", "#chrono", the address book "#c" and one entry "#c/<id>"; from a reminder or the home page also "#noter", "#noter/<problem>", "#donne/<medication>"
 let depth = 0; // views opened from here: the back arrow steps back instead of leaving the screen
 function go(hash) { history.pushState(null, "", hash); depth++; route(); window.scrollTo(0, 0); }
 function back() { if (depth > 0) history.back(); else { history.replaceState(null, "", location.pathname); route(); window.scrollTo(0, 0); } }
@@ -493,7 +532,7 @@ document.addEventListener("click", (e) => {
 let view = { kind: "" };
 function route() {
   const [kind, id] = decodeURIComponent(location.hash.slice(1)).split("/");
-  view = ["p", "r", "m", "chrono"].includes(kind) ? { kind, id } : { kind: "" };
+  view = ["p", "r", "m", "c", "chrono"].includes(kind) ? { kind, id } : { kind: "" };
   render();
 }
 function actionFromHash() { // what a reminder or the home page asked for
@@ -588,6 +627,9 @@ function renderRdv() {
   const cands = S.rows("agenda").filter((ev) => !ev.decision && Date.parse(ev.debut) > now - 120 * DAY)
     .sort((a, b) => { const fa = Date.parse(a.debut) >= now, fb = Date.parse(b.debut) >= now; return fb - fa || (fa ? Date.parse(a.debut) - Date.parse(b.debut) : Date.parse(b.debut) - Date.parse(a.debut)); });
   let h = `<button class="add" type="button" id="addRdv" data-buzz>${IC.plus}Rendez-vous</button>`;
+  const book = S.pros().filter((p) => p.actif !== false).length;
+  h += `<div class="card list"><a class="li" href="#c"><span class="ic">${IC.book}</span><span class="txt"><b>Carnet des pros</b>
+    <span class="sub">${book ? `${book} personne${book > 1 ? "s" : ""} et endroit${book > 1 ? "s" : ""} : téléphone, adresse, prise de rendez-vous` : "Les pros de Thomas, pour les choisir en un geste"}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a></div>`;
   if (cands.length) h += `<div class="card list"><div class="agenda-head"><div class="label">Dans l'agenda Family</div><span>Pour Thomas ?</span></div>`
     + cands.map((ev) => { const t = Date.parse(ev.debut);
       return `<div class="cand"><span class="txt"><b>${esc(ev.titre)}</b><span class="sub">${cap(S.fmtDay(S.dayOf(t, ev.fuseau), { year: t < now - 300 * DAY ? "numeric" : undefined }))}${ev.journee ? "" : ` à ${S.fmtTime(t, ev.fuseau)}`}${ev.lieu ? ` · ${esc(S.shortPlace(ev.lieu))}` : ""}</span></span>
@@ -710,14 +752,17 @@ function viewRdv(r) {
   const t = Date.parse(r.le), future = t > Date.now(), day = S.dayOf(t, r.fuseau);
   const probs = (r.problemes || []).map((id) => S.byId("problemes", id)).filter(Boolean), meds = S.meds().filter((m) => m.rdv === r.id);
   const done = r.compte_rendu || r.diagnostic || r.suivi || (r.photos && r.photos.length);
+  const pro = S.proOf(r), tel = pro && S.telLink(pro.telephone);
+  const tags = [pro ? `<a class="tag pro" href="#c/${pro.id}">${IC.book}${esc(pro.nom)}</a>` : "",
+    ...probs.map((p) => `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>`)].filter(Boolean);
   return head(S.rdvTitle(r)) + `
   <section class="card hero"><span class="state${r.annule ? " warn" : future ? " on" : ""}">${r.annule ? "Annulé" : future ? "À venir" : "Passé"}</span>
     <h2>${esc(S.rdvTitle(r))}</h2>
     <p class="when">${cap(S.fmtDay(day, { weekday: "long", year: "numeric" }))} à ${S.fmtTime(t, r.fuseau)}${tzNote(r.fuseau)}</p>
     <span class="sub">${esc([S.rdvType(r.type), r.lieu, r.pro].filter(Boolean).join(" · "))}</span>
     ${r.motif && r.motif !== S.rdvTitle(r) ? `<span class="sub">Pourquoi : ${esc(r.motif)}</span>` : ""}
-    ${probs.length ? `<div class="tags">${probs.map((p) => `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>`).join("")}</div>` : ""}
-    <div class="btnrow"><button class="btn" type="button" data-edit-r>Modifier</button>
+    ${tags.length ? `<div class="tags">${tags.join("")}</div>` : ""}
+    <div class="btnrow"><button class="btn" type="button" data-edit-r>Modifier</button>${tel && future ? `<a class="btn" href="${tel}">${IC.phone}Appeler</a>` : ""}
       ${r.agenda_uid ? `<span class="sub" style="align-self:center">${IC.cal.replace('class="i"', 'class="i" style="width:16px;height:16px;vertical-align:-3px"')} Dans l'agenda Family</span>`
         : future ? `<a class="btn" href="${S.agendaLink(r)}" target="_blank" rel="noopener">${IC.cal}Ajouter à l'agenda</a>` : ""}</div>
   </section>
@@ -751,6 +796,40 @@ function viewMed(m) {
       : `<p class="prose muted">Aucune prise notée.</p>`}
   </section>`;
 }
+// The address book: people, then places, then those not followed any more
+function viewCarnet() {
+  const all = S.pros(), on = all.filter((p) => p.actif !== false);
+  const row = (p) => { const n = S.rdvsWith(p.id).length, where = S.isPlace(p) ? "" : S.shortPlace(S.proPlace(p));
+    return `<a class="li" href="#c/${p.id}"><span class="txt"><b>${esc(p.nom)}</b><span class="sub">${esc([p.role, where].filter(Boolean).join(" · "))}${n ? ` · ${n} rendez-vous` : ""}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`; };
+  const group = (title, list) => (list.length ? `<div class="group">${title}</div><div class="card list">${list.map(row).join("")}</div>` : "");
+  return head("Carnet des pros") + `<button class="add" type="button" data-new-pro data-buzz>${IC.plus}Ajouter au carnet</button>`
+    + (all.length ? "" : `<div class="card empty"><b>Le carnet est vide.</b> Ajoute les pros de Thomas (médecin, ostéo, CLSC…) avec leur téléphone et leur adresse : un rendez-vous les reprend en un geste.</div>`)
+    + group("Personnes", on.filter((p) => !S.isPlace(p))) + group("Endroits", on.filter(S.isPlace)) + group("Plus suivis", all.filter((p) => p.actif === false));
+}
+const webLink = (u) => (/^https?:\/\/\S+$/i.test(u || "") ? u : ""); // only a web address becomes a link
+const host = (u) => { try { return new URL(u).hostname.replace(/^www\./, ""); } catch (e) { return u; } };
+const mapLink = (q) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`;
+function viewPro(p) {
+  const now = Date.now(), rs = S.rdvsWith(p.id), up = rs.filter((r) => !r.annule && Date.parse(r.le) >= now - 2 * H), before = rs.filter((r) => !up.includes(r)).reverse();
+  const place = S.proPlace(p), tel = S.telLink(p.telephone), site = webLink(p.site);
+  return head(p.nom) + `
+  <section class="card hero"><span class="state on">${esc(S.rdvType(p.type, true))}</span>${p.actif === false ? ` <span class="state">Plus suivi</span>` : ""}
+    <h2>${esc(p.nom)}</h2>
+    ${p.role ? `<p class="when">${esc(p.role)}</p>` : ""}
+    ${place ? `<span class="sub">${esc(place)}</span>` : ""}
+    ${tel || site || p.adresse ? `<div class="btnrow">${tel ? `<a class="btn primary" href="${tel}">${IC.phone}Appeler</a>` : ""}
+      ${site ? `<a class="btn" href="${esc(site)}" target="_blank" rel="noopener">${IC.cal}Prendre rendez-vous</a>` : ""}
+      ${p.adresse ? `<a class="btn" href="${mapLink(place)}" target="_blank" rel="noopener">${IC.pin}Plan</a>` : ""}</div>` : ""}
+    ${p.telephone || p.courriel || site ? `<dl class="kv">${p.telephone ? `<dt>Téléphone</dt><dd>${tel ? `<a href="${tel}">${esc(p.telephone)}</a>` : esc(p.telephone)}</dd>` : ""}
+      ${p.courriel ? `<dt>Courriel</dt><dd><a href="mailto:${esc(p.courriel)}">${esc(p.courriel)}</a></dd>` : ""}
+      ${site ? `<dt>En ligne</dt><dd><a href="${esc(site)}" target="_blank" rel="noopener">${esc(host(site))}</a></dd>` : ""}</dl>` : ""}
+    ${p.notes ? md(p.notes, "pros", p.id, "notes", "prose") : ""}
+    <div class="btnrow"><button class="btn" type="button" data-edit-pro>Modifier</button><button class="btn" type="button" data-rdv-pro>${IC.plus}Rendez-vous</button></div>
+  </section>
+  <section class="card"><div class="label">Rendez-vous de Thomas</div>
+    ${rs.length ? `<div class="inlist">${[...up, ...before].map((r) => rdvRow(r, now)).join("")}</div>` : `<p class="prose muted">Aucun rendez-vous avec ${S.isPlace(p) ? "cet endroit" : "cette personne"} pour le moment.</p>`}
+  </section>`;
+}
 function viewChrono() {
   const items = [];
   S.problems().forEach((p) => {
@@ -772,19 +851,21 @@ function viewChrono() {
   });
   return h;
 }
+const KINDS = { p: "problemes", r: "rdv", m: "medicaments", c: "pros" };
 function renderDetail() {
   let html = "", gone = false;
   if (view.kind === "chrono") html = viewChrono();
+  else if (view.kind === "c" && !view.id) html = viewCarnet();
   else {
-    const rec = S.byId({ p: "problemes", r: "rdv", m: "medicaments" }[view.kind], view.id);
+    const rec = S.byId(KINDS[view.kind], view.id);
     if (!rec) gone = true;
-    else html = view.kind === "p" ? viewProblem(rec) : view.kind === "r" ? viewRdv(rec) : viewMed(rec);
+    else html = { p: viewProblem, r: viewRdv, m: viewMed, c: viewPro }[view.kind](rec);
   }
   if (gone) { // deleted, or not loaded yet
     html = head("Santé") + `<div class="card empty">${S.loaded ? "Cette fiche n'existe plus." : "Chargement…"}</div>`;
   }
   $("detail").innerHTML = html;
-  const rec = () => S.byId({ p: "problemes", r: "rdv", m: "medicaments" }[view.kind], view.id);
+  const rec = () => S.byId(KINDS[view.kind], view.id);
   const on = (sel, fn) => $("detail").querySelectorAll(sel).forEach((b) => b.addEventListener("click", fn));
   on("[data-back]", back);
   on("[data-edit-p]", () => openProblem(rec()));
@@ -793,6 +874,9 @@ function renderDetail() {
   on("[data-new-med]", () => view.kind === "p" ? openMed(null, { probleme: view.id }) : openMed(null, { rdv: view.id, probleme: (rec().problemes || [])[0] || null }));
   on("[data-edit-r]", () => openRdv(rec()));
   on("[data-edit-m]", () => openMed(rec()));
+  on("[data-new-pro]", () => openPro(null));
+  on("[data-edit-pro]", () => openPro(rec()));
+  on("[data-rdv-pro]", () => openRdv(null, S.fromPro(rec())));
   on("[data-stop-m]", () => { const m = rec(); if (confirm(`Arrêter ${m.nom} maintenant ? Les rappels s'arrêtent aussi.`)) S.save("medicaments", { ...strip(m), arrete: new Date().toISOString() }); });
   on("[data-edit-note]", (e) => { if (!e.target.closest("input, a, .ph-row")) openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }); });
   Photos.hydrate($("detail"));
@@ -1043,6 +1127,7 @@ function openRdv(r, preset = {}) {
   $("rType").innerHTML = S.RDV_TYPES.map(([k, l]) => `<button type="button" class="chip" role="radio" data-v="${k}">${l}</button>`).join("");
   pressGroup($("rType"), base.type || "medecin");
   $("rLieu").value = base.lieu || ""; $("rPro").value = base.pro || ""; $("rMotif").value = base.motif || "";
+  rdvPro = base.pro_id || null; renderCarnet();
   const chosen = new Set(base.problemes || []), recent = S.problems().filter((p) => S.isOpen(p) || chosen.has(p.id) || S.daysBetween(p.fin, S.today()) <= 60);
   $("rFor").innerHTML = recent.map((p) => `<button type="button" class="chip" data-v="${p.id}" aria-pressed="${chosen.has(p.id)}">${esc(S.nameOf(p))}</button>`).join("");
   $("rForWrap").hidden = !recent.length;
@@ -1052,6 +1137,46 @@ function openRdv(r, preset = {}) {
   show($("rdvDlg"));
 }
 let rdvSaved = false, found = []; // found: the medications the assistant read, { med, on }
+// Who it is with: an entry of the address book (in a list, or one of the usual ones a tap away). Picking one fills
+// the type, the place and who; the fields stay free to change.
+let rdvPro = null;
+function renderCarnet() {
+  const on = S.pros().filter((p) => p.actif !== false || p.id === rdvPro), cur = rdvPro && S.byId("pros", rdvPro);
+  const opt = (p) => `<option value="${p.id}">${esc(p.nom)}${p.role && !S.isPlace(p) ? ` · ${esc(p.role)}` : ""}</option>`;
+  const people = on.filter((p) => !S.isPlace(p)), places = on.filter(S.isPlace);
+  $("rCarnet").innerHTML = `<option value="">${on.length ? "Choisir dans le carnet…" : "Le carnet est vide"}</option>`
+    + (people.length ? `<optgroup label="Personnes">${people.map(opt).join("")}</optgroup>` : "")
+    + (places.length ? `<optgroup label="Endroits">${places.map(opt).join("")}</optgroup>` : "")
+    + `<option value="+">+ Ajouter au carnet…</option>`;
+  $("rCarnet").value = cur ? cur.id : "";
+  // The usual ones: the most appointments, the latest first on a tie
+  const seen = new Map();
+  S.appointments().forEach((r) => { const p = S.proOf(r); if (p && p.actif !== false) seen.set(p.id, { p, n: ((seen.get(p.id) || {}).n || 0) + 1, t: Date.parse(r.le) }); });
+  const usual = [...seen.values()].sort((a, b) => b.n - a.n || b.t - a.t).slice(0, 5).map((x) => x.p);
+  $("rRecent").innerHTML = usual.map((p) => `<button type="button" class="chip" data-v="${p.id}" aria-pressed="${p.id === rdvPro}">${esc(p.nom)}</button>`).join("");
+  $("rRecent").hidden = !usual.length;
+  const tel = cur && S.telLink(cur.telephone), site = cur && webLink(cur.site);
+  $("rPicked").hidden = !(tel || site);
+  $("rPicked").innerHTML = tel || site ? `<span class="txt">${tel ? `<a href="${tel}">${IC.phone}${esc(cur.telephone)}</a>` : ""}</span>${site ? `<a href="${esc(site)}" target="_blank" rel="noopener">Prendre rendez-vous</a>` : ""}` : "";
+}
+function pickPro(p) {
+  rdvPro = p ? p.id : null;
+  if (p) {
+    const f = S.fromPro(p);
+    pressGroup($("rType"), f.type);
+    if (f.lieu) $("rLieu").value = f.lieu;
+    if (f.pro) $("rPro").value = f.pro;
+    else if (S.pros().some((x) => S.proLabel(x) === $("rPro").value.trim())) $("rPro").value = ""; // a place: not the person picked before
+    flash($("rLieu"), $("rPro"));
+  }
+  renderCarnet();
+}
+$("rCarnet").addEventListener("change", () => {
+  const v = $("rCarnet").value;
+  if (v === "+") { $("rCarnet").value = rdvPro || ""; openPro(null, pickPro); return; }
+  pickPro(v ? S.byId("pros", v) : null);
+});
+$("rRecent").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; buzz(); pickPro(b.dataset.v === rdvPro ? null : S.byId("pros", b.dataset.v)); });
 const rdvPhotos = Photos.field($("rPhotos"));
 $("rdvDlg").addEventListener("close", () => { Assistant.stopDictation(); if (!rdvSaved) rdvPhotos.cancel(); });
 const rdvTell = tellBox("r", {
@@ -1099,7 +1224,7 @@ $("rdvForm").addEventListener("submit", (e) => {
   const type = $("rType").querySelector('[aria-checked="true"]').dataset.v;
   const problemes = [...$("rFor").querySelectorAll('[aria-pressed="true"]')].map((b) => b.dataset.v);
   const dx = $("rDx").value.trim() || null;
-  const id = S.save("rdv", { ...(rdvEdit ? strip(rdvEdit) : {}), le: new Date(le).toISOString(), fuseau: tz, type, lieu: $("rLieu").value.trim() || null,
+  const id = S.save("rdv", { ...(rdvEdit ? strip(rdvEdit) : {}), le: new Date(le).toISOString(), fuseau: tz, type, pro_id: rdvPro, lieu: $("rLieu").value.trim() || null,
     pro: $("rPro").value.trim() || null, motif: $("rMotif").value.trim() || null, problemes, compte_rendu: $("rCR").value.trim() || null, diagnostic: dx,
     suivi: $("rSuivi").value.trim() || null, annule: $("rCancel").checked, photos: rdvPhotos.get().length ? rdvPhotos.get() : null });
   rdvPhotos.save(); rdvSaved = true;
@@ -1120,6 +1245,52 @@ $("rDel").addEventListener("click", () => {
   Photos.remove(rdvEdit.photos); rdvPhotos.cancel(); rdvPhotos.clear(); rdvSaved = true;
   if (rdvEdit.agenda_uid) S.save("agenda", { uid: rdvEdit.agenda_uid, decision: "ignore" });
   S.remove("rdv", rdvEdit.id); $("rdvDlg").close(); back();
+});
+
+// An entry of the address book. then(entry): once saved, back to the appointment sheet that asked for it.
+let proEdit = null, proThen = null, proKind = "personne";
+function openPro(p, then = null) {
+  proEdit = p; proThen = then;
+  $("cTitle").textContent = p ? "Modifier la fiche" : "Ajouter au carnet";
+  setKind(p && S.isPlace(p) ? "endroit" : "personne");
+  $("cType").innerHTML = S.RDV_TYPES.map(([k, l]) => `<button type="button" class="chip" role="radio" data-v="${k}">${l}</button>`).join("");
+  pressGroup($("cType"), p ? p.type : "medecin");
+  $("cNom").value = p ? p.nom : ""; $("cRole").value = p && p.role || ""; $("cLieu").value = p && p.lieu || ""; $("cAdresse").value = p && p.adresse || "";
+  $("cTel").value = p && p.telephone || ""; $("cMail").value = p && p.courriel || ""; $("cSite").value = p && p.site || "";
+  $("cMots").value = (p && p.mots || []).join(", "); $("cNotes").value = p && p.notes || "";
+  $("cOld").checked = !!(p && p.actif === false); $("cOldWrap").hidden = !p; $("cDel").hidden = !p; $("cErr").textContent = "";
+  show($("proDlg"));
+}
+function setKind(v) {
+  const place = v === "endroit";
+  proKind = v; pressGroup($("cKind"), v); $("cLieuWrap").hidden = place;
+  $("cNomLab").textContent = place ? "Nom de l'endroit" : "Nom";
+  $("cNom").placeholder = place ? "CLSC de…, Hôpital…" : "Dre Tremblay";
+  $("cRoleLab").textContent = place ? "Pour quoi" : "Métier, spécialité";
+  $("cRole").placeholder = place ? "Vaccination, échographie…" : "Pédiatre, ostéopathe, consultante en lactation…";
+}
+$("cKind").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); setKind(b.dataset.v); } });
+$("cType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("cType"), b.dataset.v); } });
+$("proForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const nom = $("cNom").value.trim(), mail = $("cMail").value.trim(), place = proKind === "endroit", val = (id) => $(id).value.trim() || null;
+  if (!nom) { $("cErr").textContent = "Donne-lui un nom."; return; }
+  if (mail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { $("cErr").textContent = "Le courriel est à vérifier."; return; }
+  let site = $("cSite").value.trim(); if (site && !/^https?:\/\//i.test(site)) site = `https://${site}`;
+  const id = S.save("pros", { ...(proEdit ? strip(proEdit) : {}), nom, role: val("cRole"), type: $("cType").querySelector('[aria-checked="true"]').dataset.v,
+    personne: !place, lieu: place ? null : val("cLieu"), adresse: val("cAdresse"), telephone: val("cTel"), courriel: mail || null, site: site || null,
+    mots: $("cMots").value.split(",").map((w) => w.trim()).filter(Boolean), notes: val("cNotes"), actif: !$("cOld").checked });
+  const then = proThen;
+  $("proDlg").close();
+  if (then) then(S.byId("pros", id));
+  else if (!proEdit) go(`#c/${id}`);
+});
+$("proDlg").addEventListener("close", () => { proThen = null; });
+$("cDel").addEventListener("click", () => {
+  const n = S.rdvsWith(proEdit.id).length;
+  if (!confirm(`Supprimer « ${proEdit.nom} » du carnet ?${n ? ` Ses ${n} rendez-vous restent, sans le lien vers le carnet.` : ""}`)) return;
+  S.remove("pros", proEdit.id); $("proDlg").close();
+  if (view.kind === "c" && view.id === proEdit.id) back();
 });
 
 // A medication

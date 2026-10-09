@@ -189,7 +189,46 @@ async function findMed(c: Ctx, ref: string): Promise<Row | string> {
 // ---------- Health: appointments ----------
 const rdvType = (k: string) => (RDV_TYPES.find(([t]) => t === k) || RDV_TYPES[0])[1];
 const rdvTitle = (r: Row) => r.motif || r.pro || r.lieu || rdvType(r.type);
-const appointments = (c: Ctx) => c.db.all(`select id, le, fuseau, type, lieu, pro, motif, compte_rendu, diagnostic, suivi, problemes, annule, agenda_uid, par from sante_rdv order by le`);
+const appointments = (c: Ctx) => c.db.all(`select id, le, fuseau, type, lieu, pro, pro_id, motif, compte_rendu, diagnostic, suivi, problemes, annule, agenda_uid, par from sante_rdv order by le`);
+
+// ---------- Health: the address book (same rules as sante.js) ----------
+// A person or a place (personne false); type: the kind of appointment they give; mots: other words the calendar uses for them
+const pros = (c: Ctx) => c.db.all(`select id, nom, role, type, personne, lieu, adresse, telephone, courriel, site, notes, mots, actif from sante_pros order by nom`);
+const bare = (s: unknown) => norm(s).replace(/[^a-z0-9]+/g, " ").trim();
+const nameKey = (p: Row) => bare(p.nom).replace(/^(dre?|docteure?|mme|m) /, "");
+const isPlace = (p: Row) => p.personne === false;
+const proLabel = (p: Row) => (isPlace(p) || !p.role ? p.nom : `${p.nom}, ${String(p.role).replace(/^\p{Lu}(?=\p{Ll})/u, (x) => x.toLowerCase())}`);
+const proPlace = (p: Row) => [p.lieu || (isPlace(p) ? p.nom : ""), p.adresse].filter(Boolean).join(", ");
+const STREET = /^(\d+) (?:(?:rue|boulevard|boul|bd|chemin|ch|avenue|av|de|du|des|la|le|saint|sainte|st|ste) )*([a-z]+)/;
+// Who some words are about: its name or its words (4), a last name (3), its clinic or street address (2 each), a word of its role (1)
+function proFor(text: string, list: Row[]): Row | null {
+  const t = ` ${bare(text)} `;
+  if (!t.trim()) return null;
+  const has = (w: string) => { const b = bare(w); return b.length >= 3 && t.includes(` ${b} `); };
+  const best = list.filter((p) => p.actif !== false).map((p) => {
+    let s = 0;
+    const last = String(p.nom).split(/\s+/).pop() || "";
+    if ((p.mots || []).some(has) || has(nameKey(p))) s += 4;
+    else if (!isPlace(p) && bare(last).length >= 4 && has(last)) s += 3;
+    if (p.lieu && p.adresse && has(p.lieu)) s += 2;
+    const street = String(p.adresse || "").split(",").map(bare).map((x) => x.match(STREET)).find(Boolean);
+    if (street && t.includes(` ${street[1]} `) && t.includes(` ${street[2]} `)) s += 2;
+    if (s && bare(p.role).split(" ").some((w) => w.length >= 5 && t.includes(` ${w.slice(0, 5)}`))) s += 1;
+    return { p, s };
+  }).filter((x) => x.s >= 2).sort((a, b) => b.s - a.s);
+  return best.length && (best.length === 1 || best[0].s > best[1].s) ? best[0].p : null;
+}
+// By id, or by name (a word of it is enough when only one matches)
+async function findPro(c: Ctx, ref: string): Promise<Row | string> {
+  const all = await pros(c);
+  if (isUuid(ref)) return all.find((p) => p.id === ref) || `Aucune fiche du carnet avec l'id ${ref}.`;
+  const q = bare(ref), hit = all.filter((p) => bare(p.nom).includes(q) || nameKey(p) === q);
+  if (hit.length === 1) return hit[0];
+  const guess = proFor(ref, all);
+  if (guess) return guess;
+  if (!hit.length) return `Personne dans le carnet pour « ${ref} ». Carnet : ${all.filter((p) => p.actif !== false).map((p) => `${p.nom} [${p.id}]`).join(" ; ") || "vide"}.`;
+  return `Plusieurs fiches correspondent à « ${ref} » : ${hit.map((p) => `${proLabel(p)} [${p.id}]`).join(" ; ")}. Précise l'id.`;
+}
 
 // ---------- Growth ----------
 const weighings = (c: Ctx) => c.db.all(`select id, jour, pese_le, fuseau, lieu, poids_g, taille_cm, pc_cm, note from mesures order by pese_le, cree`);
@@ -394,14 +433,16 @@ export function register(server: McpServer, c: Ctx) {
     inputSchema: { periode: z.enum(["a_venir", "passes", "tous"]).optional().describe("à venir par défaut"), limite: z.number().int().min(1).max(50).optional() },
     annotations: read
   }, async ({ periode = "a_venir", limite = 10 }) => {
-    const now = c.now(), all = await appointments(c), probs = await problems(c);
+    const now = c.now(), [all, probs, book] = await Promise.all([appointments(c), problems(c), pros(c)]);
     let list = periode === "a_venir" ? all.filter((r) => !r.annule && Date.parse(r.le) >= now - 2 * H) : periode === "passes" ? all.filter((r) => Date.parse(r.le) < now - 2 * H).reverse() : [...all].reverse();
     list = list.slice(0, limite);
     if (!list.length) return text(periode === "a_venir" ? "Aucun rendez-vous à venir." : "Aucun rendez-vous.");
     return text(list.map((r) => {
       const ps = (r.problemes || []).map((id: string) => probs.find((p) => p.id === id)).filter(Boolean).map(nameOf);
+      const pro = r.pro_id && book.find((p) => p.id === r.pro_id);
       return [`- **${when(c, r.le, r.fuseau)}** : ${rdvTitle(r)}${r.annule ? " (annulé)" : ""} [${r.id}]`,
         `  ${[rdvType(r.type), r.lieu && r.lieu.split("\n")[0], r.pro].filter(Boolean).join(" · ")}${ps.length ? ` · pour : ${ps.join(", ")}` : ""}`,
+        pro && `  Carnet : ${pro.nom}${pro.telephone ? `, tél. ${pro.telephone}` : ""} [${pro.id}]`,
         r.compte_rendu && `  Compte rendu : ${r.compte_rendu.replace(/\s*\n\s*/g, " ")}`, r.diagnostic && `  Diagnostic : ${r.diagnostic}`,
         r.suivi && `  Et ensuite : ${r.suivi.replace(/\s*\n\s*/g, " ")}`].filter(Boolean).join("\n");
     }).join("\n"));
@@ -411,8 +452,24 @@ export function register(server: McpServer, c: Ctx) {
     quand: z.string().optional().describe("AAAA-MM-JJ HH:MM (heure de Montréal sauf « fuseau »)"),
     fuseau: z.string().optional().describe("fuseau du rendez-vous s'il n'est pas à Montréal, ex. Europe/Paris"),
     type: z.enum(["medecin", "clsc", "hopital", "urgences", "telephone", "soin", "autre"]).optional(),
+    carnet: z.string().optional().describe("id ou nom d'une fiche du carnet (sante_pros) : remplit le type, où et qui ; sinon « pro » et « lieu » sont cherchés dans le carnet"),
     lieu: z.string().optional(), pro: z.string().optional().describe("qui, ex. « Dre Tremblay, pédiatre »"), motif: z.string().optional().describe("pourquoi"),
     problemes: z.array(z.string()).optional().describe("id ou mots des problèmes concernés")
+  };
+  // The entry an appointment is with: named (carnet), else found from who and where; null when none, a sentence when not found
+  async function proOfRdv(a: { carnet?: string; pro?: string; lieu?: string }): Promise<Row | null | string> {
+    if (a.carnet?.trim()) return findPro(c, a.carnet.trim());
+    const words = `${a.pro || ""} ${a.lieu || ""}`.trim();
+    if (!words) return null;
+    const all = await pros(c), q = bare(a.pro);
+    const named = q.length >= 4 ? all.filter((p) => p.actif !== false && ` ${bare(p.nom)} `.includes(` ${q} `)) : []; // "Mylène"
+    return named.length === 1 ? named[0] : proFor(words, all);
+  }
+  // Who, as written by the parent, unless it is only a piece of the name ("Mylène" -> "Mylène Savoie, ostéopathe D.O.")
+  const whoFor = (p: Row | null, pro?: string) => {
+    const t = pro?.trim();
+    if (t && !(p && ` ${bare(p.nom)} `.includes(` ${bare(t)} `))) return t;
+    return p && !isPlace(p) ? proLabel(p) : t || null;
   };
   async function problemIds(refs?: string[]) {
     const ids: string[] = [];
@@ -430,10 +487,14 @@ export function register(server: McpServer, c: Ctx) {
     const tz = zone(a.fuseau); if (!tz) return fail(`Fuseau inconnu : ${a.fuseau}.`);
     const t = parseQuand({ ...c, tz }, a.quand); if (typeof t === "string") return fail(t);
     const ids = await problemIds(a.problemes); if (typeof ids === "string") return fail(ids);
-    const [r] = await c.db.exec(`insert into sante_rdv (le, fuseau, type, lieu, pro, motif, problemes, par, maj)
-      values ($1::timestamptz, $2, $3, $4, $5, $6, coalesce(array(select jsonb_array_elements_text($7::text::jsonb))::uuid[], '{}'), $8, now()) returning id`,
-      [new Date(t).toISOString(), tz, a.type || "medecin", a.lieu?.trim() || null, a.pro?.trim() || null, a.motif?.trim() || null, JSON.stringify(ids), c.par]);
-    return text(`Rendez-vous ajouté : ${when({ ...c, tz }, new Date(t).toISOString(), tz)}, ${a.motif || a.pro || rdvType(a.type || "medecin")}. Il n'est pas dans l'agenda Family : l'app propose « Ajouter à l'agenda ». [${r.id}]`);
+    const p = await proOfRdv(a); if (typeof p === "string") return fail(p);
+    const pro = whoFor(p, a.pro), lieu = a.lieu?.trim() || (p && proPlace(p)) || null;
+    const [r] = await c.db.exec(`insert into sante_rdv (le, fuseau, type, lieu, pro, pro_id, motif, problemes, par, maj)
+      values ($1::timestamptz, $2, $3, $4, $5, $6::uuid, $7, coalesce(array(select jsonb_array_elements_text($8::text::jsonb))::uuid[], '{}'), $9, now()) returning id`,
+      [new Date(t).toISOString(), tz, a.type || p?.type || "medecin", lieu, pro, p?.id ?? null, a.motif?.trim() || null, JSON.stringify(ids), c.par]);
+    return text(`Rendez-vous ajouté : ${when({ ...c, tz }, new Date(t).toISOString(), tz)}, ${a.motif || pro || lieu || rdvType(a.type || p?.type || "medecin")}.`
+      + `${p ? ` Avec ${proLabel(p)} (carnet${p.telephone ? `, tél. ${p.telephone}` : ""})${lieu ? `, ${lieu}` : ""}.` : ""}`
+      + ` Il n'est pas dans l'agenda Family : l'app propose « Ajouter à l'agenda ». [${r.id}]`);
   });
 
   server.registerTool("sante_rendez_vous_modifier", {
@@ -455,11 +516,16 @@ export function register(server: McpServer, c: Ctx) {
     const more = await problemIds(a.problemes); if (typeof more === "string") return fail(more);
     const probs = [...new Set([...(r.problemes || []), ...more])];
     const pick = (v: string | undefined, old: unknown) => (v === undefined ? old : v.trim() || null);
+    // Its entry: named (carnet), or found from a new who or where while it has none
+    const p = (a.carnet?.trim() || ((a.pro?.trim() || a.lieu?.trim()) && !r.pro_id)) ? await proOfRdv(a) : null;
+    if (typeof p === "string") return fail(p);
+    const named = !!(p && a.carnet?.trim());
+    const from: { type?: string; lieu?: string; pro?: string } = p ? { type: named ? p.type : undefined, lieu: named ? proPlace(p) || undefined : undefined, pro: whoFor(p, a.pro) || undefined } : {};
     await c.db.exec(`update sante_rdv set le = $2::timestamptz, fuseau = $3, type = $4, lieu = $5, pro = $6, motif = $7, compte_rendu = $8, diagnostic = $9, suivi = $10,
-      annule = $11, problemes = coalesce(array(select jsonb_array_elements_text($12::text::jsonb))::uuid[], '{}'), maj = now() where id = $1::uuid`,
-      [r.id, le, tz, a.type || r.type, pick(a.lieu, r.lieu), pick(a.pro, r.pro), pick(a.motif, r.motif), pick(a.compte_rendu, r.compte_rendu),
-        pick(a.diagnostic, r.diagnostic), pick(a.suivi, r.suivi), a.annule ?? r.annule, JSON.stringify(probs)]);
-    const notes = [`Rendez-vous du ${fmtDay(dayOf(le, tz))} mis à jour.`];
+      annule = $11, problemes = coalesce(array(select jsonb_array_elements_text($12::text::jsonb))::uuid[], '{}'), pro_id = $13::uuid, maj = now() where id = $1::uuid`,
+      [r.id, le, tz, a.type || from.type || r.type, pick(a.lieu ?? from.lieu, r.lieu), pick(from.pro ?? a.pro, r.pro), pick(a.motif, r.motif), pick(a.compte_rendu, r.compte_rendu),
+        pick(a.diagnostic, r.diagnostic), pick(a.suivi, r.suivi), a.annule ?? r.annule, JSON.stringify(probs), p ? p.id : r.pro_id]);
+    const notes = [`Rendez-vous du ${fmtDay(dayOf(le, tz))} mis à jour${p ? `, avec ${proLabel(p)} (carnet)` : ""}.`];
     const dx = a.diagnostic?.trim();
     if (dx && probs.length) {
       const all = await problems(c);
@@ -470,6 +536,73 @@ export function register(server: McpServer, c: Ctx) {
       }
     }
     return text(`${notes.join(" ")} [${r.id}]`);
+  });
+
+  server.registerTool("sante_pros", {
+    title: "Carnet des pros",
+    description: "Le carnet des professionnels de santé et des endroits de Thomas (médecin de famille, ostéopathe, consultante en lactation, CLSC, hôpitaux) : métier, clinique, adresse, téléphone, courriel, lien de prise de rendez-vous, notes. Avec « recherche » (un nom, un métier, un mot) : les fiches qui correspondent, en détail, avec leurs rendez-vous.",
+    inputSchema: { recherche: z.string().optional(), tous: z.boolean().optional().describe("aussi ceux qui ne sont plus suivis") },
+    annotations: read
+  }, async ({ recherche, tous }) => {
+    const all = await pros(c), q = bare(recherche);
+    const list = all.filter((p) => (tous || q || p.actif !== false)
+      && (!q || [p.nom, p.role, p.lieu, p.adresse, p.notes, ...(p.mots || [])].some((x) => bare(x).includes(q))));
+    if (!list.length) return text(q ? `Rien dans le carnet pour « ${recherche} ».` : "Le carnet est vide.");
+    const kind = (p: Row) => [{ telephone: "téléphone", soin: "soin" }[p.type as string] || rdvType(p.type).toLowerCase(), isPlace(p) && "endroit", p.actif === false && "plus suivi"].filter(Boolean).join(", ");
+    const line = (p: Row) => `- **${p.nom}**${p.role ? `, ${p.role}` : ""} (${kind(p)}) : ${[isPlace(p) ? p.adresse : proPlace(p), p.telephone && `tél. ${p.telephone}`].filter(Boolean).join(" ; ") || "sans coordonnées"} [${p.id}]`;
+    if (!q) return text([`${list.length} fiche${list.length > 1 ? "s" : ""} (entre parenthèses : le type de rendez-vous) :`, ...list.map(line)].join("\n"));
+    const rdvs = await appointments(c), now = c.now(), out: string[] = [];
+    for (const p of list.slice(0, 5)) {
+      const rs = rdvs.filter((r) => r.pro_id === p.id && !r.annule), next = rs.find((r) => Date.parse(r.le) >= now - 2 * H), last = rs.filter((r) => Date.parse(r.le) < now - 2 * H).at(-1);
+      out.push(line(p),
+        ...[p.courriel && `  Courriel : ${p.courriel}`, p.site && `  Prise de rendez-vous : ${p.site}`, p.notes && `  Notes : ${p.notes.replace(/\s*\n\s*/g, " ")}`,
+          (p.mots || []).length && `  Reconnu dans l'agenda par : ${p.mots.join(", ")}`,
+          `  Rendez-vous de Thomas : ${rs.length}${last ? ` ; dernier ${when(c, last.le, last.fuseau)} (${rdvTitle(last)})` : ""}${next ? ` ; prochain ${when(c, next.le, next.fuseau)} (${rdvTitle(next)}) [${next.id}]` : ""}`].filter(Boolean) as string[]);
+    }
+    if (list.length > 5) out.push(`… et ${list.length - 5} autres : précise la recherche.`);
+    return text(out.join("\n"));
+  });
+
+  server.registerTool("sante_pro_ajouter", {
+    title: "Ajouter ou compléter une fiche du carnet",
+    description: "Ajoute un professionnel de santé ou un endroit au carnet, ou complète une fiche existante (« fiche » : son id ou son nom ; seuls les champs donnés changent). Ne recopie que des coordonnées données par le parent ou lues dans un document, sans en inventer.",
+    inputSchema: {
+      fiche: z.string().optional().describe("pour compléter une fiche : son id ou son nom"),
+      nom: z.string().optional().describe("ex. « Dre Julie Tremblay », « CLSC de Rosemont »"), role: z.string().optional().describe("métier, spécialité ; pour un endroit : ce qu'on y fait"),
+      endroit: z.boolean().optional().describe("true pour un endroit (CLSC, hôpital), pas une personne"),
+      type: z.enum(["medecin", "clsc", "hopital", "urgences", "telephone", "soin", "autre"]).optional().describe("le type de ses rendez-vous"),
+      lieu: z.string().optional().describe("personne : sa clinique, son établissement, ou « À domicile »"), adresse: z.string().optional(),
+      telephone: z.string().optional(), courriel: z.string().optional(), site: z.string().optional().describe("lien de prise de rendez-vous"),
+      notes: z.string().max(4000).optional(), mots: z.array(z.string()).optional().describe("autres mots de l'agenda qui le désignent, ex. « GMF HMR »"),
+      plus_suivi: z.boolean().optional().describe("true : caché du choix dans l'app, gardé pour ses rendez-vous ; false : de nouveau suivi")
+    },
+    annotations: write
+  }, async (a) => {
+    const val = (v?: string) => (v === undefined ? undefined : v.trim() || null);
+    let site = val(a.site);
+    if (site && !/^https?:\/\//i.test(site)) site = `https://${site}`;
+    if (a.courriel?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(a.courriel.trim())) return fail(`Courriel illisible : « ${a.courriel} ».`);
+    const f: Row = { nom: val(a.nom), role: val(a.role), type: a.type, personne: a.endroit === undefined ? undefined : !a.endroit, lieu: val(a.lieu), adresse: val(a.adresse),
+      telephone: val(a.telephone), courriel: val(a.courriel), site, notes: val(a.notes), mots: a.mots?.map((w) => w.trim()).filter(Boolean),
+      actif: a.plus_suivi === undefined ? undefined : !a.plus_suivi };
+    if (f.personne === false) f.lieu = null;
+    if (a.fiche?.trim()) {
+      const p = await findPro(c, a.fiche.trim()); if (typeof p === "string") return fail(p);
+      const n = { ...p, ...Object.fromEntries(Object.entries(f).filter(([, v]) => v !== undefined)) };
+      if (!n.nom) return fail("Le nom ne peut pas être vide.");
+      await c.db.exec(`update sante_pros set nom = $2, role = $3, type = $4, personne = $5, lieu = $6, adresse = $7, telephone = $8, courriel = $9, site = $10, notes = $11,
+        mots = coalesce((select array_agg(x) from jsonb_array_elements_text($12::text::jsonb) x), '{}'), actif = $13, maj = now() where id = $1::uuid`,
+        [p.id, n.nom, n.role, n.type, n.personne, n.lieu, n.adresse, n.telephone, n.courriel, n.site, n.notes, JSON.stringify(n.mots || []), n.actif]);
+      return text(`Fiche « ${n.nom} » mise à jour${n.actif === false ? " (plus suivie)" : ""}. [${p.id}]`);
+    }
+    if (!f.nom) return fail("Donne au moins le nom (ou « fiche » pour compléter une fiche existante).");
+    const twin = (await pros(c)).find((p) => nameKey(p) === nameKey({ nom: f.nom }));
+    if (twin) return fail(`« ${twin.nom} » est déjà dans le carnet [${twin.id}] : passe « fiche » pour la compléter.`);
+    const [p] = await c.db.exec(`insert into sante_pros (nom, role, type, personne, lieu, adresse, telephone, courriel, site, notes, mots, par, maj)
+      values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, coalesce((select array_agg(x) from jsonb_array_elements_text($11::text::jsonb) x), '{}'), $12, now()) returning id`,
+      [f.nom, f.role ?? null, f.type || "medecin", f.personne ?? true, f.lieu ?? null, f.adresse ?? null, f.telephone ?? null, f.courriel ?? null, f.site ?? null, f.notes ?? null,
+        JSON.stringify(f.mots || []), c.par]);
+    return text(`Ajouté au carnet : ${proLabel({ ...f, personne: f.personne ?? true })}${f.telephone ? `, tél. ${f.telephone}` : ""}. On peut maintenant le choisir pour un rendez-vous. [${p.id}]`);
   });
 
   server.registerTool("sante_medicaments", {
@@ -660,8 +793,9 @@ export function register(server: McpServer, c: Ctx) {
   });
 }
 
-export const INSTRUCTIONS = `Données de la famille de Thomas, né le 26 juin 2026 à Montréal (app THOMAS911, partagée par Arthur et Edith) : santé (problèmes, notes, rendez-vous, médicaments et prises), pesées, bonnes habitudes, checklist de sortie.
+export const INSTRUCTIONS = `Données de la famille de Thomas, né le 26 juin 2026 à Montréal (app THOMAS911, partagée par Arthur et Edith) : santé (problèmes, notes, rendez-vous, médicaments et prises, carnet des pros), pesées, bonnes habitudes, checklist de sortie.
 - Commence par thomas_aujourdhui pour avoir l'état du moment et les id.
+- Les pros et endroits de Thomas (médecin de famille, ostéopathe, CLSC…) sont dans le carnet (sante_pros) : un rendez-vous ajouté avec « carnet » en reprend le type, l'adresse et le nom.
 - Les heures sont celles de Montréal (America/Toronto) sauf mention contraire ; écris-les AAAA-MM-JJ HH:MM.
 - Tu peux lire, ajouter et compléter, pas supprimer : pour supprimer ou corriger une note, une prise ou une pesée, renvoie vers l'app.
 - Médicaments : recopie la dose et le rythme de l'ordonnance, ne calcule ni ne devine jamais une dose. Si sante_donner dit que c'est trop tôt, demande confirmation au parent avant forcer = true.

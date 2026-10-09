@@ -189,3 +189,22 @@ create table assistant_journal (
   par text, sorte text, modele text, entree integer, sortie integer, ms integer, refus boolean not null default false
 );
 alter table assistant_journal enable row level security;
+
+-- ---------- The address book ----------
+-- Health professionals and places (personne false: a CLSC, a hospital), to pick for an appointment: it takes their type,
+-- place and name. mots: other words the Family calendar uses for them ("GMF HMR"). actif false: not followed any more,
+-- hidden from the choice, kept for the past appointments. Filled from the family's emails and calendar (not in this file).
+create table sante_pros (
+  id uuid primary key default gen_random_uuid(),
+  nom text not null, role text,
+  type text not null default 'medecin' check (type in ('medecin', 'clsc', 'hopital', 'urgences', 'telephone', 'soin', 'autre')),
+  personne boolean not null default true,
+  lieu text, adresse text, telephone text, courriel text, site text, notes text,
+  mots text[] not null default '{}',
+  actif boolean not null default true,
+  par text, cree timestamptz not null default now(), maj timestamptz not null default now()
+);
+alter table sante_pros enable row level security;
+create policy famille on sante_pros for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+alter table sante_rdv add column pro_id uuid references sante_pros(id) on delete set null;
+create index sante_rdv_pro_id on sante_rdv (pro_id);
