@@ -19,6 +19,7 @@ En ligne : https://latullaye.github.io/checklist-bebe/ — sur téléphone, l'aj
 La checklist, les habitudes, la température intérieure et les mesures de croissance sont partagées entre les téléphones de la famille via un projet Supabase. `config.js` contient son URL et sa clé publique (publiques par nature).
 
 - **Rappels** : `pg_cron` appelle toutes les demi-heures la fonction `rappels` (`supabase/functions/rappels/index.ts`). Chaque téléphone reçoit ses rappels à 9 h, 12 h 30 et 17 h 30 dans son propre fuseau horaire, seulement s'il reste quelque chose à cocher. Celui de 17 h 30 annonce aussi le soir du bain (tous les 2 à 3 jours, à partir du 2e jour après le dernier).
+- **Sur l'icône de l'app** : sur iPhone, une pastille rouge donne le nombre de choses qu'il reste à faire pour le moment (le « À faire » de l'accueil). Le rappel la met et chaque case cochée la fait baisser. Android n'affiche pas de chiffre pour une app web : il met un point tant que le rappel est dans les notifications, et le rappel disparaît dès que tout ce qu'il annonçait est coché. Sur iPhone, le titre du rappel commence par ☀️, 🌞, 🌙 ou 🛁, parce que l'image n'y est pas affichée.
 - **Clés de notification** : générées par la fonction elle-même. La clé privée reste dans une table que l'app ne peut pas lire.
 - **Installation** : le SQL appliqué est dans `supabase/setup.sql`.
 - **Sur chaque téléphone** : ouvrir *Réglages* (roue dentée de l'accueil) et autoriser les notifications. Sur iPhone, l'app doit d'abord être ajoutée à l'écran d'accueil.

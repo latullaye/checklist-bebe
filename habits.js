@@ -30,7 +30,7 @@
   let status = shared ? "sync" : "local"; // sync | ok | offline | local
 
   const listeners = [];
-  const emit = () => listeners.forEach((fn) => { try { fn(); } catch (e) {} });
+  const emit = () => { listeners.forEach((fn) => { try { fn(); } catch (e) {} }); badge(); };
   const setStatus = (s) => { if (s !== status) { status = s; emit(); } };
 
   const api = (path, opts = {}) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${path}`, {
@@ -98,6 +98,32 @@
   function lastBath() {
     return Object.keys(data).filter((d) => data[d].bain).sort().pop() || null;
   }
+  // The bath: every 2 or 3 days, in the evening. Due from the 2nd day after the last one (the reminders say the same).
+  const BATH_EVERY = 2;
+  function bathAgo() {
+    const last = lastBath();
+    return last ? Math.round((new Date(today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
+  }
+  const bathDue = () => { const d = bathAgo(); return d === null || d >= BATH_EVERY; };
+  // What this moment is about (the home page's "À faire"): the slot's habits, the vitamin D, the bath on its evening
+  const todo = (slot = slotNow()) => [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : [])];
+  const left = () => todo().filter((k) => !get(today(), k));
+
+  // The app icon follows what's left. iPhone: the red badge with the number (the reminder sets it, every tick updates it).
+  // Android has no number for web apps: its dot stays while the reminder is in the tray, so the reminder goes once it's all done.
+  function badge() {
+    const n = left().length;
+    try { if (navigator.setAppBadge) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {}); } catch (e) {}
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistration()
+      .then((reg) => reg && reg.getNotifications && reg.getNotifications({ tag: "rappel" }))
+      .then((list) => (list || []).forEach((note) => {
+        const { jour, cles, bain } = note.data || {};
+        if (!jour || !cles) return;
+        if (jour < today() || (cles.every((k) => get(jour, k)) && (!bain || get(jour, "bain")))) note.close();
+      }))
+      .catch(() => {});
+  }
 
   // The phone's time zone: reminders come at 9:00, 12:30 and 17:30 wherever it is (Paris, Montréal...).
   const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } };
@@ -121,7 +147,9 @@
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") { refresh(); syncTz(); } });
   window.addEventListener("online", refresh);
   syncTz();
+  badge();
 
-  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, onChange, api, tz,
+  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, bathAgo, bathDue, todo, left,
+    onChange, api, tz,
     get status() { return status; } };
 })();

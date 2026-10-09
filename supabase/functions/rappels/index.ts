@@ -1,7 +1,8 @@
 // THOMAS911 habit reminders (Web Push).
 // - GET  ?cle-publique      -> the VAPID public key (created on first call; the private half never leaves the database)
 // - POST (x-cron-key header) -> called by pg_cron every half hour; each phone gets its reminder at 9:00, 12:30 and 17:30
-//   in its own time zone (abonnements.tz); the 17:30 one also says when it's bath night (every 2 or 3 days). Body {"slot": "matin"} forces a moment, {"dry": true} sends nothing.
+//   in its own time zone (abonnements.tz); the 17:30 one also says when it's bath night (every 2 or 3 days), and each one sets
+//   the red badge on the app icon to what's left for that moment. Body {"slot": "matin"} forces a moment, {"dry": true} sends nothing.
 import webpush from "npm:web-push@3.6.7";
 import postgres from "npm:postgres@3.4.5";
 
@@ -67,7 +68,9 @@ async function message(jour: string, slot: string) {
   // "C'est fait" ticks the exercises; it ticks the bath only when the bath is all the reminder is about
   // (the bath usually comes later in the evening than the exercises).
   const cles = todo.length ? todo.map(([c]) => c) : ["bain"];
-  return { title: `Rappel du ${slot}`, body: todo.length ? body : body.replace("Et c'est", "C'est"), jour, slot, cles };
+  // The red badge on the app icon: what's left for this moment, like the home page's "À faire" (the vitamin D counts all day)
+  const reste = [`bouche-${slot}`, `perinee-${slot}`, "vitd"].filter((c) => !done.has(c)).length + (bath ? 1 : 0);
+  return { title: `Rappel du ${slot}`, body: todo.length ? body : body.replace("Et c'est", "C'est"), jour, slot, cles, reste };
 }
 
 Deno.serve(async (req) => {
@@ -92,7 +95,7 @@ Deno.serve(async (req) => {
     const slot = body.slot || SLOTS[hm];
     if (!slot) { report.push({ tz, jour, hm, abonnes: group.length, envoye: 0 }); continue; }
     const msg = await message(jour, slot);
-    if (!msg || body.dry) { report.push({ tz, jour, slot, abonnes: group.length, envoye: 0, message: msg?.body ?? "tout est fait" }); continue; }
+    if (!msg || body.dry) { report.push({ tz, jour, slot, abonnes: group.length, envoye: 0, message: msg?.body ?? "tout est fait", reste: msg?.reste ?? 0 }); continue; }
     let envoye = 0; const erreurs: string[] = [];
     for (const s of group) {
       try { await webpush.sendNotification(s.abonnement, JSON.stringify(msg), { TTL: 3 * 3600, urgency: "high" }); envoye++; }

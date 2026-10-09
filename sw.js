@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v33";
+const VERSION = "thomas911-v35";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -26,6 +26,11 @@ const FILES = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon-192.png",
+  "./notif/matin.png",
+  "./notif/midi.png",
+  "./notif/soir.png",
+  "./notif/bain.png",
+  "./notif/badge.png",
   "./icon-poussette.svg",
   "./icon-bruit.svg",
   "./icon-habitudes.svg",
@@ -75,16 +80,29 @@ self.addEventListener("fetch", (e) => {
 });
 
 // ---------- Reminders ----------
-// The GitHub job sends { title, body, jour, slot, cles } (cles: the boxes the reminder is about). Android shows the two quick actions; iPhone only the tap.
+// The reminder function sends { title, body, jour, slot, cles, reste } (cles: the boxes the reminder is about, reste: what's left
+// for this moment, the bath included). Android shows the picture and the two quick actions; iPhone only the text and the tap.
+const EMOJI = { matin: "☀️", midi: "🌞", soir: "🌙", bain: "🛁" };
+const ua = self.navigator.userAgent || "";
+const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && !/Chrome|Firefox|Edg/.test(ua));
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data.json(); } catch (err) {}
-  e.waitUntil(self.registration.showNotification(d.title || "THOMAS911", {
+  const bain = /bain/.test(d.body || ""), cles = d.cles || [];
+  // What it's about: morning sun, midday sun, evening moon, or the duck when the bath is in it.
+  // Android shows the app icon on the left already, so it goes in the picture on the right (the badge goes in the status bar);
+  // iPhone ignores the picture, so it goes at the start of the title.
+  const pic = bain ? "bain" : ["matin", "midi", "soir"].includes(d.slot) ? d.slot : null;
+  const title = d.title || "THOMAS911";
+  // The red badge on the app icon (iPhone; Android shows its own dot while the reminder is there)
+  const n = d.reste ?? cles.length + (bain && !cles.includes("bain") ? 1 : 0);
+  const count = self.navigator.setAppBadge && n ? self.navigator.setAppBadge(n).catch(() => {}) : null;
+  e.waitUntil(Promise.all([count, self.registration.showNotification(apple && pic ? `${EMOJI[pic]} ${title}` : title, {
     body: d.body || "", tag: "rappel", renotify: true,
-    icon: "icon-192.png",
-    data: { jour: d.jour, slot: d.slot, cles: d.cles },
+    icon: pic ? `notif/${pic}.png` : "icon-192.png", badge: "notif/badge.png",
+    data: { jour: d.jour, slot: d.slot, cles: d.cles, bain },
     actions: [{ action: "fait", title: "C'est fait" }, { action: "plus-tard", title: "Plus tard" }]
-  }));
+  })]));
 });
 
 function openPage(url) {

@@ -218,29 +218,18 @@ Growth.onChange(renderWeight);
 // Habits of the moment (this slot) and the vitamin D, checkable right here
 const NAMES = { bouche: "Exercices de bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain" };
 const MOMENT = { matin: "ce matin", midi: "ce midi", soir: "ce soir" };
-// The bath: every 2 or 3 days, in the evening. Due from the 2nd day after the last one.
-const BATH_EVERY = 2;
-function bathAgo() {
-  const last = Habits.lastBath();
-  return last ? Math.round((new Date(Habits.today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
-}
-const bathDue = () => { const d = bathAgo(); return d === null || d >= BATH_EVERY; };
-function todoKeys() {
-  const slot = Habits.slotNow();
-  return [...Habits.HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : [])];
-}
 function todoLabel(k) {
   if (k !== "bain") return NAMES[k.split("-")[0]];
-  const d = bathAgo();
+  const d = Habits.bathAgo();
   return `Bain<small>${d === null ? "pas noté depuis 2 semaines" : `dernier il y a ${d} jours`}</small>`;
 }
 function renderTodo() {
   const day = Habits.today(), slot = Habits.slotNow(), { done, total } = Habits.progress();
-  const left = todoKeys().filter((k) => !Habits.get(day, k));
+  const left = Habits.left();
   $("todoTitle").textContent = `À faire ${MOMENT[slot]}`;
   $("todoCount").textContent = `${done}/${total} aujourd'hui ›`;
   $("habSub").innerHTML = done >= total ? "<b>Tout est fait</b> aujourd'hui" : `<b>${done}/${total}</b> aujourd'hui`;
-  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${k === "bain" && bathAgo() !== null && bathAgo() >= 3 ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
+  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${k === "bain" && Habits.bathAgo() >= 3 ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
   $("allDone").hidden = !!left.length;
   $("allDone").innerHTML = `<b>Tout est fait ${MOMENT[slot]}.</b> Bravo !`;
 }
