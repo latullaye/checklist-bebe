@@ -1,6 +1,7 @@
 // The MCP server (Streamable HTTP, stateless): checks the family code, then answers with the tools of outils.ts.
-// The code comes in a header, "x-famille: <code>" or "Authorization: Bearer <code>" (typed like on the phones: spaces,
-// capitals and accents don't matter). In the address: ?qui=Arthur (who writes), ?tz=Europe/Paris (else Montréal).
+// The code comes in the address (?cle=<code>: claude.ai only sends approved header names) or in a header,
+// "x-famille: <code>" or "Authorization: Bearer <code>"; typed like on the phones (spaces, capitals and accents don't
+// matter). Also in the address: ?qui=Arthur (who writes), ?tz=Europe/Paris (else Montréal).
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { DEFAULT_TZ } from "../sante/logic.ts";
@@ -26,10 +27,11 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   // No session, so no stream to keep open (GET) nor to close (DELETE): the protocol allows answering 405
   if (req.method !== "POST") return new Response(null, { status: 405, headers: { ...CORS, Allow: "POST, OPTIONS" } });
   const url = new URL(req.url);
-  const code = normalize(req.headers.get("x-famille") || (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, ""));
-  const expected = code ? await deps.familleSha256() : null;
-  if (!code || !expected || (await sha256(code)) !== expected) {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Code de la famille manquant ou faux (en-tête x-famille ou Authorization: Bearer)." }, id: null }),
+  const codes = [url.searchParams.get("cle"), req.headers.get("x-famille"), (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "")]
+    .map((c) => normalize(c || "")).filter(Boolean);
+  const expected = codes.length ? await deps.familleSha256() : null;
+  if (!expected || !(await Promise.all(codes.map(sha256))).includes(expected)) {
+    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Code de la famille manquant ou faux (?cle= dans l'adresse, ou en-tête x-famille)." }, id: null }),
       { status: 401, headers: { ...CORS, "Content-Type": "application/json" } });
   }
   const qui = PEOPLE.find((p) => p.toLowerCase() === (url.searchParams.get("qui") || "").toLowerCase()) || null;
