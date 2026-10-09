@@ -9,7 +9,8 @@
     "sortie-bebe-attente": (v) => Object.keys(v || {}).length,          // checklist
     "thomas911-habitudes-attente": (v) => Object.keys(v || {}).length,  // habits
     "thomas911-reglages-attente": (v) => Object.keys(v || {}).length,   // shared settings
-    "thomas911-outbox": (v) => (Array.isArray(v) ? v.length : 0)        // growth measures
+    "thomas911-outbox": (v) => (Array.isArray(v) ? v.length : 0),       // growth measures
+    "thomas911-sante-attente": (v) => (Array.isArray(v) ? v.length : 0) // health notes, appointments, medications
   };
   let online = navigator.onLine !== false, lastOk = 0, el = null;
   const waiting = () => {
@@ -19,11 +20,13 @@
   };
   function render() {
     if (!el) return;
-    const n = waiting(), state = !online ? "off" : n ? "wait" : lastOk ? "ok" : "sync";
+    const locked = window.Famille && !Famille.ok(); // no family code on this phone yet (famille.js)
+    const n = waiting(), state = locked ? "lock" : !online ? "off" : n ? "wait" : lastOk ? "ok" : "sync";
     el.className = "sync-pill " + state;
-    el.textContent = state === "off" ? (n ? `Hors ligne · ${n} en attente` : "Hors ligne")
+    el.textContent = state === "lock" ? "Code famille ?" : state === "off" ? (n ? `Hors ligne · ${n} en attente` : "Hors ligne")
       : state === "wait" ? `${n} en attente` : state === "ok" ? "À jour" : "Synchro…";
-    el.title = state === "ok" ? "Partagé entre vos téléphones" : state === "off" ? "Ce qui est noté partira au retour du réseau" : "";
+    el.title = state === "ok" ? "Partagé entre vos téléphones" : state === "off" ? "Ce qui est noté partira au retour du réseau"
+      : state === "lock" ? "Touche pour entrer le code de la famille" : "";
   }
   // Watch the calls to the shared database
   const realFetch = window.fetch.bind(window);
@@ -45,6 +48,7 @@
     if (!slot) return;
     el = document.createElement("span");
     el.setAttribute("role", "status");
+    el.addEventListener("click", () => { if (window.Famille && !Famille.ok()) Famille.ask(); });
     slot.appendChild(el);
     render();
   }

@@ -1,0 +1,977 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="common.css">
+<title>Santé · THOMAS911</title>
+<style>
+:root { --warn: #b36b12; --bad: #c4553f; --good: #2f8f55; --warn-soft: #fbead2; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --warn: #f0b860; --bad: #f08a75; --good: #6fd39a; --warn-soft: #3a2e1a; } }
+:root[data-theme="dark"] { --warn: #f0b860; --bad: #f08a75; --good: #6fd39a; --warn-soft: #3a2e1a; }
+
+/* Tabs (as in Croissance) */
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--group); }
+.tab { font: inherit; font-weight: 700; font-size: 0.9rem; color: var(--muted); background: none; border: 0; border-radius: 10px; padding: 9px 2px; cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.tab small { font-size: 0.72rem; font-weight: 800; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 1px 6px; margin-left: 4px; vertical-align: 1px; }
+.pane { display: flex; flex-direction: column; gap: 14px; }
+
+/* Big action button (as "Nouvelle mesure") */
+.add { font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; color: var(--accent-ink); background: var(--accent); border: 0;
+  border-radius: 16px; padding: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; width: 100%; }
+.add svg { width: 22px; height: 22px; }
+.group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 4px 2px -6px; }
+.empty { color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
+.empty b { color: var(--ink); }
+
+/* "Right now" */
+.now { padding: 0; overflow: hidden; }
+.now .label { padding: 13px 16px 0; }
+.now .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.now .row + .row { border-top: 1px solid var(--line); }
+.now .row > a { flex: 1; min-width: 0; color: inherit; text-decoration: none; display: flex; align-items: center; gap: 12px; }
+.now .ic { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.now .ic svg { width: 21px; height: 21px; }
+.now .ic.warn { background: var(--warn-soft); color: var(--warn); }
+.ttl { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
+.sub { display: block; color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.sub b { color: var(--ink); }
+.sub b.late, .late { color: var(--warn); }
+.pillbtn { font: inherit; font-weight: 800; font-size: 0.85rem; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 999px; padding: 8px 12px;
+  display: inline-flex; align-items: center; gap: 4px; flex: none; cursor: pointer; }
+.pillbtn svg { width: 16px; height: 16px; }
+.pillbtn.soft { color: var(--accent); background: var(--accent-soft); }
+.nothing { padding: 14px 16px; color: var(--muted); font-size: 0.9rem; }
+
+/* Lists */
+.list { padding: 0; overflow: hidden; }
+.li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: inherit; text-decoration: none; }
+.li + .li, .li + .cand, .cand + .cand, .cand + .li { border-top: 1px solid var(--line); }
+.li .txt { flex: 1; min-width: 0; }
+.li b { display: block; font-size: 0.96rem; line-height: 1.25; }
+.li .go { width: 18px; height: 18px; color: var(--muted); flex: none; }
+.date { width: 44px; flex: none; text-align: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); padding: 5px 0 4px; line-height: 1; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.date b { display: block; font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 2px; }
+.date.past { background: var(--group); color: var(--muted); }
+.dx { display: inline-block; margin-top: 4px; font-size: 0.78rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+.cancel b { text-decoration: line-through; color: var(--muted); }
+/* Events found in the Family calendar */
+.cand { display: flex; align-items: center; gap: 10px; padding: 11px 14px; flex-wrap: wrap; }
+.cand .txt { flex: 1; min-width: 180px; }
+.cand .btns { display: flex; gap: 6px; }
+.cand button { font: inherit; font-size: 0.82rem; font-weight: 700; border-radius: 999px; padding: 7px 11px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.cand button.yes { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.agenda-head { display: flex; align-items: center; gap: 8px; padding: 13px 14px 4px; }
+.agenda-head .label { flex: 1; }
+.agenda-head span { font-size: 0.78rem; color: var(--muted); }
+
+/* Problem and medication cards */
+.prob, .med { display: flex; flex-direction: column; gap: 10px; }
+.prob > a, .med > a { color: inherit; text-decoration: none; display: flex; align-items: flex-start; gap: 10px; }
+.prob > a .txt, .med > a .txt { flex: 1; min-width: 0; }
+.was { display: block; font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+.tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tag { font-size: 0.8rem; font-weight: 700; color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 999px; padding: 4px 9px; font-variant-numeric: tabular-nums; }
+.tag.hot { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
+.tag.muted { font-weight: 400; color: var(--muted); }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn { font: inherit; font-weight: 700; font-size: 0.88rem; border-radius: 12px; padding: 10px 13px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.btn svg { width: 17px; height: 17px; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.grow { flex: 1; justify-content: center; }
+.next { font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.next b { font-family: var(--font-display); }
+.next.late b { color: var(--warn); }
+.dots { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dots i { font-style: normal; color: var(--ink); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; font-weight: 700; }
+
+/* Detail views */
+.top .back { cursor: pointer; font: inherit; }
+.top h1 { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hero h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.45rem; line-height: 1.15; margin: 8px 0 0; }
+.hero .when { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; margin: 6px 0 0; }
+.hero .sub { margin-top: 4px; }
+.hero .btnrow { margin-top: 14px; }
+.hero .tags { margin-top: 10px; }
+.state { display: inline-block; font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; border-radius: 999px; padding: 3px 9px; background: var(--group); color: var(--muted); }
+.state.on { background: var(--accent-soft); color: var(--accent); }
+.state.warn { background: var(--warn-soft); color: var(--warn); }
+.prose { white-space: pre-wrap; font-size: 0.92rem; line-height: 1.45; margin: 8px 0 0; -webkit-user-select: text; user-select: text; }
+.prose.muted { color: var(--muted); }
+.kv { margin: 10px 0 0; }
+.kv dt { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 10px; }
+.kv dd { margin: 3px 0 0; font-size: 0.94rem; line-height: 1.4; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
+.resume { white-space: pre-wrap; font: inherit; font-size: 0.88rem; line-height: 1.5; margin: 10px 0 12px; padding: 12px; border-radius: 12px; background: var(--bg);
+  border: 1px solid var(--line); -webkit-user-select: text; user-select: text; overflow-wrap: anywhere; }
+.card > .label + .btnrow, .card > .label + .li { margin-top: 10px; }
+.addline { font: inherit; font-weight: 700; font-size: 0.88rem; color: var(--accent); background: none; border: 0; padding: 10px 0 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+.addline svg { width: 17px; height: 17px; }
+.inlist { margin: 10px -16px 0; border-top: 1px solid var(--line); }
+.inlist .li { padding-left: 16px; padding-right: 16px; }
+/* Day by day */
+.day { padding: 12px 0; }
+.day + .day { border-top: 1px solid var(--line); }
+.day-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.day-head b { font-size: 0.95rem; }
+.day-head b::first-letter { text-transform: uppercase; }
+.day-head span { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
+.day .tags { margin-bottom: 6px; }
+.note { font: inherit; text-align: left; display: block; width: 100%; background: none; border: 0; padding: 6px 0 6px 12px; margin-top: 4px; border-left: 3px solid var(--accent-soft);
+  color: var(--ink); cursor: pointer; font-size: 0.9rem; line-height: 1.4; }
+.note .when { display: block; font-size: 0.76rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.note .did { display: block; color: var(--accent); }
+.note .muted { color: var(--muted); }
+.given { display: flex; align-items: center; gap: 7px; font-size: 0.86rem; color: var(--muted); margin: 6px 0 0; text-decoration: none; font-variant-numeric: tabular-nums; }
+.given svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
+.given b { color: var(--ink); }
+.none { font-size: 0.85rem; color: var(--muted); margin: 0; }
+.none button { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+.doses { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.doses button { font: inherit; font-size: 0.84rem; font-weight: 700; border: 1px solid var(--line); background: var(--bg); color: var(--ink); border-radius: 999px; padding: 5px 10px; cursor: pointer; font-variant-numeric: tabular-nums; }
+.doses button small { font-weight: 400; color: var(--muted); }
+.chrono-item { display: flex; gap: 10px; align-items: flex-start; padding: 9px 0; color: inherit; text-decoration: none; }
+.chrono-item + .chrono-item { border-top: 1px solid var(--line); }
+.chrono-item .ic { width: 30px; height: 30px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.chrono-item .ic svg { width: 17px; height: 17px; }
+.chrono-item .txt { flex: 1; min-width: 0; font-size: 0.9rem; line-height: 1.35; }
+.chrono-item .txt span { display: block; font-size: 0.78rem; color: var(--muted); }
+.foot { text-align: center; font-size: 0.78rem; color: var(--muted); line-height: 1.45; }
+.foot a { color: var(--accent); font-weight: 700; text-decoration: none; }
+
+/* Sheets (as in Croissance) */
+dialog { border: 0; border-radius: 22px; padding: 0; width: min(440px, calc(100vw - 20px)); max-height: calc(100dvh - 24px); background: var(--surface); color: var(--ink); box-shadow: 0 20px 60px rgba(0,0,0,.3); }
+dialog::backdrop { background: rgba(0,0,0,.35); }
+.sheet { padding: 18px 16px 16px; display: flex; flex-direction: column; gap: 13px; }
+.sheet h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.25rem; margin: 0; }
+.sheet .hint { font-size: 0.8rem; color: var(--muted); margin: -4px 0 0; line-height: 1.35; }
+.field > label, .field > .lab { display: block; font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 6px; }
+.field input, .field textarea, .field select { font: inherit; width: 100%; padding: 11px 12px; border-radius: 12px; border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+  -webkit-user-select: text; user-select: text; }
+.field textarea { min-height: 70px; resize: vertical; line-height: 1.4; }
+.field input:focus, .field textarea:focus { outline: none; border-color: var(--accent); }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font: inherit; font-size: 0.84rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 11px; cursor: pointer; }
+.chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip.ghost { color: var(--accent); border-style: dashed; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--group); }
+.seg button { font: inherit; font-weight: 700; font-size: 0.86rem; color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 9px 4px; cursor: pointer; }
+.seg button[aria-checked="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
+.count { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.88rem; }
+.count > b { min-width: 0; flex: 1; }
+.count small { color: var(--muted); font-size: 0.78rem; }
+.step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
+.step button { font: inherit; font-weight: 800; font-size: 1.05rem; width: 36px; height: 34px; border: 0; background: var(--bg); color: var(--accent); cursor: pointer; }
+.step output { min-width: 34px; text-align: center; font-family: var(--font-display); font-weight: 700; font-variant-numeric: tabular-nums; }
+.unit { position: relative; }
+.unit input { padding-right: 40px; }
+.unit span { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; pointer-events: none; }
+.times { display: flex; flex-direction: column; gap: 6px; }
+.times div { display: flex; gap: 6px; }
+.times button { font: inherit; font-weight: 800; border: 1px solid var(--line); background: var(--bg); color: var(--muted); border-radius: 12px; width: 44px; cursor: pointer; }
+.sep { border-top: 1px solid var(--line); padding-top: 12px; font-size: 0.72rem; font-weight: 700; color: var(--accent); text-transform: uppercase; letter-spacing: .06em; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; }
+.check input { width: 20px; height: 20px; accent-color: var(--accent); }
+.actions { display: flex; gap: 8px; margin-top: 4px; position: sticky; bottom: -16px; background: var(--surface); padding: 8px 0 0; }
+.actions button { font: inherit; font-weight: 700; border-radius: 12px; padding: 12px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.actions .save { flex: 1; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.actions .del { color: var(--bad); }
+.err { color: var(--bad); font-size: 0.85rem; min-height: 1em; margin: 0; }
+.err:empty { display: none; }
+
+/* Toast with "undo" */
+.toast { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; width: min(440px, calc(100vw - 24px));
+  display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; background: var(--ink); color: var(--bg); box-shadow: 0 8px 30px rgba(0,0,0,.25); font-size: 0.9rem; }
+.toast span { flex: 1; }
+.toast button { font: inherit; font-weight: 800; color: var(--accent-soft); background: none; border: 0; cursor: pointer; padding: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="main">
+  <header class="top">
+    <a class="back" href="./" aria-label="Retour à l'accueil"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></a>
+    <h1>Santé</h1>
+  </header>
+
+  <section class="card now" id="now" aria-label="En ce moment"></section>
+  <button class="add" id="addNote" type="button" data-buzz><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Noter ce que je vois</button>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-t="p" type="button">Problèmes</button>
+    <button class="tab" role="tab" data-t="r" type="button">Rendez-vous</button>
+    <button class="tab" role="tab" data-t="m" type="button">Médicaments</button>
+  </div>
+  <div class="pane" id="paneP" role="tabpanel"></div>
+  <div class="pane" id="paneR" role="tabpanel" hidden></div>
+  <div class="pane" id="paneM" role="tabpanel" hidden></div>
+  <p class="foot"><a href="#chrono">Toute la chronologie</a><br>En cas de doute : Info-Santé 811 au Québec, le 15 ou le 112 en France.</p>
+</div>
+
+<div class="wrap" id="detail" hidden></div>
+
+<div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastUndo">Annuler</button></div>
+
+<!-- What is seen -->
+<dialog id="noteDlg">
+  <form class="sheet" id="noteForm" method="dialog">
+    <h2 id="noteTitle">Noter ce que je vois</h2>
+    <div class="field"><span class="lab">Pour</span><div class="chips" id="nFor" role="radiogroup"></div></div>
+    <div id="nNew" class="two">
+      <div class="field"><label for="nName">Nom</label><input id="nName" autocomplete="off" placeholder="Diarrhée, fièvre…"></div>
+      <div class="field"><label for="nSince">Depuis le</label><input type="date" id="nSince"></div>
+    </div>
+    <div class="chips" id="nSinceQuick"></div>
+    <div class="two">
+      <div class="field"><label for="nDate">Le</label><input type="date" id="nDate"></div>
+      <div class="field"><label for="nTime">À</label><input type="time" id="nTime"></div>
+    </div>
+    <div class="field"><span class="lab">Symptômes</span><div class="chips" id="nSyms"></div><div id="nCounts"></div></div>
+    <div class="two">
+      <div class="field"><label for="nTemp">Température</label><div class="unit"><input id="nTemp" inputmode="decimal" autocomplete="off" placeholder="37,5"><span>°C</span></div></div>
+      <div class="field"><span class="lab">Couches mouillées</span><span class="step"><button type="button" id="nCMinus" aria-label="Une de moins">−</button><output id="nCouches">—</output><button type="button" id="nCPlus" aria-label="Une de plus">+</button></span></div>
+    </div>
+    <p class="hint">Les nombres comptent depuis la note d'avant ; le résumé fait le total de la journée.</p>
+    <div class="field"><label for="nObs">Ce que j'observe</label><textarea id="nObs" placeholder="Selles très liquides, boit bien, dort plus que d'habitude…"></textarea></div>
+    <div class="field"><label for="nFait">Ce qu'on fait</label><textarea id="nFait" placeholder="Solution de réhydratation, biberons plus petits et plus souvent…"></textarea></div>
+    <p class="err" id="nErr"></p>
+    <div class="actions"><button type="button" class="del" id="nDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<!-- A problem -->
+<dialog id="probDlg">
+  <form class="sheet" id="probForm" method="dialog">
+    <h2>Le problème</h2>
+    <div class="field"><label for="pTitre">Ce qu'on a vu d'abord</label><input id="pTitre" autocomplete="off" placeholder="Diarrhée"></div>
+    <div class="field"><label for="pDx">Diagnostic</label><input id="pDx" autocomplete="off" placeholder="Gastro-entérite (une fois le médecin vu)"></div>
+    <div class="two">
+      <div class="field"><label for="pDebut">Début</label><input type="date" id="pDebut" required></div>
+      <div class="field"><label for="pFin">Fin</label><input type="date" id="pFin"></div>
+    </div>
+    <p class="hint">Fin vide : toujours en cours.</p>
+    <div class="field"><label for="pNotes">Notes</label><textarea id="pNotes" placeholder="Contexte, ce qui pourrait l'expliquer…"></textarea></div>
+    <p class="err" id="pErr"></p>
+    <div class="actions"><button type="button" class="del" id="pDel">Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<!-- An appointment -->
+<dialog id="rdvDlg">
+  <form class="sheet" id="rdvForm" method="dialog">
+    <h2 id="rTitle">Rendez-vous</h2>
+    <div class="two">
+      <div class="field"><label for="rDate">Le</label><input type="date" id="rDate" required></div>
+      <div class="field"><label for="rTime">À</label><input type="time" id="rTime" required></div>
+    </div>
+    <p class="hint" id="rAgenda" hidden>Lié à l'agenda Family : s'il y est déplacé, l'app suit.</p>
+    <div class="field"><span class="lab">Avec</span><div class="chips" id="rType" role="radiogroup"></div></div>
+    <div class="field"><label for="rLieu">Où</label><input id="rLieu" autocomplete="off" placeholder="CLSC de la Petite-Patrie, cabinet du Dr…"></div>
+    <div class="field"><label for="rPro">Qui</label><input id="rPro" autocomplete="off" placeholder="Dre Tremblay, pédiatre"></div>
+    <div class="field"><label for="rMotif">Pourquoi</label><input id="rMotif" autocomplete="off" placeholder="Diarrhée depuis 3 jours, vaccins des 4 mois…"></div>
+    <div class="field" id="rForWrap"><span class="lab">Pour les problèmes</span><div class="chips" id="rFor"></div></div>
+    <div class="sep">Après le rendez-vous</div>
+    <div class="field"><label for="rCR">Ce qui a été dit et fait</label><textarea id="rCR" placeholder="Examen, conseils, ordonnance…"></textarea></div>
+    <div class="field"><label for="rDx">Diagnostic</label><input id="rDx" autocomplete="off" placeholder="Gastro-entérite"></div>
+    <div class="field"><label for="rSuivi">Et ensuite</label><input id="rSuivi" autocomplete="off" placeholder="Revoir si fièvre, rendez-vous dans 1 semaine…"></div>
+    <label class="check" id="rCancelWrap"><input type="checkbox" id="rCancel"> Rendez-vous annulé</label>
+    <p class="err" id="rErr"></p>
+    <div class="actions"><button type="button" class="del" id="rDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<!-- A medication -->
+<dialog id="medDlg">
+  <form class="sheet" id="medForm" method="dialog">
+    <h2 id="mTitle">Médicament</h2>
+    <div class="field"><label for="mNom">Nom</label><input id="mNom" autocomplete="off" list="mNoms" placeholder="Paracétamol (Tempra), solution de réhydratation…"><datalist id="mNoms"></datalist></div>
+    <div class="field"><label for="mDose">Dose</label><input id="mDose" autocomplete="off" placeholder="2,5 mL, 1 suppositoire de 80 mg…"></div>
+    <div class="field"><span class="lab">Quand</span><div class="seg" id="mMode" role="radiogroup">
+      <button type="button" role="radio" data-m="intervalle">Toutes les … h</button><button type="button" role="radio" data-m="heures">À heures fixes</button><button type="button" role="radio" data-m="besoin">Au besoin</button></div></div>
+    <div id="mModeIntervalle" class="field"><label for="mEvery">Toutes les (heures)</label><input id="mEvery" inputmode="decimal" autocomplete="off" placeholder="6"><div class="chips" id="mEveryQuick" style="margin-top:8px"></div></div>
+    <div id="mModeHeures" class="field"><span class="lab">Heures des prises</span><div class="times" id="mTimes"></div><button type="button" class="addline" id="mAddTime">+ Une heure</button></div>
+    <div id="mModeBesoin" class="two">
+      <div class="field"><label for="mGap">Au moins (h entre deux)</label><input id="mGap" inputmode="decimal" autocomplete="off" placeholder="4"></div>
+      <div class="field"><label for="mMax">Au plus (fois par 24 h)</label><input id="mMax" inputmode="numeric" autocomplete="off" placeholder="5"></div>
+    </div>
+    <div class="two">
+      <div class="field"><label for="mDate">Début le</label><input type="date" id="mDate" required></div>
+      <div class="field"><label for="mTime">À</label><input type="time" id="mTime" required></div>
+    </div>
+    <p class="hint" id="mStartHint">Heure de la première prise.</p>
+    <div class="field"><span class="lab">Pendant</span><div class="seg" id="mLen" role="radiogroup">
+      <button type="button" role="radio" data-l="ouvert">Sans fin prévue</button><button type="button" role="radio" data-l="jours">… jours</button><button type="button" role="radio" data-l="date">Jusqu'au…</button></div>
+      <input id="mDays" inputmode="numeric" autocomplete="off" placeholder="Nombre de jours, par exemple 5" style="margin-top:8px">
+      <input type="date" id="mFin" style="margin-top:8px"></div>
+    <div class="field" id="mForWrap"><span class="lab">Pour</span><div class="chips" id="mFor" role="radiogroup"></div></div>
+    <div class="field" id="mRdvWrap"><span class="lab">Prescrit au rendez-vous</span><div class="chips" id="mRdv" role="radiogroup"></div></div>
+    <div class="field"><label for="mConsignes">Consignes</label><textarea id="mConsignes" placeholder="Bien agiter, à donner avant le boire…"></textarea></div>
+    <label class="check" id="mRemindWrap"><input type="checkbox" id="mRemind" checked> Rappel sur les téléphones à chaque prise</label>
+    <p class="hint">L'app note ce qui a été prescrit : elle ne calcule aucune dose.</p>
+    <p class="err" id="mErr"></p>
+    <div class="actions"><button type="button" class="del" id="mDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<!-- A dose given -->
+<dialog id="doseDlg">
+  <form class="sheet" id="doseForm" method="dialog">
+    <h2 id="dTitle">Prise</h2>
+    <div class="two">
+      <div class="field"><label for="dDate">Le</label><input type="date" id="dDate" required></div>
+      <div class="field"><label for="dTime">À</label><input type="time" id="dTime" required></div>
+    </div>
+    <div class="field"><label for="dDose">Dose</label><input id="dDose" autocomplete="off"></div>
+    <div class="field"><label for="dNote">Note</label><input id="dNote" autocomplete="off" placeholder="En a recraché un peu…"></div>
+    <p class="err" id="dErr"></p>
+    <div class="actions"><button type="button" class="del" id="dDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
+  </form>
+</dialog>
+
+<script src="config.js"></script>
+<script src="famille.js"></script>
+<script src="sync.js"></script>
+<script src="thomas.js"></script>
+<script src="sante.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+const S = Sante;
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const cap = (s) => (s ? s[0].toUpperCase() + s.slice(1) : "");
+const buzz = () => window.buzz && window.buzz();
+const svg = (d) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+const IC = {
+  plus: svg('<path d="M12 5v14M5 12h14"/>'), go: svg('<path d="M9 18l6-6-6-6"/>'),
+  pill: svg('<rect x="2.5" y="7.5" width="19" height="9" rx="4.5"/><path d="M12 7.5v9"/>'),
+  cal: svg('<rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 10h18"/><path d="M12 13v5M9.5 15.5h5"/>'),
+  note: svg('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/>'),
+  heart: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/>'),
+  stop: svg('<path d="M5 12h14"/>'), check: svg('<path d="M5 12l5 5L20 7"/>'),
+  copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
+  share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>')
+};
+const H = S.H, DAY = S.DAY;
+// Time of a record on the clock where it happened, and "(heure de France)" when that's not here
+const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+const tzNote = (tz) => tz && tz !== S.HERE ? ` (heure ${CITY[tz] === "France" ? "de France" : `de ${CITY[tz] || tz.split("/").pop().replace(/_/g, " ")}`})` : "";
+// "14 h 30", "hier à 20 h", "jeu. 8 oct. à 9 h"
+function whenText(t, tz) {
+  const day = S.dayOf(t, tz), rel = S.relDay(day);
+  return `${rel === "aujourd'hui" ? "" : `${rel} à `}${S.fmtTime(t, tz)}`;
+}
+function lastWeight() { // from the growth screen's copy on this phone
+  try {
+    const w = (JSON.parse(localStorage.getItem("thomas911-mesures")) || []).filter((r) => r.poids_g != null).sort((a, b) => Date.parse(a.pese_le) - Date.parse(b.pese_le)).at(-1);
+    return w ? `${(w.poids_g / 1000).toLocaleString("fr-CA", { minimumFractionDigits: 3 })} kg le ${S.fmtDay(w.jour, { weekday: undefined })}` : "";
+  } catch (e) { return ""; }
+}
+
+// ---------- Toast with "undo" ----------
+let toastTimer = null, toastUndo = null;
+function toast(text, undo) {
+  $("toastTxt").textContent = text; toastUndo = undo || null;
+  $("toastUndo").hidden = !undo; $("toast").hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
+}
+$("toastUndo").addEventListener("click", () => { if (toastUndo) toastUndo(); toastUndo = null; $("toast").hidden = true; });
+
+// ---------- Views: the main screen, or one problem / appointment / medication ----------
+// "#p/<id>", "#r/<id>", "#m/<id>", "#chrono"; from a reminder or the home page also "#noter", "#noter/<problem>", "#donne/<medication>"
+let depth = 0; // views opened from here: the back arrow steps back instead of leaving the screen
+function go(hash) { history.pushState(null, "", hash); depth++; route(); window.scrollTo(0, 0); }
+function back() { if (depth > 0) history.back(); else { history.replaceState(null, "", location.pathname); route(); window.scrollTo(0, 0); } }
+window.addEventListener("popstate", () => { depth = Math.max(0, depth - 1); route(); });
+document.addEventListener("click", (e) => {
+  const a = e.target.closest('a[href^="#"]');
+  if (!a || a.closest("dialog")) return;
+  e.preventDefault(); buzz(); go(a.getAttribute("href"));
+});
+let view = { kind: "" };
+function route() {
+  const [kind, id] = decodeURIComponent(location.hash.slice(1)).split("/");
+  view = ["p", "r", "m", "chrono"].includes(kind) ? { kind, id } : { kind: "" };
+  render();
+}
+function actionFromHash() { // what a reminder or the home page asked for
+  const [kind, id] = decodeURIComponent(location.hash.slice(1)).split("/");
+  if (kind === "noter") { history.replaceState(null, "", id ? `#p/${id}` : location.pathname); route(); openNote({ probleme: id || null }); }
+  else if (kind === "donne" && id) { history.replaceState(null, "", `#m/${id}`); route(); const m = S.byId("medicaments", id); if (m) setTimeout(() => giveNow(m), 300); }
+  else route();
+}
+
+// ---------- Main screen ----------
+let tab = "p";
+try { const t = localStorage.getItem("thomas911-sante-onglet"); if (["p", "r", "m"].includes(t)) tab = t; } catch (e) {}
+document.querySelectorAll(".tab").forEach((b) => b.addEventListener("click", () => {
+  tab = b.dataset.t; buzz();
+  try { localStorage.setItem("thomas911-sante-onglet", tab); } catch (e) {}
+  renderMain();
+}));
+$("addNote").addEventListener("click", () => openNote({}));
+
+function doseStatus(m, now = Date.now()) {
+  const n = S.nextDose(m, now);
+  if (!n) return { text: m.mode === "heures" ? "Prises du jour faites" : "Plus de prise prévue", late: false };
+  if (n.kind === "possible") return n.at <= now ? { text: "Possible maintenant", late: false } : { text: `Possible dès <b>${whenText(n.at)}</b>`, late: false };
+  if (n.at <= now) return { text: `<b class="late">À donner${now - n.at > 10 * 6e4 ? ` (prévue à ${S.fmtTime(n.at, m.fuseau)})` : " maintenant"}</b>`, late: true };
+  return { text: `Prochaine prise <b>${whenText(n.at, m.fuseau)}</b> <span>(dans ${S.ago(n.at - now)})</span>`, late: false };
+}
+function renderNow() {
+  const open = S.openProblems(), act = S.meds().filter((m) => S.isActive(m)), now = Date.now();
+  const soon = S.upcoming(now).filter((r) => Date.parse(r.le) < now + 14 * DAY);
+  const rows = [];
+  open.forEach((p) => {
+    const last = S.notesOf(p.id).at(-1);
+    rows.push(`<div class="row"><a href="#p/${p.id}"><span class="ic">${IC.heart}</span><span class="txt"><span class="ttl">${esc(S.nameOf(p))}</span>
+      <span class="sub">Jour ${S.dayNumber(p)} · depuis ${S.relDay(p.debut) === S.fmtDay(p.debut) ? `le ${S.fmtDay(p.debut)}` : S.relDay(p.debut)}${last ? ` · noté ${whenText(last.le, last.fuseau)}` : ""}</span></span></a>
+      <button class="pillbtn" type="button" data-note="${p.id}" data-buzz>${IC.plus}Noter</button></div>`);
+  });
+  act.forEach((m) => {
+    // "Donné" stands out when a dose is due (or close), stays soft otherwise
+    const nd = S.nextDose(m, now), st = doseStatus(m, now), canGive = !nd || nd.at - now < 30 * 6e4;
+    rows.push(`<div class="row"><a href="#m/${m.id}"><span class="ic${st.late ? " warn" : ""}">${IC.pill}</span><span class="txt"><span class="ttl">${esc(m.nom)}${m.dose ? ` <small class="sub" style="display:inline">${esc(m.dose)}</small>` : ""}</span>
+      <span class="sub">${st.text}</span></span></a>
+      <button class="pillbtn${canGive ? "" : " soft"}" type="button" data-give="${m.id}">${IC.check}Donné</button></div>`);
+  });
+  soon.forEach((r) => {
+    rows.push(`<div class="row"><a href="#r/${r.id}"><span class="ic">${IC.cal}</span><span class="txt"><span class="ttl">${esc(S.rdvTitle(r))}</span>
+      <span class="sub">${cap(whenText(Date.parse(r.le), r.fuseau))}${r.lieu ? ` · ${esc(S.shortPlace(r.lieu))}` : ""}</span></span></a></div>`);
+  });
+  $("now").innerHTML = rows.length ? `<div class="label">En ce moment</div>${rows.join("")}`
+    : `<div class="label">En ce moment</div><p class="nothing">Rien en cours. Quand quelque chose t'inquiète, note ce que tu vois : le nom viendra après.</p>`;
+}
+document.addEventListener("click", (e) => {
+  const n = e.target.closest("[data-note]"); if (n && !n.closest("dialog")) { openNote({ probleme: n.dataset.note }); return; }
+  const g = e.target.closest("[data-give]"); if (g) { const m = S.byId("medicaments", g.dataset.give); if (m) giveNow(m); return; }
+  const o = e.target.closest("[data-other]"); if (o) { const m = S.byId("medicaments", o.dataset.other); if (m) openDose(m, null); }
+});
+
+function probCard(p) {
+  const today = S.journal(p).at(-1), tags = [];
+  if (today) {
+    today.sym.forEach((c, k) => tags.push(`<span class="tag">${esc(S.symText(k, c))}</span>`));
+    if (today.tmax != null) tags.push(`<span class="tag${today.tmax >= 38 ? " hot" : ""}">${S.nf(today.tmax, 1)} °C</span>`);
+  }
+  return `<div class="card prob"><a href="#p/${p.id}"><span class="txt"><span class="ttl">${esc(S.nameOf(p))}</span>
+      ${p.diagnostic && p.diagnostic !== p.titre ? `<span class="was">Commencé par : ${esc(p.titre)}</span>` : ""}
+      <span class="sub">Depuis le ${S.fmtDay(p.debut)} · jour ${S.dayNumber(p)}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>
+    <div class="tags">${tags.length ? tags.join("") : `<span class="tag muted">Rien noté aujourd'hui</span>`}</div>
+    <div class="btnrow"><button class="btn primary" type="button" data-note="${p.id}">${IC.plus}Noter</button><a class="btn grow" href="#p/${p.id}">Résumé pour le médecin</a></div></div>`;
+}
+function probRow(p) {
+  const n = S.daysBetween(p.debut, p.fin || S.today()) + 1;
+  return `<a class="li" href="#p/${p.id}"><span class="txt"><b>${esc(S.nameOf(p))}</b><span class="sub">${S.fmtDay(p.debut, { weekday: undefined })} → ${S.fmtDay(p.fin, { weekday: undefined, year: "numeric" })} · ${n} jour${n > 1 ? "s" : ""}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`;
+}
+function renderProblems() {
+  const all = S.problems(), open = all.filter(S.isOpen), done = all.filter((p) => !S.isOpen(p));
+  let h = "";
+  if (!all.length) h += `<div class="card empty"><b>Aucun problème noté.</b> Commence par « Noter ce que je vois » : les symptômes et depuis quand. Un problème se crée tout seul, avec son résumé pour le médecin ; le diagnostic viendra avec le rendez-vous.</div>`;
+  h += open.map(probCard).join("");
+  if (done.length) h += `<div class="group">Terminés</div><div class="card list">${done.map(probRow).join("")}</div>`;
+  $("paneP").innerHTML = h;
+}
+
+function rdvRow(r, now = Date.now()) {
+  const t = Date.parse(r.le), day = S.dayOf(t, r.fuseau), past = t < now - 2 * H;
+  const [d, mo] = [Number(day.slice(8)), new Date(day + "T12:00:00Z").toLocaleDateString("fr-CA", { timeZone: "UTC", month: "short" }).replace(".", "")];
+  return `<a class="li${r.annule ? " cancel" : ""}" href="#r/${r.id}"><span class="date${past ? " past" : ""}"><b>${d}</b>${mo}</span><span class="txt"><b>${esc(S.rdvTitle(r))}</b>
+    <span class="sub">${cap(S.fmtDay(day, { day: undefined, month: undefined }))} ${S.fmtTime(t, r.fuseau)} · ${S.rdvType(r.type, true)}${r.lieu ? ` · ${esc(S.shortPlace(r.lieu))}` : ""}${r.annule ? " · annulé" : ""}</span>
+    ${r.diagnostic ? `<span class="dx">${esc(r.diagnostic)}</span>` : ""}</span>${IC.go.replace('class="i"', 'class="i go"')}</a>`;
+}
+function renderRdv() {
+  const now = Date.now(), all = S.appointments();
+  const up = all.filter((r) => !r.annule && Date.parse(r.le) >= now - 2 * H), past = all.filter((r) => !up.includes(r)).reverse();
+  const cands = S.rows("agenda").filter((ev) => !ev.decision && Date.parse(ev.debut) > now - 120 * DAY)
+    .sort((a, b) => { const fa = Date.parse(a.debut) >= now, fb = Date.parse(b.debut) >= now; return fb - fa || (fa ? Date.parse(a.debut) - Date.parse(b.debut) : Date.parse(b.debut) - Date.parse(a.debut)); });
+  let h = `<button class="add" type="button" id="addRdv" data-buzz>${IC.plus}Rendez-vous</button>`;
+  if (cands.length) h += `<div class="card list"><div class="agenda-head"><div class="label">Dans l'agenda Family</div><span>Pour Thomas ?</span></div>`
+    + cands.map((ev) => { const t = Date.parse(ev.debut);
+      return `<div class="cand"><span class="txt"><b>${esc(ev.titre)}</b><span class="sub">${cap(S.fmtDay(S.dayOf(t, ev.fuseau), { year: t < now - 300 * DAY ? "numeric" : undefined }))}${ev.journee ? "" : ` à ${S.fmtTime(t, ev.fuseau)}`}${ev.lieu ? ` · ${esc(S.shortPlace(ev.lieu))}` : ""}</span></span>
+        <span class="btns"><button type="button" class="yes" data-take="${esc(ev.uid)}" data-buzz>Pour Thomas</button><button type="button" data-skip="${esc(ev.uid)}" data-buzz>Ignorer</button></span></div>`; }).join("") + `</div>`;
+  if (up.length) h += `<div class="group">À venir</div><div class="card list">${up.map((r) => rdvRow(r, now)).join("")}</div>`;
+  let month = "";
+  past.forEach((r, i) => {
+    const m = new Date(r.le).toLocaleDateString("fr-CA", { month: "long", year: "numeric" });
+    if (m !== month) { h += `${month ? "</div>" : ""}<div class="group">${cap(m)}</div><div class="card list">`; month = m; }
+    h += rdvRow(r, now);
+    if (i === past.length - 1) h += "</div>";
+  });
+  if (!all.length && !cands.length) h += `<div class="card empty"><b>Aucun rendez-vous.</b> Ajoute ceux à venir pour un rappel la veille et une heure avant, et ceux passés pour garder ce qui a été dit.</div>`;
+  $("paneR").innerHTML = h;
+  $("addRdv").addEventListener("click", () => openRdv(null, {}));
+}
+$("paneR").addEventListener("click", (e) => {
+  const t = e.target.closest("[data-take]"), s = e.target.closest("[data-skip]");
+  if (t) {
+    const ev = S.rows("agenda").find((x) => x.uid === t.dataset.take); if (!ev) return;
+    const id = S.save("rdv", S.fromAgenda(ev));
+    S.save("agenda", { uid: ev.uid, decision: "ajoute" });
+    toast("Ajouté aux rendez-vous de Thomas.", () => { S.remove("rdv", id); S.save("agenda", { uid: ev.uid, decision: null }); });
+  }
+  if (s) {
+    const uid = s.dataset.skip;
+    S.save("agenda", { uid, decision: "ignore" });
+    toast("Ignoré.", () => S.save("agenda", { uid, decision: null }));
+  }
+});
+
+function medCard(m, now = Date.now()) {
+  const st = doseStatus(m, now), todays = S.dosesOf(m.id).filter((d) => S.dayOf(d.le, d.fuseau) === S.today());
+  return `<div class="card med"><a href="#m/${m.id}"><span class="txt"><span class="ttl">${esc(m.nom)}</span>
+      <span class="sub">${m.dose ? `<b>${esc(m.dose)}</b> · ` : ""}${esc(S.posologie(m))} · ${S.course(m)}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>
+    <div class="next${st.late ? " late" : ""}">${st.text}</div>
+    <div class="dots">Aujourd'hui : ${todays.length ? todays.map((d) => `<i>${S.fmtTime(d.le, d.fuseau)}</i>`).join("") : "aucune prise"}</div>
+    <div class="btnrow"><button class="btn primary grow" type="button" data-give="${m.id}">${IC.check}Donné</button><button class="btn" type="button" data-other="${m.id}">Autre heure…</button></div></div>`;
+}
+function renderMeds() {
+  const all = S.meds(), act = all.filter((m) => S.isActive(m)), done = all.filter((m) => !S.isActive(m));
+  let h = `<button class="add" type="button" id="addMed" data-buzz>${IC.plus}Médicament</button>`;
+  h += act.map((m) => medCard(m)).join("");
+  if (!all.length) h += `<div class="card empty"><b>Aucun médicament.</b> Note ce qui a été prescrit (dose, rythme, durée) : l'app dit quand vient la prochaine prise, garde qui a donné quoi et à quelle heure, et envoie un rappel sur vos téléphones.</div>`;
+  if (done.length) h += `<div class="group">Terminés</div><div class="card list">${done.map((m) => {
+    const n = S.dosesOf(m.id).length;
+    return `<a class="li" href="#m/${m.id}"><span class="txt"><b>${esc(m.nom)}</b><span class="sub">${S.fmtDay(S.dayOf(m.debut, m.fuseau), { year: "numeric" })} · ${n} prise${n > 1 ? "s" : ""}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`; }).join("")}</div>`;
+  $("paneM").innerHTML = h;
+  $("addMed").addEventListener("click", () => openMed(null, {}));
+}
+function renderMain() {
+  document.querySelectorAll(".tab").forEach((b) => {
+    b.setAttribute("aria-selected", b.dataset.t === tab);
+    const n = b.dataset.t === "p" ? S.openProblems().length : b.dataset.t === "m" ? S.meds().filter((m) => S.isActive(m)).length
+      : S.rows("agenda").filter((ev) => !ev.decision && Date.parse(ev.debut) > Date.now() - 120 * DAY).length;
+    b.innerHTML = `${{ p: "Problèmes", r: "Rendez-vous", m: "Médicaments" }[b.dataset.t]}${n ? `<small>${n}</small>` : ""}`;
+  });
+  $("paneP").hidden = tab !== "p"; $("paneR").hidden = tab !== "r"; $("paneM").hidden = tab !== "m";
+  renderNow(); renderProblems(); renderRdv(); renderMeds();
+}
+
+// ---------- Giving a dose ----------
+function giveNow(m) {
+  const why = S.tooSoon(m);
+  if (why && !confirm(`${why}\n\nNoter une prise maintenant quand même ?`)) return;
+  buzz();
+  const id = S.give(m, { dose: m.dose || null });
+  toast(`${m.nom} : prise notée à ${S.fmtTime(Date.now())}${window.Famille && Famille.qui() ? ` (${Famille.qui()})` : ""}.`, () => S.remove("prises", id));
+}
+
+// ---------- Detail views ----------
+function head(title) {
+  return `<header class="top"><button class="back" type="button" data-back aria-label="Retour">${svg('<path d="M15 18l-6-6 6-6"/>')}</button><h1>${esc(title)}</h1></header>`;
+}
+function dayBlock(d) {
+  const tags = [...d.sym].map(([k, c]) => `<span class="tag">${esc(S.symText(k, c))}</span>`);
+  if (d.tmax != null) tags.push(`<span class="tag${d.tmax >= 38 ? " hot" : ""}">${S.nf(d.tmax, 1)} °C${d.notes.filter((n) => n.temperature != null).length > 1 ? " au plus" : ""}</span>`);
+  if (d.couches != null) tags.push(`<span class="tag">${d.couches} couche${d.couches > 1 ? "s" : ""} mouillée${d.couches > 1 ? "s" : ""}</span>`);
+  const notes = d.notes.map((n) => `<button type="button" class="note" data-edit-note="${n.id}"><span class="when">${S.fmtTime(n.le, n.fuseau)}${n.par ? ` · ${esc(n.par)}` : ""}${n._pending ? " · en attente d'envoi" : ""}</span>
+      ${n.observe ? `<span>${esc(n.observe)}</span>` : ""}${n.fait ? `<span class="did">Fait : ${esc(n.fait)}</span>` : ""}
+      ${!n.observe && !n.fait ? `<span class="muted">${(n.symptomes || []).map(({ k, n: c }) => esc(S.symText(k, c))).join(", ") || "Note"}</span>` : ""}</button>`).join("");
+  const given = d.given.map(({ med, at }) => `<a class="given" href="#m/${med.id}">${IC.pill}<span><b>${esc(med.nom)}</b> ×${at.length} : ${at.map((x) => S.fmtTime(x.le, x.fuseau)).join(", ")}</span></a>`).join("");
+  const rdvs = d.rdvs.map((r) => `<a class="given" href="#r/${r.id}">${IC.cal}<span>Rendez-vous ${S.rdvWord(r)} à ${S.fmtTime(r.le, r.fuseau)}${r.diagnostic ? ` : <b>${esc(r.diagnostic)}</b>` : ""}</span></a>`).join("");
+  const empty = !d.notes.length && !d.given.length && !d.rdvs.length;
+  return `<div class="day"><div class="day-head"><b>${S.fmtDay(d.day, { weekday: "long" })}</b><span>jour ${d.n}</span></div>
+    ${tags.length ? `<div class="tags">${tags.join("")}</div>` : ""}${notes}${given}${rdvs}
+    ${empty ? `<p class="none">Rien de noté. <button type="button" data-note-day="${d.day}">Noter pour ce jour</button></p>` : ""}</div>`;
+}
+function viewProblem(p) {
+  const open = S.isOpen(p), n = S.dayNumber(p, p.fin || S.today()), days = S.journal(p).reverse();
+  const rdvs = S.rdvOf(p.id), meds = S.medsOf(p.id);
+  return head(S.nameOf(p)) + `
+  <section class="card hero"><span class="state${open ? " on" : ""}">${open ? "En cours" : "Terminé"}</span>
+    <h2>${esc(S.nameOf(p))}</h2>
+    ${p.diagnostic && p.diagnostic !== p.titre ? `<span class="was">Commencé par : ${esc(p.titre)}</span>` : ""}
+    <span class="sub">${open ? `Depuis le ${S.fmtDay(p.debut, { weekday: "long" })} · jour ${n}` : `Du ${S.fmtDay(p.debut)} au ${S.fmtDay(p.fin)} · ${n} jour${n > 1 ? "s" : ""}`}</span>
+    ${p.notes ? `<p class="prose">${esc(p.notes)}</p>` : ""}
+    <div class="btnrow">${open ? `<button class="btn primary grow" type="button" data-note="${p.id}">${IC.plus}Noter</button>` : ""}
+      <button class="btn" type="button" data-edit-p>Modifier</button><button class="btn" type="button" data-close-p>${open ? "C'est fini" : "Rouvrir"}</button></div>
+  </section>
+  <section class="card"><div class="label">Pour le médecin</div>
+    <pre class="resume" id="resume">${esc(S.resume(p, { poids: lastWeight() }))}</pre>
+    <div class="btnrow"><button class="btn grow" type="button" id="copy">${IC.copy}Copier</button><button class="btn grow" type="button" id="share">${IC.share}Partager</button></div>
+  </section>
+  <section class="card"><div class="label">Jour par jour</div>${days.map(dayBlock).join("")}</section>
+  <section class="card"><div class="label">Rendez-vous</div>
+    ${rdvs.length ? `<div class="inlist">${rdvs.map((r) => rdvRow(r)).join("")}</div>` : ""}
+    <button class="addline" type="button" data-new-rdv>${IC.plus}Rendez-vous pour ce problème</button></section>
+  <section class="card"><div class="label">Médicaments</div>
+    ${meds.length ? `<div class="inlist">${meds.map((m) => `<a class="li" href="#m/${m.id}"><span class="txt"><b>${esc(m.nom)}</b><span class="sub">${esc([m.dose, S.posologie(m)].filter(Boolean).join(" · "))}${S.isActive(m) ? "" : " · terminé"}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`).join("")}</div>` : ""}
+    <button class="addline" type="button" data-new-med>${IC.plus}Médicament pour ce problème</button></section>`;
+}
+function viewRdv(r) {
+  const t = Date.parse(r.le), future = t > Date.now(), day = S.dayOf(t, r.fuseau);
+  const probs = (r.problemes || []).map((id) => S.byId("problemes", id)).filter(Boolean), meds = S.meds().filter((m) => m.rdv === r.id);
+  const done = r.compte_rendu || r.diagnostic || r.suivi;
+  return head(S.rdvTitle(r)) + `
+  <section class="card hero"><span class="state${r.annule ? " warn" : future ? " on" : ""}">${r.annule ? "Annulé" : future ? "À venir" : "Passé"}</span>
+    <h2>${esc(S.rdvTitle(r))}</h2>
+    <p class="when">${cap(S.fmtDay(day, { weekday: "long", year: "numeric" }))} à ${S.fmtTime(t, r.fuseau)}${tzNote(r.fuseau)}</p>
+    <span class="sub">${esc([S.rdvType(r.type), r.lieu, r.pro].filter(Boolean).join(" · "))}</span>
+    ${r.motif && r.motif !== S.rdvTitle(r) ? `<span class="sub">Pourquoi : ${esc(r.motif)}</span>` : ""}
+    ${probs.length ? `<div class="tags">${probs.map((p) => `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>`).join("")}</div>` : ""}
+    <div class="btnrow"><button class="btn" type="button" data-edit-r>Modifier</button>
+      ${r.agenda_uid ? `<span class="sub" style="align-self:center">${IC.cal.replace('class="i"', 'class="i" style="width:16px;height:16px;vertical-align:-3px"')} Dans l'agenda Family</span>`
+        : future ? `<a class="btn" href="${S.agendaLink(r)}" target="_blank" rel="noopener">${IC.cal}Ajouter à l'agenda</a>` : ""}</div>
+  </section>
+  <section class="card"><div class="label">Compte rendu</div>
+    ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${esc(r.compte_rendu)}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd>${esc(r.diagnostic)}</dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${esc(r.suivi)}</dd>` : ""}</dl>`
+      : `<p class="prose muted">${future ? "À remplir après le rendez-vous : ce qui a été dit, le diagnostic, la suite." : "Rien de noté. Ce qui a été dit, le diagnostic, la suite ?"}</p>`}
+    <button class="addline" type="button" data-edit-r>${IC.note}${done ? "Compléter" : "Écrire le compte rendu"}</button></section>
+  <section class="card"><div class="label">Médicaments prescrits</div>
+    ${meds.length ? `<div class="inlist">${meds.map((m) => `<a class="li" href="#m/${m.id}"><span class="txt"><b>${esc(m.nom)}</b><span class="sub">${esc([m.dose, S.posologie(m)].filter(Boolean).join(" · "))}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`).join("")}</div>` : ""}
+    <button class="addline" type="button" data-new-med>${IC.plus}Médicament prescrit</button></section>`;
+}
+function viewMed(m) {
+  const act = S.isActive(m), st = doseStatus(m), ds = S.dosesOf(m.id).slice().reverse();
+  const p = m.probleme && S.byId("problemes", m.probleme), r = m.rdv && S.byId("rdv", m.rdv);
+  const byDay = new Map(); ds.forEach((d) => { const k = S.dayOf(d.le, d.fuseau); byDay.set(k, [...(byDay.get(k) || []), d]); });
+  return head(m.nom) + `
+  <section class="card hero"><span class="state${act ? " on" : ""}">${act ? "En cours" : "Terminé"}</span>
+    <h2>${esc(m.nom)}</h2>
+    ${m.dose ? `<p class="when">${esc(m.dose)}</p>` : ""}
+    <span class="sub">${esc(cap(S.posologie(m)))} · ${S.course(m)}${m.fin ? ` (jusqu'au ${S.fmtDay(m.fin)})` : ""}${m.arrete ? ` · arrêté le ${S.fmtDay(S.dayOf(m.arrete))}` : ""}</span>
+    ${m.consignes ? `<p class="prose">${esc(m.consignes)}</p>` : ""}
+    ${p || r ? `<div class="tags">${p ? `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>` : ""}${r ? `<a class="tag" href="#r/${r.id}" style="text-decoration:none">Prescrit le ${S.fmtDay(S.dayOf(r.le, r.fuseau))}</a>` : ""}</div>` : ""}
+    ${act ? `<p class="next${st.late ? " late" : ""}" style="margin:12px 0 0">${st.text}</p>
+    <div class="btnrow"><button class="btn primary grow" type="button" data-give="${m.id}">${IC.check}Donné</button><button class="btn" type="button" data-other="${m.id}">Autre heure…</button></div>` : ""}
+    <div class="btnrow" style="margin-top:8px"><button class="btn" type="button" data-edit-m>Modifier</button>${act ? `<button class="btn" type="button" data-stop-m>Arrêter</button>` : ""}</div>
+  </section>
+  <section class="card"><div class="label">Prises (${ds.length})</div>
+    ${ds.length ? [...byDay].map(([day, list]) => `<div class="day"><div class="day-head"><b>${S.fmtDay(day, { weekday: "long" })}</b><span>${list.length} prise${list.length > 1 ? "s" : ""}</span></div>
+      <div class="doses">${list.slice().reverse().map((d) => `<button type="button" data-edit-dose="${d.id}">${S.fmtTime(d.le, d.fuseau)}${d.par ? ` <small>${esc(d.par)}</small>` : ""}${d.dose && d.dose !== m.dose ? ` <small>${esc(d.dose)}</small>` : ""}${d._pending ? " <small>en attente</small>" : ""}</button>`).join("")}</div>
+      ${list.filter((d) => d.note).map((d) => `<p class="none">${S.fmtTime(d.le, d.fuseau)} : ${esc(d.note)}</p>`).join("")}</div>`).join("")
+      : `<p class="prose muted">Aucune prise notée.</p>`}
+  </section>`;
+}
+function viewChrono() {
+  const items = [];
+  S.problems().forEach((p) => {
+    items.push({ day: p.debut, t: Date.parse(p.debut + "T00:00:00Z"), ic: IC.heart, href: `#p/${p.id}`, text: `Début : <b>${esc(S.nameOf(p))}</b>`, sub: p.diagnostic && p.diagnostic !== p.titre ? `Commencé par : ${esc(p.titre)}` : "" });
+    if (p.fin) items.push({ day: p.fin, t: Date.parse(p.fin + "T23:59:00Z"), ic: IC.check, href: `#p/${p.id}`, text: `Fin : ${esc(S.nameOf(p))}`, sub: `${S.daysBetween(p.debut, p.fin) + 1} jours` });
+  });
+  S.appointments().filter((r) => !r.annule).forEach((r) => items.push({ day: S.dayOf(r.le, r.fuseau), t: Date.parse(r.le), ic: IC.cal, href: `#r/${r.id}`,
+    text: `${esc(S.rdvTitle(r))}`, sub: [S.fmtTime(r.le, r.fuseau), S.rdvType(r.type, true), S.shortPlace(r.lieu), r.diagnostic].filter(Boolean).map(esc).join(" · ") }));
+  S.meds().forEach((m) => items.push({ day: S.dayOf(m.debut, m.fuseau), t: Date.parse(m.debut), ic: IC.pill, href: `#m/${m.id}`, text: `Début : ${esc(m.nom)}`,
+    sub: esc([m.dose, S.posologie(m)].filter(Boolean).join(" · ")) }));
+  items.sort((a, b) => b.t - a.t);
+  let h = head("Chronologie"), month = "";
+  if (!items.length) h += `<div class="card empty">Rien encore. Les problèmes, rendez-vous et médicaments s'afficheront ici, du plus récent au plus ancien.</div>`;
+  items.forEach((it, i) => {
+    const m = new Date(it.day + "T12:00:00Z").toLocaleDateString("fr-CA", { timeZone: "UTC", month: "long", year: "numeric" });
+    if (m !== month) { h += `${month ? "</section>" : ""}<div class="group">${cap(m)}</div><section class="card">`; month = m; }
+    h += `<a class="chrono-item" href="${it.href}"><span class="ic">${it.ic}</span><span class="txt">${cap(S.fmtDay(it.day))} · ${it.text}${it.sub ? `<span>${it.sub}</span>` : ""}</span></a>`;
+    if (i === items.length - 1) h += "</section>";
+  });
+  return h;
+}
+function renderDetail() {
+  let html = "", gone = false;
+  if (view.kind === "chrono") html = viewChrono();
+  else {
+    const rec = S.byId({ p: "problemes", r: "rdv", m: "medicaments" }[view.kind], view.id);
+    if (!rec) gone = true;
+    else html = view.kind === "p" ? viewProblem(rec) : view.kind === "r" ? viewRdv(rec) : viewMed(rec);
+  }
+  if (gone) { // deleted, or not loaded yet
+    html = head("Santé") + `<div class="card empty">${S.loaded ? "Cette fiche n'existe plus." : "Chargement…"}</div>`;
+  }
+  $("detail").innerHTML = html;
+  const rec = () => S.byId({ p: "problemes", r: "rdv", m: "medicaments" }[view.kind], view.id);
+  const on = (sel, fn) => $("detail").querySelectorAll(sel).forEach((b) => b.addEventListener("click", fn));
+  on("[data-back]", back);
+  on("[data-edit-p]", () => openProblem(rec()));
+  on("[data-close-p]", () => { const p = rec(); buzz(); S.save("problemes", { ...strip(p), fin: S.isOpen(p) ? S.today() : null }); });
+  on("[data-new-rdv]", () => openRdv(null, { problemes: [view.id], motif: S.nameOf(rec()) }));
+  on("[data-new-med]", () => view.kind === "p" ? openMed(null, { probleme: view.id }) : openMed(null, { rdv: view.id, probleme: (rec().problemes || [])[0] || null }));
+  on("[data-edit-r]", () => openRdv(rec()));
+  on("[data-edit-m]", () => openMed(rec()));
+  on("[data-stop-m]", () => { const m = rec(); if (confirm(`Arrêter ${m.nom} maintenant ? Les rappels s'arrêtent aussi.`)) S.save("medicaments", { ...strip(m), arrete: new Date().toISOString() }); });
+  on("[data-edit-note]", (e) => openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }));
+  on("[data-note-day]", (e) => openNote({ probleme: view.id, day: e.currentTarget.dataset.noteDay }));
+  on("[data-edit-dose]", (e) => { const d = S.byId("prises", e.currentTarget.dataset.editDose); openDose(rec(), d); });
+  const copy = $("copy"), share = $("share");
+  if (copy) copy.addEventListener("click", () => {
+    const text = $("resume").textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast("Résumé copié."), () => {
+      const r = document.createRange(); r.selectNodeContents($("resume")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Sélectionné : copie-le avec le menu du téléphone.");
+    });
+  });
+  if (share) { share.hidden = !navigator.share; share.addEventListener("click", () => navigator.share({ title: `Thomas : ${$("detail").querySelector("h2").textContent}`, text: $("resume").textContent }).catch(() => {})); }
+}
+const strip = (r) => { const { _pending, ...rest } = r; return rest; };
+
+function render() {
+  const main = !view.kind;
+  $("main").hidden = !main; $("detail").hidden = main;
+  if (main) renderMain(); else renderDetail();
+}
+S.onChange(render);
+setInterval(() => { if (document.visibilityState === "visible" && !document.querySelector("dialog[open]")) render(); }, 30000); // "in 25 min" stays true
+
+// ---------- Sheets ----------
+document.querySelectorAll("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+const pressGroup = (el, value, attr = "aria-checked") => el.querySelectorAll("button").forEach((b) => b.setAttribute(attr, b.dataset.v === String(value)));
+const nowParts = () => S.partsIn(Date.now());
+const num = (s) => { const n = Number(String(s || "").replace(",", ".").trim()); return String(s || "").trim() && isFinite(n) ? n : null; };
+
+// What is seen: one note, for a problem (an open one, or a new one created with it)
+let note = null; // { id?, probleme, isNew, sym: Map, couches }
+function openNote({ probleme = null, note: existing = null, day = null }) {
+  const open = S.openProblems(), t = existing ? Date.parse(existing.le) : null;
+  const pid = existing ? existing.probleme : probleme || (open.length === 1 ? open[0].id : null);
+  note = { id: existing ? existing.id : null, probleme: pid, sym: new Map((existing ? existing.symptomes : []).map(({ k, n }) => [k, n == null ? null : Number(n)])),
+    couches: existing && existing.couches != null ? Number(existing.couches) : null, nameTouched: false };
+  $("noteTitle").textContent = existing ? "Modifier la note" : "Noter ce que je vois";
+  const choices = [...open]; if (pid && !choices.some((p) => p.id === pid)) { const p = S.byId("problemes", pid); if (p) choices.unshift(p); }
+  $("nFor").innerHTML = choices.map((p) => `<button type="button" class="chip" role="radio" data-v="${p.id}">${esc(S.nameOf(p))}</button>`).join("")
+    + (existing ? "" : `<button type="button" class="chip ghost" role="radio" data-v="new">+ Nouveau problème</button>`);
+  setFor(pid || "new");
+  const at = existing ? S.partsIn(t, existing.fuseau) : nowParts();
+  $("nDate").value = day || at.day; $("nTime").value = day && !existing ? "20:00" : at.time; $("nDate").max = nowParts().day;
+  $("nName").value = ""; $("nSince").value = S.today(); $("nSince").max = S.today();
+  $("nTemp").value = existing && existing.temperature != null ? String(existing.temperature).replace(".", ",") : "";
+  $("nObs").value = existing ? existing.observe || "" : ""; $("nFait").value = existing ? existing.fait || "" : "";
+  $("nDel").hidden = !existing; $("nErr").textContent = "";
+  renderSyms(); renderCouches();
+  $("noteDlg").showModal();
+}
+function setFor(v) {
+  note.probleme = v === "new" ? null : v; note.isNew = v === "new";
+  pressGroup($("nFor"), v);
+  $("nNew").hidden = !note.isNew; $("nSinceQuick").hidden = !note.isNew;
+  $("nSinceQuick").innerHTML = [["Aujourd'hui", 0], ["Hier", -1], ["Avant-hier", -2], ["Il y a 3 jours", -3]].map(([l, d]) =>
+    `<button type="button" class="chip" data-v="${S.addDays(S.today(), d)}">${l}</button>`).join("");
+  pressGroup($("nSinceQuick"), $("nSince").value, "aria-pressed");
+}
+$("nFor").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); setFor(b.dataset.v); } });
+$("nSinceQuick").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; buzz(); $("nSince").value = b.dataset.v; pressGroup($("nSinceQuick"), b.dataset.v, "aria-pressed"); });
+$("nSince").addEventListener("input", () => pressGroup($("nSinceQuick"), $("nSince").value, "aria-pressed"));
+$("nName").addEventListener("input", () => { note.nameTouched = true; });
+function renderSyms() {
+  const words = [...new Set([...S.customWords(), ...[...note.sym.keys()].filter((k) => !S.SYM[k])])];
+  $("nSyms").innerHTML = S.SYMPTOMES.map(([k, l]) => `<button type="button" class="chip" data-k="${k}" aria-pressed="${note.sym.has(k)}">${l}</button>`).join("")
+    + words.map((w) => `<button type="button" class="chip" data-k="${esc(w)}" aria-pressed="${note.sym.has(w)}">${esc(w)}</button>`).join("")
+    + `<button type="button" class="chip ghost" data-k="+">+ Autre…</button>`;
+  $("nCounts").innerHTML = [...note.sym].filter(([k]) => S.SYM[k] && S.SYM[k].unit).map(([k, n]) =>
+    `<div class="count"><b>${S.SYM[k].label}</b><span class="step"><button type="button" data-c="${k}" data-d="-1" aria-label="Un de moins">−</button><output>${n == null ? "—" : n}</output><button type="button" data-c="${k}" data-d="1" aria-label="Un de plus">+</button></span><small>${S.SYM[k].unit}</small></div>`).join("");
+  // A new problem takes the name of the first symptom, until it's typed
+  if (note.isNew && !note.nameTouched) $("nName").value = note.sym.size ? S.symLabel([...note.sym.keys()][0]) : "";
+}
+$("nSyms").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b) return; buzz();
+  let k = b.dataset.k;
+  if (k === "+") { k = (prompt("Quel symptôme ? (un ou quelques mots)") || "").trim(); if (!k) return; k = k[0].toUpperCase() + k.slice(1); note.sym.set(k, null); }
+  else if (note.sym.has(k)) note.sym.delete(k); else note.sym.set(k, S.SYM[k] && S.SYM[k].unit ? 1 : null);
+  renderSyms();
+});
+$("nCounts").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-c]"); if (!b) return; buzz();
+  const k = b.dataset.c, n = (note.sym.get(k) || 0) + Number(b.dataset.d);
+  note.sym.set(k, Math.max(0, Math.min(40, n))); renderSyms();
+});
+function renderCouches() { $("nCouches").textContent = note.couches == null ? "—" : note.couches; }
+$("nCMinus").addEventListener("click", () => { buzz(); note.couches = note.couches == null ? null : note.couches > 0 ? note.couches - 1 : null; renderCouches(); });
+$("nCPlus").addEventListener("click", () => { buzz(); note.couches = Math.min(30, (note.couches == null ? 0 : note.couches) + 1); renderCouches(); });
+$("nTemp").addEventListener("input", () => { // 38 °C and more: fever
+  const t = num($("nTemp").value);
+  if (t != null && t >= 38 && !note.sym.has("fievre")) { note.sym.set("fievre", null); renderSyms(); }
+});
+$("nDel").addEventListener("click", () => { if (confirm("Supprimer cette note ?")) { S.remove("notes", note.id); $("noteDlg").close(); } });
+$("noteForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const bad = (m) => { $("nErr").textContent = m; };
+  const temp = num($("nTemp").value);
+  if ($("nTemp").value.trim() && (temp == null || temp < 34 || temp > 43)) return bad("Température à vérifier : entre 34 et 43 °C.");
+  const obs = $("nObs").value.trim(), fait = $("nFait").value.trim();
+  if (!note.sym.size && temp == null && note.couches == null && !obs && !fait) return bad("Note au moins un symptôme ou quelques mots.");
+  if (!$("nDate").value || !/^\d\d:\d\d/.test($("nTime").value)) return bad("Indique le jour et l'heure.");
+  const le = S.instant($("nDate").value, $("nTime").value.slice(0, 5), S.HERE);
+  if (le > Date.now() + 10 * 6e4) return bad("C'est dans le futur : vérifie le jour et l'heure.");
+  let pid = note.probleme;
+  if (note.isNew) {
+    const titre = $("nName").value.trim() || (note.sym.size ? S.symLabel([...note.sym.keys()][0]) : "");
+    if (!titre) return bad("Donne un nom au problème (le symptôme principal suffit).");
+    const debut = $("nSince").value && $("nSince").value <= $("nDate").value ? $("nSince").value : $("nDate").value;
+    pid = S.save("problemes", { titre, debut });
+  } else {
+    const p = S.byId("problemes", pid);
+    if (p && $("nDate").value < p.debut) S.save("problemes", { ...strip(p), debut: $("nDate").value }); // seen earlier than we thought
+  }
+  S.save("notes", { ...(note.id ? { id: note.id } : {}), probleme: pid, le: new Date(le).toISOString(), jour: S.dayOf(le), fuseau: S.HERE,
+    symptomes: [...note.sym].map(([k, n]) => (n == null ? { k } : { k, n })), temperature: temp, couches: note.couches, observe: obs || null, fait: fait || null });
+  $("noteDlg").close();
+  if (note.isNew) go(`#p/${pid}`);
+  else toast("Noté.");
+});
+
+// A problem
+let probEdit = null;
+function openProblem(p) {
+  probEdit = p;
+  $("pTitre").value = p.titre; $("pDx").value = p.diagnostic || ""; $("pDebut").value = p.debut; $("pFin").value = p.fin || ""; $("pNotes").value = p.notes || "";
+  $("pDebut").max = S.today(); $("pFin").max = S.today(); $("pErr").textContent = "";
+  $("probDlg").showModal();
+}
+$("probForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const titre = $("pTitre").value.trim(), debut = $("pDebut").value, fin = $("pFin").value || null;
+  if (!titre) { $("pErr").textContent = "Donne-lui un nom."; return; }
+  if (!debut) { $("pErr").textContent = "Indique le début."; return; }
+  if (fin && fin < debut) { $("pErr").textContent = "La fin est avant le début."; return; }
+  S.save("problemes", { ...strip(probEdit), titre, diagnostic: $("pDx").value.trim() || null, debut, fin, notes: $("pNotes").value.trim() || null });
+  $("probDlg").close();
+});
+$("pDel").addEventListener("click", () => {
+  if (!confirm("Supprimer ce problème et toutes ses notes ? Les rendez-vous et médicaments restent.")) return;
+  S.remove("problemes", probEdit.id); $("probDlg").close(); back();
+});
+
+// An appointment
+let rdvEdit = null;
+function openRdv(r, preset = {}) {
+  rdvEdit = r; const base = r || preset;
+  $("rTitle").textContent = r ? "Modifier le rendez-vous" : "Nouveau rendez-vous";
+  const at = r ? S.partsIn(Date.parse(r.le), r.fuseau) : { day: S.today(), time: "" };
+  $("rDate").value = at.day; $("rTime").value = at.time;
+  $("rAgenda").hidden = !(r && r.agenda_uid);
+  $("rType").innerHTML = S.RDV_TYPES.map(([k, l]) => `<button type="button" class="chip" role="radio" data-v="${k}">${l}</button>`).join("");
+  pressGroup($("rType"), base.type || "medecin");
+  $("rLieu").value = base.lieu || ""; $("rPro").value = base.pro || ""; $("rMotif").value = base.motif || "";
+  const chosen = new Set(base.problemes || []), recent = S.problems().filter((p) => S.isOpen(p) || chosen.has(p.id) || S.daysBetween(p.fin, S.today()) <= 60);
+  $("rFor").innerHTML = recent.map((p) => `<button type="button" class="chip" data-v="${p.id}" aria-pressed="${chosen.has(p.id)}">${esc(S.nameOf(p))}</button>`).join("");
+  $("rForWrap").hidden = !recent.length;
+  $("rCR").value = base.compte_rendu || ""; $("rDx").value = base.diagnostic || ""; $("rSuivi").value = base.suivi || "";
+  $("rCancel").checked = !!(r && r.annule); $("rCancelWrap").hidden = !r; $("rDel").hidden = !r; $("rErr").textContent = "";
+  $("rdvDlg").showModal();
+}
+$("rType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("rType"), b.dataset.v); } });
+$("rFor").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); } });
+$("rdvForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!$("rDate").value || !/^\d\d:\d\d/.test($("rTime").value)) { $("rErr").textContent = "Indique le jour et l'heure."; return; }
+  const tz = rdvEdit && rdvEdit.fuseau || S.HERE, le = S.instant($("rDate").value, $("rTime").value.slice(0, 5), tz);
+  const type = $("rType").querySelector('[aria-checked="true"]').dataset.v;
+  const problemes = [...$("rFor").querySelectorAll('[aria-pressed="true"]')].map((b) => b.dataset.v);
+  const dx = $("rDx").value.trim() || null;
+  const id = S.save("rdv", { ...(rdvEdit ? strip(rdvEdit) : {}), le: new Date(le).toISOString(), fuseau: tz, type, lieu: $("rLieu").value.trim() || null,
+    pro: $("rPro").value.trim() || null, motif: $("rMotif").value.trim() || null, problemes, compte_rendu: $("rCR").value.trim() || null, diagnostic: dx,
+    suivi: $("rSuivi").value.trim() || null, annule: $("rCancel").checked });
+  // The diagnosis names the problems it is about
+  if (dx) problemes.forEach((pid) => {
+    const p = S.byId("problemes", pid);
+    if (p && p.diagnostic !== dx && (!p.diagnostic || confirm(`Le problème s'appelle « ${p.diagnostic} ». Le renommer « ${dx} » ?`))) S.save("problemes", { ...strip(p), diagnostic: dx });
+  });
+  $("rdvDlg").close();
+  if (!rdvEdit) go(`#r/${id}`);
+});
+$("rDel").addEventListener("click", () => {
+  if (!confirm("Supprimer ce rendez-vous ? (Les médicaments prescrits restent.)")) return;
+  if (rdvEdit.agenda_uid) S.save("agenda", { uid: rdvEdit.agenda_uid, decision: "ignore" });
+  S.remove("rdv", rdvEdit.id); $("rdvDlg").close(); back();
+});
+
+// A medication
+let medEdit = null, mode = "intervalle", len = "ouvert";
+function openMed(m, preset = {}) {
+  medEdit = m; const base = m || preset;
+  $("mTitle").textContent = m ? "Modifier le médicament" : "Nouveau médicament";
+  $("mNoms").innerHTML = [...new Set(S.meds().map((x) => x.nom))].map((n) => `<option value="${esc(n)}">`).join("");
+  $("mNom").value = base.nom || ""; $("mDose").value = base.dose || "";
+  mode = base.mode || "intervalle"; setMode(mode);
+  $("mEvery").value = base.toutes_h && mode === "intervalle" ? String(base.toutes_h).replace(".", ",") : "";
+  $("mGap").value = base.toutes_h && mode === "besoin" ? String(base.toutes_h).replace(".", ",") : ""; $("mMax").value = base.max_jour || "";
+  renderTimes(base.heures && base.heures.length ? base.heures : ["08:00", "20:00"]);
+  const at = m ? S.partsIn(Date.parse(m.debut), m.fuseau) : nowParts();
+  $("mDate").value = at.day; $("mTime").value = at.time;
+  len = base.fin ? "date" : "ouvert"; $("mFin").value = base.fin || ""; $("mDays").value = "";
+  setLen(len);
+  const probs = S.problems().filter((p) => S.isOpen(p) || p.id === base.probleme);
+  $("mFor").innerHTML = probs.map((p) => `<button type="button" class="chip" role="radio" data-v="${p.id}">${esc(S.nameOf(p))}</button>`).join("") + `<button type="button" class="chip" role="radio" data-v="">Aucun</button>`;
+  pressGroup($("mFor"), base.probleme || "");
+  const rdvs = S.appointments().filter((r) => (Date.parse(r.le) > Date.now() - 45 * DAY && Date.parse(r.le) < Date.now() + DAY) || r.id === base.rdv).reverse();
+  $("mRdv").innerHTML = rdvs.map((r) => `<button type="button" class="chip" role="radio" data-v="${r.id}">${esc(S.rdvTitle(r))}, ${S.fmtDay(S.dayOf(r.le, r.fuseau), { weekday: undefined })}</button>`).join("") + `<button type="button" class="chip" role="radio" data-v="">Aucun</button>`;
+  pressGroup($("mRdv"), base.rdv || "");
+  $("mConsignes").value = base.consignes || ""; $("mRemind").checked = base.rappels !== false;
+  $("mDel").hidden = !m; $("mErr").textContent = "";
+  $("medDlg").showModal();
+}
+function setMode(v) {
+  mode = v; pressGroup($("mMode"), v);
+  $("mModeIntervalle").hidden = v !== "intervalle"; $("mModeHeures").hidden = v !== "heures"; $("mModeBesoin").hidden = v !== "besoin";
+  $("mRemindWrap").hidden = v === "besoin";
+  $("mStartHint").textContent = v === "heures" ? "À partir de quand (les prises suivent les heures choisies)." : v === "besoin" ? "Depuis quand il peut être donné." : "Heure de la première prise.";
+  $("mEveryQuick").innerHTML = [4, 6, 8, 12, 24].map((h) => `<button type="button" class="chip" data-v="${h}" aria-pressed="${num($("mEvery").value) === h}">${h} h</button>`).join("");
+}
+function setLen(v) { len = v; pressGroup($("mLen"), v); $("mDays").hidden = v !== "jours"; $("mFin").hidden = v !== "date"; }
+function renderTimes(list) {
+  $("mTimes").innerHTML = list.map((t) => `<div><div class="field" style="flex:1"><input type="time" value="${t}"></div><button type="button" aria-label="Enlever cette heure">×</button></div>`).join("");
+}
+const readTimes = () => [...$("mTimes").querySelectorAll("input")].map((i) => i.value).filter((v) => /^\d\d:\d\d/.test(v)).map((v) => v.slice(0, 5)).sort();
+$("mMode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); setMode(b.dataset.m); } });
+$("mMode").querySelectorAll("button").forEach((b) => { b.dataset.v = b.dataset.m; });
+$("mLen").querySelectorAll("button").forEach((b) => { b.dataset.v = b.dataset.l; });
+$("mLen").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); setLen(b.dataset.l); } });
+$("mEveryQuick").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; buzz(); $("mEvery").value = b.dataset.v; setMode("intervalle"); });
+$("mAddTime").addEventListener("click", () => { const t = readTimes(); renderTimes([...t, t.length ? "14:00" : "08:00"]); });
+$("mTimes").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; b.parentElement.remove(); });
+$("mFor").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("mFor"), b.dataset.v); } });
+$("mRdv").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("mRdv"), b.dataset.v); } });
+$("medForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const bad = (m) => { $("mErr").textContent = m; };
+  const nom = $("mNom").value.trim(); if (!nom) return bad("Indique le nom du médicament.");
+  const every = num($("mEvery").value), gap = num($("mGap").value), max = num($("mMax").value), heures = readTimes();
+  if (mode === "intervalle" && !(every > 0 && every <= 168)) return bad("Indique toutes les combien d'heures.");
+  if (mode === "heures" && !heures.length) return bad("Ajoute au moins une heure de prise.");
+  if (mode === "besoin" && gap != null && !(gap > 0 && gap <= 168)) return bad("Écart entre deux prises à vérifier.");
+  if (mode === "besoin" && max != null && !(max >= 1 && max <= 24)) return bad("Nombre de prises par 24 h à vérifier.");
+  if (!$("mDate").value || !/^\d\d:\d\d/.test($("mTime").value)) return bad("Indique quand il commence.");
+  const tz = medEdit && medEdit.fuseau || S.HERE, debut = S.instant($("mDate").value, $("mTime").value.slice(0, 5), tz);
+  let fin = null;
+  if (len === "jours") { const n = num($("mDays").value); if (!(n >= 1 && n <= 365)) return bad("Indique le nombre de jours."); fin = S.addDays($("mDate").value, Math.round(n) - 1); }
+  if (len === "date") { fin = $("mFin").value || null; if (!fin) return bad("Choisis le dernier jour."); if (fin < $("mDate").value) return bad("Le dernier jour est avant le début."); }
+  const pick = (el) => { const b = el.querySelector('[aria-checked="true"]'); return b && b.dataset.v || null; };
+  const id = S.save("medicaments", { ...(medEdit ? strip(medEdit) : {}), nom, dose: $("mDose").value.trim() || null, mode,
+    toutes_h: mode === "intervalle" ? every : mode === "besoin" ? gap : null, heures: mode === "heures" ? heures : null, max_jour: mode === "besoin" ? max : null,
+    debut: new Date(debut).toISOString(), fuseau: tz, fin, probleme: pick($("mFor")), rdv: pick($("mRdv")),
+    consignes: $("mConsignes").value.trim() || null, rappels: mode === "besoin" ? false : $("mRemind").checked });
+  $("medDlg").close();
+  if (!medEdit) go(`#m/${id}`);
+});
+$("mDel").addEventListener("click", () => {
+  if (!confirm("Supprimer ce médicament et toutes ses prises notées ?")) return;
+  S.remove("medicaments", medEdit.id); $("medDlg").close(); back();
+});
+
+// A dose: another time, or fixing one
+let doseEdit = null, doseMed = null;
+function openDose(m, d) {
+  doseMed = m; doseEdit = d;
+  $("dTitle").textContent = d ? `${m.nom} : modifier la prise` : `${m.nom} : prise à une autre heure`;
+  const at = d ? S.partsIn(Date.parse(d.le), d.fuseau) : nowParts();
+  $("dDate").value = at.day; $("dTime").value = at.time; $("dDate").max = nowParts().day;
+  $("dDose").value = d ? d.dose || "" : m.dose || ""; $("dNote").value = d ? d.note || "" : "";
+  $("dDel").hidden = !d; $("dErr").textContent = "";
+  $("doseDlg").showModal();
+}
+$("doseForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  if (!$("dDate").value || !/^\d\d:\d\d/.test($("dTime").value)) { $("dErr").textContent = "Indique le jour et l'heure."; return; }
+  const tz = doseEdit && doseEdit.fuseau || S.HERE, le = S.instant($("dDate").value, $("dTime").value.slice(0, 5), tz);
+  if (le > Date.now() + 10 * 6e4) { $("dErr").textContent = "C'est dans le futur : vérifie le jour et l'heure."; return; }
+  S.save("prises", { ...(doseEdit ? strip(doseEdit) : { medicament: doseMed.id }), le: new Date(le).toISOString(), fuseau: tz, dose: $("dDose").value.trim() || null, note: $("dNote").value.trim() || null });
+  $("doseDlg").close();
+  toast(doseEdit ? "Prise modifiée." : `Prise notée à ${S.fmtTime(le, tz)}.`);
+});
+$("dDel").addEventListener("click", () => { if (confirm("Supprimer cette prise ?")) { S.remove("prises", doseEdit.id); $("doseDlg").close(); } });
+
+actionFromHash();
+</script>
+<script src="app.js"></script>
+</body>
+</html>

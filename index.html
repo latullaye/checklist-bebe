@@ -119,6 +119,12 @@
 .tile .sub { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.3; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .tile .sub b { color: var(--accent); }
 .tile:active, .now a.row:active { transform: scale(0.985); }
+/* Health: a wide tile that says what's going on */
+.tile.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 12px; min-height: 0; }
+.tile.wide > span { flex: 1; min-width: 0; }
+.tile.wide .go { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.now .sub b.late { color: #b36b12; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .now .sub b.late { color: #f0b860; } }
 </style>
 </head>
 <body>
@@ -160,6 +166,10 @@
       <a class="txt" href="croissance.html"><span class="big" id="wBig">Poids</span><span class="sub" id="wSub">Aucune pesée pour l'instant</span></a>
       <a class="weigh" href="croissance.html#pesee" data-buzz><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Pesée</a>
     </div>
+    <div class="wrow" id="hRow" hidden>
+      <a class="txt" href="sante.html"><span class="big" id="hBig"></span><span class="sub" id="hSub"></span></a>
+      <a class="weigh" id="hNote" href="sante.html#noter" data-buzz><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Noter</a>
+    </div>
     <div>
       <div class="todo-head"><div class="label" id="todoTitle">À faire</div><a href="habitudes.html" id="todoCount"></a></div>
       <div class="todo" id="todo"></div>
@@ -179,18 +189,21 @@
   </div>
   <div class="group">Suivi</div>
   <div class="grid">
+    <a class="card tile wide" href="sante.html"><img class="ico" src="icon-sante.svg" alt=""><span><strong>Santé</strong><span class="sub" id="santeSub">Symptômes, rendez-vous, médicaments</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
     <a class="card tile" href="croissance.html"><img class="ico" src="icon-croissance.svg" alt=""><span><strong>Croissance</strong><span class="sub">Courbes, lait par jour</span></span></a>
     <a class="card tile" href="age.html"><img class="ico" src="icon-age.svg" alt=""><span><strong>Âge</strong><span class="sub">Toutes les fêtes à venir</span></span></a>
   </div>
 </div>
 
 <script src="config.js"></script>
+<script src="famille.js"></script>
 <script src="sync.js"></script>
 <script src="weather.js"></script>
 <script src="habits.js"></script>
 <script src="thomas.js"></script>
 <script src="who-boys.js"></script>
 <script src="growth.js"></script>
+<script src="sante.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const nf = Growth.nf;
@@ -243,6 +256,31 @@ $("todo").addEventListener("click", (e) => {
 });
 Habits.onChange(renderTodo);
 
+// Health (sante.js): what's going on, the next doses, an appointment soon
+function renderHealth() {
+  const now = Date.now(), open = Sante.openProblems(), meds = Sante.meds().filter((m) => Sante.isActive(m));
+  const soon = Sante.upcoming(now).filter((r) => Date.parse(r.le) < now + 2 * Sante.DAY);
+  const at = (t, tz) => { const day = Sante.dayOf(t, tz), rel = Sante.relDay(day); return `${rel === "aujourd'hui" ? "" : `${rel} `}${Sante.fmtTime(t, tz)}`; };
+  const doses = meds.map((m) => [m, Sante.nextDose(m, now)]).filter(([, n]) => n).sort((a, b) => a[1].at - b[1].at).slice(0, 2)
+    .map(([m, n]) => n.kind === "possible" ? `${esc(m.nom)} possible ${n.at <= now ? "maintenant" : `dès ${at(n.at, m.fuseau)}`}`
+      : n.at <= now ? `<b class="late">${esc(m.nom)} à donner</b>` : `${esc(m.nom)} à ${at(n.at, m.fuseau)}`);
+  const rdv = soon.map((r) => `${Sante.rdvTitle(r)} ${at(Date.parse(r.le), r.fuseau)}`).map(esc).slice(0, 1);
+  $("hRow").hidden = !open.length && !meds.length && !soon.length;
+  if (!$("hRow").hidden) {
+    const p = open[0];
+    $("hBig").textContent = p ? `${Sante.nameOf(p)} · jour ${Sante.dayNumber(p)}` : meds.length ? meds[0].nom : "Rendez-vous";
+    const last = p && Sante.notesOf(p.id).at(-1);
+    $("hSub").innerHTML = [...doses, ...rdv].join(" · ") || (last ? `Noté ${at(Date.parse(last.le), last.fuseau)}` : "Rien noté encore");
+    $("hNote").hidden = !p;
+    $("hNote").href = p ? `sante.html#noter/${p.id}` : "sante.html#noter";
+  }
+  const next = Sante.upcoming(now)[0];
+  $("santeSub").innerHTML = open.length ? `<b>${esc(open.map((p) => Sante.nameOf(p)).join(", "))}</b> en cours`
+    : next ? `Prochain rendez-vous : ${esc(Sante.rdvTitle(next))}, ${Sante.fmtDay(Sante.dayOf(next.le, next.fuseau), { weekday: undefined })}` : "Symptômes, rendez-vous, médicaments";
+}
+const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+Sante.onChange(renderHealth);
+
 // Other screens' state, kept on this phone
 const SOUND_NAMES = { blanc: "Bruit blanc", rose: "Bruit rose", brun: "Bruit brun", chut: "Chut-chut", coeur: "Battements de cœur", ventre: "Ventre de maman",
   pluie: "Pluie", vagues: "Vagues", seche: "Sèche-cheveux", ventilo: "Ventilateur", aspi: "Aspirateur" };
@@ -256,7 +294,7 @@ function renderLocal() {
 
 function renderAll() {
   $("today").textContent = new Date().toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" });
-  renderAge(); renderWeight(); renderTodo(); renderLocal();
+  renderAge(); renderWeight(); renderTodo(); renderHealth(); renderLocal();
 }
 renderAll();
 Habits.refresh();

@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v36";
+const VERSION = "thomas911-v37";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -13,7 +13,10 @@ const FILES = [
   "./age.html",
   "./croissance.html",
   "./reglages.html",
+  "./sante.html",
   "./config.js",
+  "./famille.js",
+  "./sante.js",
   "./habits.js",
   "./thomas.js",
   "./sync.js",
@@ -31,12 +34,16 @@ const FILES = [
   "./notif/soir.png",
   "./notif/bain.png",
   "./notif/badge.png",
+  "./notif/medicament.png",
+  "./notif/rdv.png",
+  "./notif/note.png",
   "./icon-poussette.svg",
   "./icon-bruit.svg",
   "./icon-habitudes.svg",
   "./icon-habiller.svg",
   "./icon-age.svg",
   "./icon-croissance.svg",
+  "./icon-sante.svg",
   "./icon-512.png",
   "./icon-maskable-512.png",
   "./apple-touch-icon.png",
@@ -60,7 +67,8 @@ self.addEventListener("install", (e) => {
 self.addEventListener("activate", (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION).map((k) => caches.delete(k))))
+      // "thomas911-famille" holds the family code for the reminders' quick actions (famille.js): it stays
+      .then((keys) => Promise.all(keys.filter((k) => k !== VERSION && k !== FAMILLE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -80,14 +88,31 @@ self.addEventListener("fetch", (e) => {
 });
 
 // ---------- Reminders ----------
-// The reminder function sends { title, body, jour, slot, cles, reste } (cles: the boxes the reminder is about, reste: what's left
-// for this moment, the bath included). Android shows the picture and the two quick actions; iPhone only the text and the tap.
-const EMOJI = { matin: "☀️", midi: "🌞", soir: "🌙", bain: "🛁" };
+// The habits function sends { title, body, jour, slot, cles, reste } (cles: the boxes the reminder is about, reste: what's left
+// for this moment, the bath included). The health function sends { kind: "prise" | "rdv" | "note", title, body, med | rdv | probleme }.
+// Android shows the picture and the quick actions; iPhone only the text (with an emoji in front) and the tap.
+const EMOJI = { matin: "☀️", midi: "🌞", soir: "🌙", bain: "🛁", medicament: "💊", rdv: "📅", note: "📝" };
 const ua = self.navigator.userAgent || "";
 const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && !/Chrome|Firefox|Edg/.test(ua));
+// The family code and who uses this phone, kept by famille.js for these actions
+const FAMILLE = "thomas911-famille";
+const famille = () => caches.open(FAMILLE).then((c) => c.match("famille.json")).then((r) => (r ? r.json() : {})).catch(() => ({}));
+const HEALTH = {
+  prise: (d) => ({ pic: "medicament", tag: `prise-${d.med}`, data: { kind: "prise", med: d.med, at: d.at },
+    actions: [{ action: "donne", title: "Donné" }, { action: "plus-tard", title: "Plus tard" }] }),
+  rdv: (d) => ({ pic: "rdv", tag: `rdv-${d.rdv}`, data: { kind: "rdv", rdv: d.rdv }, actions: [] }),
+  note: (d) => ({ pic: "note", tag: `note-${d.probleme}`, data: { kind: "note", probleme: d.probleme }, actions: [{ action: "noter", title: "Noter" }] })
+};
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data.json(); } catch (err) {}
+  if (HEALTH[d.kind]) {
+    const h = HEALTH[d.kind](d), title = d.title || "THOMAS911";
+    e.waitUntil(self.registration.showNotification(apple ? `${EMOJI[h.pic]} ${title}` : title, {
+      body: d.body || "", tag: h.tag, renotify: true, icon: `notif/${h.pic}.png`, badge: "notif/badge.png", data: h.data, actions: h.actions
+    }));
+    return;
+  }
   const bain = /bain/.test(d.body || ""), cles = d.cles || [];
   // What it's about: morning sun, midday sun, evening moon, or the duck when the bath is in it.
   // Android shows the app icon on the left already, so it goes in the picture on the right (the badge goes in the status bar);
@@ -107,26 +132,43 @@ self.addEventListener("push", (e) => {
 
 function openPage(url) {
   return self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((list) => {
-    const page = list.find((c) => c.url.includes("habitudes.html")) || list[0];
+    const page = list.find((c) => c.url.includes(url.split(/[?#]/)[0])) || list[0];
     if (page) return page.navigate(url).then((c) => (c || page).focus()).catch(() => page.focus());
     return self.clients.openWindow(url);
   });
 }
 
+// Writes to the shared tables with the family code; an error when it fails (the page then does it)
+function post(table, rows) {
+  const cfg = self.T911 || {};
+  return famille().then(({ code }) => fetch(`${cfg.SUPABASE_URL}/rest/v1/${table}`, {
+    method: "POST",
+    headers: { apikey: cfg.SUPABASE_KEY, "x-famille": code || "", "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
+    body: JSON.stringify(rows)
+  })).then((r) => { if (!r.ok) throw new Error(r.status); });
+}
+
 self.addEventListener("notificationclick", (e) => {
-  const n = e.notification, { jour, slot, cles } = n.data || {};
+  const n = e.notification, data = n.data || {}, { jour, slot, cles } = data;
   n.close();
   if (e.action === "plus-tard") return;
+  // Health: give the dose right from the reminder, or open what it's about
+  if (data.kind === "prise") {
+    if (e.action === "donne") {
+      e.waitUntil(famille().then(({ qui }) => post("sante_prises", [{ id: crypto.randomUUID(), medicament: data.med, le: new Date().toISOString(),
+        fuseau: Intl.DateTimeFormat().resolvedOptions().timeZone || null, par: qui || null }]))
+        .catch(() => openPage(`sante.html#donne/${data.med}`)));
+      return;
+    }
+    e.waitUntil(openPage(`sante.html#m/${data.med}`));
+    return;
+  }
+  if (data.kind === "rdv") { e.waitUntil(openPage(`sante.html#r/${data.rdv}`)); return; }
+  if (data.kind === "note") { e.waitUntil(openPage(`sante.html#noter/${data.probleme}`)); return; }
   if (e.action === "fait" && jour && slot) {
     // Tick the boxes the reminder was about; if the network fails, the page does it.
-    const cfg = self.T911 || {};
     const keys = cles || ["bouche", "perinee"].map((h) => `${h}-${slot}`).concat(slot === "matin" ? ["vitd"] : []);
-    const rows = keys.map((cle) => ({ jour, cle, fait: true }));
-    e.waitUntil(fetch(`${cfg.SUPABASE_URL}/rest/v1/habitudes`, {
-      method: "POST",
-      headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify(rows)
-    }).then((r) => { if (!r.ok) throw new Error(r.status); })
+    e.waitUntil(post("habitudes", keys.map((cle) => ({ jour, cle, fait: true })))
       .catch(() => openPage(`habitudes.html?fait=${encodeURIComponent(jour + "|" + slot)}`)));
     return;
   }

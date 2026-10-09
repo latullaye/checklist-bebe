@@ -17,6 +17,7 @@
 .set b { display: block; font-size: 0.98rem; }
 .set .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 2px; }
 .card .set + .set, .card .set + .block, .card .block + .set { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+.block > .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 8px; }
 .card .label { margin-bottom: 10px; }
 /* Switch */
 .switch { position: relative; width: 52px; height: 32px; flex: none; }
@@ -50,9 +51,9 @@
   </header>
 
   <section class="card" id="rappels">
-    <div class="label">Rappels des habitudes</div>
+    <div class="label">Rappels</div>
     <div class="set">
-      <span class="txt"><b>Notifications sur ce téléphone</b><span class="hint">À 9 h, 12 h 30 et 17 h 30, à l'heure du téléphone, seulement s'il reste quelque chose à cocher.</span></span>
+      <span class="txt"><b>Notifications sur ce téléphone</b><span class="hint">Habitudes à 9 h, 12 h 30 et 17 h 30, s'il reste quelque chose à cocher. Santé : chaque prise de médicament, les rendez-vous la veille à 19 h et une heure avant, et à 20 h pour noter la journée tant qu'un problème dure. À l'heure du téléphone.</span></span>
       <label class="switch"><input type="checkbox" id="notif" aria-label="Notifications sur ce téléphone" data-buzz><span></span></label>
     </div>
     <p class="msg" id="notifMsg"></p>
@@ -80,10 +81,19 @@
     </div>
   </section>
 
-  <section class="card">
+  <section class="card" id="famille">
     <div class="label">Partage entre vos téléphones</div>
     <div class="set">
-      <span class="txt"><b id="shareTitle">Synchronisation</b><span class="hint" id="shareHint">Checklist, habitudes, mesures et réglages sont partagés.</span></span>
+      <span class="txt"><b id="shareTitle">Synchronisation</b><span class="hint" id="shareHint">Checklist, habitudes, mesures, santé et réglages sont partagés.</span></span>
+    </div>
+    <div class="block">
+      <b>Ce téléphone est celui de</b>
+      <div class="chips" id="qui"></div>
+      <span class="hint">Pour savoir qui a noté quoi et qui a donné un médicament.</span>
+    </div>
+    <div class="set">
+      <span class="txt"><b>Code de la famille</b><span class="hint" id="famHint"></span></span>
+      <button class="chip" id="famChange" type="button" data-buzz>Changer</button>
     </div>
   </section>
 
@@ -99,6 +109,7 @@
 </div>
 
 <script src="config.js"></script>
+<script src="famille.js"></script>
 <script src="sync.js"></script>
 <script src="habits.js"></script>
 <script src="notifs.js"></script>
@@ -150,12 +161,22 @@ $("fMinus").addEventListener("click", () => setLait({ boires: Math.max(3, lait()
 $("fPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lait().boires + 1) }));
 Prefs.on("lait", renderLait);
 
+// ---------- This phone: who, and the family code (famille.js) ----------
+function renderFamille() {
+  const q = Famille.qui();
+  $("qui").innerHTML = Famille.PEOPLE.map((p) => `<button type="button" class="chip" data-buzz data-p="${p}" aria-pressed="${p === q}">${p}</button>`).join("");
+  $("famHint").textContent = Famille.ok() ? "Enregistré sur ce téléphone. Sans lui, rien ne peut être lu ni écrit." : "Pas encore entré sur ce téléphone.";
+  $("famChange").textContent = Famille.ok() ? "Changer" : "Entrer";
+}
+$("qui").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) { Famille.setQui(b.dataset.p); renderFamille(); } });
+$("famChange").addEventListener("click", () => Famille.ask());
+
 // ---------- Sharing ----------
 function renderShare() {
   const n = window.Sync ? Sync.waiting() : 0, on = window.Sync ? Sync.online : true;
   $("shareTitle").textContent = !on ? "Hors ligne" : n ? `${n} changement${n > 1 ? "s" : ""} en attente` : "À jour";
   $("shareHint").textContent = !on ? "Ce que vous notez reste sur ce téléphone et part au retour du réseau."
-    : "Checklist, habitudes, mesures et réglages sont partagés entre vos téléphones.";
+    : "Checklist, habitudes, mesures, santé et réglages sont partagés entre vos téléphones.";
 }
 setInterval(renderShare, 2000);
 
@@ -178,7 +199,7 @@ $("update").addEventListener("click", async () => {
   } catch (e) { $("updateMsg").textContent = "Pas de réseau : réessaie plus tard."; }
 });
 
-renderTemp(); renderLait(); renderShare(); renderVersion();
+renderTemp(); renderLait(); renderShare(); renderVersion(); renderFamille();
 </script>
 <script src="app.js"></script>
 </body>

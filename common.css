@@ -56,8 +56,10 @@ svg.i { width: 24px; height: 24px; flex: none; fill: none; stroke: currentColor;
 .sync-pill.off, .sync-pill.wait { color: #b36b12; border-color: color-mix(in srgb, #e0a040 45%, var(--line)); }
 .sync-pill.off::before, .sync-pill.wait::before { background: #e0a040; }
 .sync-pill.sync::before { animation: blink 1s ease-in-out infinite; }
+.sync-pill.lock { color: #b36b12; border-color: color-mix(in srgb, #e0a040 45%, var(--line)); cursor: pointer; }
+.sync-pill.lock::before { background: #e0a040; }
 @keyframes blink { 50% { opacity: .3; } }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sync-pill.off, :root:not([data-theme="light"]) .sync-pill.wait { color: #f0b860; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .sync-pill.off, :root:not([data-theme="light"]) .sync-pill.wait, :root:not([data-theme="light"]) .sync-pill.lock { color: #f0b860; } }
 
 /* Moving between screens: a short cross-fade instead of a blank reload (Chrome, Safari 18+) */
 @view-transition { navigation: auto; }

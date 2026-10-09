@@ -80,3 +80,91 @@ select cron.schedule('rappels-habitudes', '0,30 * * * *', $$
     body := '{}'::jsonb
   );
 $$);
+
+-- ---------- Family code ----------
+-- The app sends the family code in the x-famille header (famille.js); only its SHA-256 is kept, in prive (key famille_sha256).
+-- Every table the app uses opens only with it.
+create or replace function public.famille_ok() returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select coalesce(
+    encode(extensions.digest(coalesce(current_setting('request.headers', true)::json ->> 'x-famille', ''), 'sha256'), 'hex')
+      = (select valeur from public.prive where cle = 'famille_sha256'),
+    false)
+$$;
+grant execute on function public.famille_ok() to anon, authenticated;
+-- The first tables (open until the app sent the code) get the same lock:
+drop policy "app" on habitudes;   create policy famille on habitudes for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+drop policy "app" on abonnements; create policy famille on abonnements for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+drop policy "app" on checklist;   create policy famille on checklist for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+drop policy "app" on reglages;    create policy famille on reglages for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+drop policy "app" on mesures;     create policy famille on mesures for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+
+-- ---------- Health ----------
+-- Problems: start as a symptom ("Diarrhée"), get a diagnosis later ("Gastro-entérite").
+create table sante_problemes (
+  id uuid primary key default gen_random_uuid(),
+  titre text not null, diagnostic text, debut date not null, fin date, notes text,
+  par text, cree timestamptz not null default now(), maj timestamptz not null default now()
+);
+-- What was seen, when: symptoms [{k, n?}] (counts since the note before), temperature, wet diapers, observations, what was done.
+create table sante_notes (
+  id uuid primary key default gen_random_uuid(),
+  probleme uuid references sante_problemes(id) on delete cascade,
+  le timestamptz not null, jour date not null, fuseau text,
+  symptomes jsonb not null default '[]'::jsonb,
+  temperature numeric(3,1) check (temperature between 34 and 43), couches smallint check (couches between 0 and 30),
+  observe text, fait text, par text, cree timestamptz not null default now()
+);
+-- Appointments, past or to come; agenda_uid: the event of the Family calendar it comes from.
+create table sante_rdv (
+  id uuid primary key default gen_random_uuid(),
+  le timestamptz not null, fuseau text,
+  type text not null default 'medecin' check (type in ('medecin', 'clsc', 'hopital', 'urgences', 'telephone', 'soin', 'autre')),
+  lieu text, pro text, motif text, compte_rendu text, diagnostic text, suivi text,
+  problemes uuid[] not null default '{}', annule boolean not null default false, agenda_uid text unique,
+  par text, cree timestamptz not null default now(), maj timestamptz not null default now()
+);
+-- Medications as prescribed: every N hours, at set times (on the clock of fuseau), or when needed.
+create table sante_medicaments (
+  id uuid primary key default gen_random_uuid(),
+  nom text not null, dose text,
+  mode text not null default 'intervalle' check (mode in ('intervalle', 'heures', 'besoin')),
+  toutes_h numeric(4,1) check (toutes_h > 0 and toutes_h <= 168), heures text[], max_jour smallint check (max_jour between 1 and 24),
+  debut timestamptz not null, fuseau text, fin date, arrete timestamptz,
+  probleme uuid references sante_problemes(id) on delete set null, rdv uuid references sante_rdv(id) on delete set null,
+  consignes text, notes text, rappels boolean not null default true,
+  par text, cree timestamptz not null default now(), maj timestamptz not null default now()
+);
+-- Each dose given.
+create table sante_prises (
+  id uuid primary key default gen_random_uuid(),
+  medicament uuid not null references sante_medicaments(id) on delete cascade,
+  le timestamptz not null, fuseau text, dose text, note text, par text, cree timestamptz not null default now()
+);
+-- Health-looking events read from the Family calendar (the "sante" function), waiting for "for Thomas" or "ignore".
+create table agenda (
+  uid text primary key, debut timestamptz not null, fin timestamptz, journee boolean not null default false,
+  titre text not null, lieu text, fuseau text, decision text check (decision in ('ajoute', 'ignore')), vu timestamptz not null default now()
+);
+-- Reminders already sent (a 5-minute tick never sends one twice); server only.
+create table rappels_envoyes (cle text primary key, le timestamptz not null default now());
+alter table sante_problemes enable row level security; alter table sante_notes enable row level security;
+alter table sante_rdv enable row level security; alter table sante_medicaments enable row level security;
+alter table sante_prises enable row level security; alter table agenda enable row level security;
+alter table rappels_envoyes enable row level security;
+create policy famille on sante_problemes for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+create policy famille on sante_notes for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+create policy famille on sante_rdv for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+create policy famille on sante_medicaments for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+create policy famille on sante_prises for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+create policy famille on agenda for all to anon using ((select famille_ok())) with check ((select famille_ok()));
+-- The Family calendar's secret iCal address goes in prive, key agenda_ical (never in the code).
+-- Every 5 minutes: dose and appointment reminders, the evening note; once an hour, the calendar
+select cron.schedule('sante', '*/5 * * * *', $$
+  select net.http_post(
+    url := 'https://vvkkxphkyjejyhbcdcuw.supabase.co/functions/v1/sante',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-key', (select valeur from public.prive where cle = 'cron')),
+    body := '{}'::jsonb,
+    timeout_milliseconds := 30000
+  );
+$$);
