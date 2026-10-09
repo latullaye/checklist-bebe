@@ -106,11 +106,13 @@
 .state.warn { background: var(--warn-soft); color: var(--warn); }
 .prose { white-space: pre-wrap; font-size: 0.92rem; line-height: 1.45; margin: 8px 0 0; -webkit-user-select: text; user-select: text; }
 .prose.muted { color: var(--muted); }
+.md.prose { white-space: normal; margin-top: 10px; }
 .kv { margin: 10px 0 0; }
-.kv dt { font-size: 0.72rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 10px; }
-.kv dd { margin: 3px 0 0; font-size: 0.94rem; line-height: 1.4; white-space: pre-wrap; -webkit-user-select: text; user-select: text; }
-.resume { white-space: pre-wrap; font: inherit; font-size: 0.88rem; line-height: 1.5; margin: 10px 0 12px; padding: 12px; border-radius: 12px; background: var(--bg);
-  border: 1px solid var(--line); -webkit-user-select: text; user-select: text; overflow-wrap: anywhere; }
+.kv dt { margin-top: 12px; }
+.kv dd { margin: 4px 0 0; }
+.resume { font-size: 0.88rem; line-height: 1.5; margin: 10px 0 12px; padding: 12px 14px; border-radius: 12px; background: var(--bg); border: 1px solid var(--line); }
+.resume ul { padding-left: 18px; }
+.resume li { margin: 6px 0; }
 .card > .label + .btnrow, .card > .label + .li { margin-top: 10px; }
 .addline { font: inherit; font-weight: 700; font-size: 0.88rem; color: var(--accent); background: none; border: 0; padding: 10px 0 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .addline svg { width: 17px; height: 17px; }
@@ -124,10 +126,10 @@
 .day-head b::first-letter { text-transform: uppercase; }
 .day-head span { font-size: 0.78rem; color: var(--muted); font-weight: 700; }
 .day .tags { margin-bottom: 6px; }
-.note { font: inherit; text-align: left; display: block; width: 100%; background: none; border: 0; padding: 6px 0 6px 12px; margin-top: 4px; border-left: 3px solid var(--accent-soft);
-  color: var(--ink); cursor: pointer; font-size: 0.9rem; line-height: 1.4; }
-.note .when { display: block; font-size: 0.76rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
-.note .did { display: block; color: var(--accent); }
+.note { display: block; padding: 6px 0 6px 12px; margin-top: 6px; border-left: 3px solid var(--accent-soft); color: var(--ink); cursor: pointer; font-size: 0.9rem; line-height: 1.4; }
+.note .when { display: flex; align-items: center; gap: 4px; font-size: 0.76rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+.note .did { margin-top: 6px; }
+.note .did .lab, .kv dt { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
 .note .muted { color: var(--muted); }
 .given { display: flex; align-items: center; gap: 7px; font-size: 0.86rem; color: var(--muted); margin: 6px 0 0; text-decoration: none; font-variant-numeric: tabular-nums; }
 .given svg { width: 16px; height: 16px; color: var(--accent); flex: none; }
@@ -186,6 +188,45 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .actions .del { color: var(--bad); }
 .err { color: var(--bad); font-size: 0.85rem; min-height: 1em; margin: 0; }
 .err:empty { display: none; }
+
+/* Notes in Markdown (markdown.js) */
+.md { font-size: 0.92rem; line-height: 1.45; overflow-wrap: anywhere; -webkit-user-select: text; user-select: text; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md p { margin: 0 0 6px; }
+.md h3, .md h4, .md h5 { font-family: var(--font-display); font-weight: 700; line-height: 1.2; margin: 10px 0 4px; }
+.md h3 { font-size: 1.08rem; }
+.md h4 { font-size: 0.98rem; }
+.md h5 { font-size: 0.76rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.md ul, .md ol { margin: 4px 0 6px; padding-left: 20px; }
+.md li { margin: 3px 0; }
+.md li::marker { color: var(--accent); font-weight: 700; }
+.md li.task { list-style: none; margin-left: -20px; display: flex; gap: 8px; align-items: flex-start; }
+.md li.task > input { width: 19px; height: 19px; margin: 1px 0 0; accent-color: var(--accent); flex: none; cursor: pointer; }
+.md li.task.done > span { color: var(--muted); text-decoration: line-through; }
+.md blockquote { margin: 6px 0; padding: 3px 0 3px 10px; border-left: 3px solid var(--accent); color: var(--muted); }
+.md blockquote p { margin: 0; }
+.md code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: .85em; background: var(--group); border-radius: 5px; padding: 1px 5px; }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 10px 0; }
+.md a { color: var(--accent); font-weight: 700; text-decoration: none; }
+.md strong { font-weight: 700; }
+/* Writing: a toolbar above the text, and a preview */
+.mde { border: 1.5px solid var(--line); border-radius: 12px; background: var(--bg); overflow: hidden; }
+.mde:focus-within { border-color: var(--accent); }
+.mde-bar { display: flex; align-items: center; gap: 2px; padding: 4px; border-bottom: 1px solid var(--line); background: var(--surface); }
+.mde-bar button { font: inherit; font-size: 0.92rem; min-width: 34px; height: 30px; border: 0; border-radius: 8px; background: none; color: var(--ink); cursor: pointer; }
+.mde-bar button:active { background: var(--group); }
+.mde-bar button:disabled { opacity: .3; }
+.mde-bar .mde-eye { margin-left: auto; font-size: 0.78rem; font-weight: 700; color: var(--accent); padding: 0 10px; }
+.mde-bar .mde-eye[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.field .mde textarea { border: 0; border-radius: 0; background: transparent; min-height: 66px; resize: none; }
+.mde-view { padding: 10px 12px; min-height: 66px; }
+.mde-empty { color: var(--muted); }
+/* Who wrote it */
+.by { display: inline-flex; align-items: center; gap: 4px; }
+.by i { width: 16px; height: 16px; border-radius: 50%; font-style: normal; font-size: 0.62rem; font-weight: 800; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--accent-soft); color: var(--accent); }
+.by i.e { background: var(--warn-soft); color: var(--warn); }
 
 /* Toast with "undo" */
 .toast { position: fixed; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 60; width: min(440px, calc(100vw - 24px));
@@ -280,7 +321,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="sep">Après le rendez-vous</div>
     <div class="field"><label for="rCR">Ce qui a été dit et fait</label><textarea id="rCR" placeholder="Examen, conseils, ordonnance…"></textarea></div>
     <div class="field"><label for="rDx">Diagnostic</label><input id="rDx" autocomplete="off" placeholder="Gastro-entérite"></div>
-    <div class="field"><label for="rSuivi">Et ensuite</label><input id="rSuivi" autocomplete="off" placeholder="Revoir si fièvre, rendez-vous dans 1 semaine…"></div>
+    <div class="field"><label for="rSuivi">Et ensuite</label><textarea id="rSuivi" placeholder="- [ ] Revoir si fièvre plus de 48 h&#10;- [ ] Rendez-vous dans 1 semaine"></textarea></div>
     <label class="check" id="rCancelWrap"><input type="checkbox" id="rCancel"> Rendez-vous annulé</label>
     <p class="err" id="rErr"></p>
     <div class="actions"><button type="button" class="del" id="rDel" hidden>Supprimer</button><button type="button" data-close>Annuler</button><button type="submit" class="save">Enregistrer</button></div>
@@ -340,6 +381,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <script src="sync.js"></script>
 <script src="thomas.js"></script>
 <script src="sante.js"></script>
+<script src="markdown.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const S = Sante;
@@ -565,13 +607,16 @@ function giveNow(m) {
 function head(title) {
   return `<header class="top"><button class="back" type="button" data-back aria-label="Retour">${svg('<path d="M15 18l-6-6 6-6"/>')}</button><h1>${esc(title)}</h1></header>`;
 }
+const by = (p) => (p ? `<span class="by"><i class="${p === "Edith" ? "e" : ""}">${esc(p[0])}</i>${esc(p)}</span>` : "");
+// A note in Markdown; its to-dos can be ticked right here (data-t / data-id / data-f: where the text lives)
+const md = (text, t, id, f, cls = "") => `<div class="md${cls ? ` ${cls}` : ""}" data-t="${t}" data-id="${id}" data-f="${f}">${Markdown.html(text)}</div>`;
 function dayBlock(d) {
   const tags = [...d.sym].map(([k, c]) => `<span class="tag">${esc(S.symText(k, c))}</span>`);
   if (d.tmax != null) tags.push(`<span class="tag${d.tmax >= 38 ? " hot" : ""}">${S.nf(d.tmax, 1)} °C${d.notes.filter((n) => n.temperature != null).length > 1 ? " au plus" : ""}</span>`);
   if (d.couches != null) tags.push(`<span class="tag">${d.couches} couche${d.couches > 1 ? "s" : ""} mouillée${d.couches > 1 ? "s" : ""}</span>`);
-  const notes = d.notes.map((n) => `<button type="button" class="note" data-edit-note="${n.id}"><span class="when">${S.fmtTime(n.le, n.fuseau)}${n.par ? ` · ${esc(n.par)}` : ""}${n._pending ? " · en attente d'envoi" : ""}</span>
-      ${n.observe ? `<span>${esc(n.observe)}</span>` : ""}${n.fait ? `<span class="did">Fait : ${esc(n.fait)}</span>` : ""}
-      ${!n.observe && !n.fait ? `<span class="muted">${(n.symptomes || []).map(({ k, n: c }) => esc(S.symText(k, c))).join(", ") || "Note"}</span>` : ""}</button>`).join("");
+  const notes = d.notes.map((n) => `<div class="note" role="button" tabindex="0" data-edit-note="${n.id}"><span class="when">${S.fmtTime(n.le, n.fuseau)}${n.par ? ` · ${by(n.par)}` : ""}${n._pending ? " · en attente d'envoi" : ""}</span>
+      ${n.observe ? md(n.observe, "notes", n.id, "observe") : ""}${n.fait ? `<div class="did"><span class="lab">Ce qu'on fait</span>${md(n.fait, "notes", n.id, "fait")}</div>` : ""}
+      ${!n.observe && !n.fait ? `<span class="muted">${(n.symptomes || []).map(({ k, n: c }) => esc(S.symText(k, c))).join(", ") || "Note"}</span>` : ""}</div>`).join("");
   const given = d.given.map(({ med, at }) => `<a class="given" href="#m/${med.id}">${IC.pill}<span><b>${esc(med.nom)}</b> ×${at.length} : ${at.map((x) => S.fmtTime(x.le, x.fuseau)).join(", ")}</span></a>`).join("");
   const rdvs = d.rdvs.map((r) => `<a class="given" href="#r/${r.id}">${IC.cal}<span>Rendez-vous ${S.rdvWord(r)} à ${S.fmtTime(r.le, r.fuseau)}${r.diagnostic ? ` : <b>${esc(r.diagnostic)}</b>` : ""}</span></a>`).join("");
   const empty = !d.notes.length && !d.given.length && !d.rdvs.length;
@@ -587,12 +632,12 @@ function viewProblem(p) {
     <h2>${esc(S.nameOf(p))}</h2>
     ${p.diagnostic && p.diagnostic !== p.titre ? `<span class="was">Commencé par : ${esc(p.titre)}</span>` : ""}
     <span class="sub">${open ? `Depuis le ${S.fmtDay(p.debut, { weekday: "long" })} · jour ${n}` : `Du ${S.fmtDay(p.debut)} au ${S.fmtDay(p.fin)} · ${n} jour${n > 1 ? "s" : ""}`}</span>
-    ${p.notes ? `<p class="prose">${esc(p.notes)}</p>` : ""}
+    ${p.notes ? md(p.notes, "problemes", p.id, "notes", "prose") : ""}
     <div class="btnrow">${open ? `<button class="btn primary grow" type="button" data-note="${p.id}">${IC.plus}Noter</button>` : ""}
       <button class="btn" type="button" data-edit-p>Modifier</button><button class="btn" type="button" data-close-p>${open ? "C'est fini" : "Rouvrir"}</button></div>
   </section>
   <section class="card"><div class="label">Pour le médecin</div>
-    <pre class="resume" id="resume">${esc(S.resume(p, { poids: lastWeight() }))}</pre>
+    <div class="resume md" id="resume">${Markdown.html(lastResume = S.resume(p, { poids: lastWeight() }))}</div>
     <div class="btnrow"><button class="btn grow" type="button" id="copy">${IC.copy}Copier</button><button class="btn grow" type="button" id="share">${IC.share}Partager</button></div>
   </section>
   <section class="card"><div class="label">Jour par jour</div>${days.map(dayBlock).join("")}</section>
@@ -619,7 +664,7 @@ function viewRdv(r) {
         : future ? `<a class="btn" href="${S.agendaLink(r)}" target="_blank" rel="noopener">${IC.cal}Ajouter à l'agenda</a>` : ""}</div>
   </section>
   <section class="card"><div class="label">Compte rendu</div>
-    ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${esc(r.compte_rendu)}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd>${esc(r.diagnostic)}</dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${esc(r.suivi)}</dd>` : ""}</dl>`
+    ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${md(r.compte_rendu, "rdv", r.id, "compte_rendu")}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd class="md"><p><strong>${esc(r.diagnostic)}</strong></p></dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${md(r.suivi, "rdv", r.id, "suivi")}</dd>` : ""}</dl>`
       : `<p class="prose muted">${future ? "À remplir après le rendez-vous : ce qui a été dit, le diagnostic, la suite." : "Rien de noté. Ce qui a été dit, le diagnostic, la suite ?"}</p>`}
     <button class="addline" type="button" data-edit-r>${IC.note}${done ? "Compléter" : "Écrire le compte rendu"}</button></section>
   <section class="card"><div class="label">Médicaments prescrits</div>
@@ -635,7 +680,7 @@ function viewMed(m) {
     <h2>${esc(m.nom)}</h2>
     ${m.dose ? `<p class="when">${esc(m.dose)}</p>` : ""}
     <span class="sub">${esc(cap(S.posologie(m)))} · ${S.course(m)}${m.fin ? ` (jusqu'au ${S.fmtDay(m.fin)})` : ""}${m.arrete ? ` · arrêté le ${S.fmtDay(S.dayOf(m.arrete))}` : ""}</span>
-    ${m.consignes ? `<p class="prose">${esc(m.consignes)}</p>` : ""}
+    ${m.consignes ? md(m.consignes, "medicaments", m.id, "consignes", "prose") : ""}
     ${p || r ? `<div class="tags">${p ? `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>` : ""}${r ? `<a class="tag" href="#r/${r.id}" style="text-decoration:none">Prescrit le ${S.fmtDay(S.dayOf(r.le, r.fuseau))}</a>` : ""}</div>` : ""}
     ${act ? `<p class="next${st.late ? " late" : ""}" style="margin:12px 0 0">${st.text}</p>
     <div class="btnrow"><button class="btn primary grow" type="button" data-give="${m.id}">${IC.check}Donné</button><button class="btn" type="button" data-other="${m.id}">Autre heure…</button></div>` : ""}
@@ -691,19 +736,27 @@ function renderDetail() {
   on("[data-edit-r]", () => openRdv(rec()));
   on("[data-edit-m]", () => openMed(rec()));
   on("[data-stop-m]", () => { const m = rec(); if (confirm(`Arrêter ${m.nom} maintenant ? Les rappels s'arrêtent aussi.`)) S.save("medicaments", { ...strip(m), arrete: new Date().toISOString() }); });
-  on("[data-edit-note]", (e) => openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }));
+  on("[data-edit-note]", (e) => { if (!e.target.closest("input, a")) openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }); });
   on("[data-note-day]", (e) => openNote({ probleme: view.id, day: e.currentTarget.dataset.noteDay }));
   on("[data-edit-dose]", (e) => { const d = S.byId("prises", e.currentTarget.dataset.editDose); openDose(rec(), d); });
   const copy = $("copy"), share = $("share");
   if (copy) copy.addEventListener("click", () => {
-    const text = $("resume").textContent;
+    const text = Markdown.plain(lastResume);
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(() => toast("Résumé copié."), () => {
       const r = document.createRange(); r.selectNodeContents($("resume")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast("Sélectionné : copie-le avec le menu du téléphone.");
     });
   });
-  if (share) { share.hidden = !navigator.share; share.addEventListener("click", () => navigator.share({ title: `Thomas : ${$("detail").querySelector("h2").textContent}`, text: $("resume").textContent }).catch(() => {})); }
+  if (share) { share.hidden = !navigator.share; share.addEventListener("click", () => navigator.share({ title: `Thomas : ${$("detail").querySelector("h2").textContent}`, text: Markdown.plain(lastResume) }).catch(() => {})); }
 }
 const strip = (r) => { const { _pending, ...rest } = r; return rest; };
+let lastResume = "";
+// A to-do ticked in a note: saved right away
+$("detail").addEventListener("click", (e) => {
+  const cb = e.target.closest("input[data-task]"); if (!cb) return;
+  const box = cb.closest("[data-t]"), rec = box && S.byId(box.dataset.t, box.dataset.id); if (!rec) return;
+  buzz();
+  S.save(box.dataset.t, { ...strip(rec), [box.dataset.f]: Markdown.toggle(rec[box.dataset.f], Number(cb.dataset.task)) });
+});
 
 function render() {
   const main = !view.kind;
@@ -715,6 +768,8 @@ setInterval(() => { if (document.visibilityState === "visible" && !document.quer
 
 // ---------- Sheets ----------
 document.querySelectorAll("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
+document.querySelectorAll("dialog textarea").forEach((ta) => Markdown.editor(ta));
+const show = (dlg) => { dlg.showModal(); Markdown.reset(dlg); };
 const pressGroup = (el, value, attr = "aria-checked") => el.querySelectorAll("button").forEach((b) => b.setAttribute(attr, b.dataset.v === String(value)));
 const nowParts = () => S.partsIn(Date.now());
 const num = (s) => { const n = Number(String(s || "").replace(",", ".").trim()); return String(s || "").trim() && isFinite(n) ? n : null; };
@@ -738,7 +793,7 @@ function openNote({ probleme = null, note: existing = null, day = null }) {
   $("nObs").value = existing ? existing.observe || "" : ""; $("nFait").value = existing ? existing.fait || "" : "";
   $("nDel").hidden = !existing; $("nErr").textContent = "";
   renderSyms(); renderCouches();
-  $("noteDlg").showModal();
+  show($("noteDlg"));
 }
 function setFor(v) {
   note.probleme = v === "new" ? null : v; note.isNew = v === "new";
@@ -815,7 +870,7 @@ function openProblem(p) {
   probEdit = p;
   $("pTitre").value = p.titre; $("pDx").value = p.diagnostic || ""; $("pDebut").value = p.debut; $("pFin").value = p.fin || ""; $("pNotes").value = p.notes || "";
   $("pDebut").max = S.today(); $("pFin").max = S.today(); $("pErr").textContent = "";
-  $("probDlg").showModal();
+  show($("probDlg"));
 }
 $("probForm").addEventListener("submit", (e) => {
   e.preventDefault();
@@ -847,7 +902,7 @@ function openRdv(r, preset = {}) {
   $("rForWrap").hidden = !recent.length;
   $("rCR").value = base.compte_rendu || ""; $("rDx").value = base.diagnostic || ""; $("rSuivi").value = base.suivi || "";
   $("rCancel").checked = !!(r && r.annule); $("rCancelWrap").hidden = !r; $("rDel").hidden = !r; $("rErr").textContent = "";
-  $("rdvDlg").showModal();
+  show($("rdvDlg"));
 }
 $("rType").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); pressGroup($("rType"), b.dataset.v); } });
 $("rFor").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); b.setAttribute("aria-pressed", b.getAttribute("aria-pressed") !== "true"); } });
@@ -898,7 +953,7 @@ function openMed(m, preset = {}) {
   pressGroup($("mRdv"), base.rdv || "");
   $("mConsignes").value = base.consignes || ""; $("mRemind").checked = base.rappels !== false;
   $("mDel").hidden = !m; $("mErr").textContent = "";
-  $("medDlg").showModal();
+  show($("medDlg"));
 }
 function setMode(v) {
   mode = v; pressGroup($("mMode"), v);

@@ -167,15 +167,17 @@
   }
   // "Diarrhée (6 selles liquides)", "Fièvre", "Plaques sur les joues"
   const symText = (k, c) => `${symLabel(k)}${c ? ` (${c}${SYM[k] && SYM[k].unit ? ` ${SYM[k].unit}` : ""})` : ""}`;
-  const quote = (s) => String(s || "").trim().replace(/\s+/g, " ");
+  // Notes are Markdown (markdown.js): flattened to one line in the summary
+  const quote = (s) => (window.Markdown ? Markdown.flat(s || "") : String(s || "").trim().replace(/\s+/g, " "));
+  const cap1 = (t) => t.replace(/^./, (c) => c.toUpperCase());
 
-  // What to tell the doctor, ready to read out or send
+  // What to tell the doctor, ready to read out or send. In Markdown: shown formatted, copied or sent as plain text.
   function resume(p, extra = {}) {
     const days = journal(p), lines = [];
     const a = window.Thomas ? Thomas.age(p.fin || today()) : null;
-    lines.push(`Thomas${a ? `, ${a.text.months} (${a.days} j)` : ""}${extra.poids ? `, ${extra.poids}` : ""}.`);
+    lines.push(`**Thomas**${a ? `, ${a.text.months} (${a.days} j)` : ""}${extra.poids ? `, ${extra.poids}` : ""}.`);
     const n = dayNumber(p, p.fin || today());
-    lines.push(`${p.titre}${p.diagnostic && p.diagnostic !== p.titre ? ` (diagnostic : ${p.diagnostic})` : ""} depuis le ${fmtDay(p.debut, { weekday: "long" })}`
+    lines.push(`**${p.titre}**${p.diagnostic && p.diagnostic !== p.titre ? ` (diagnostic : ${p.diagnostic})` : ""} depuis le ${fmtDay(p.debut, { weekday: "long" })}`
       + `${p.fin ? `, fini le ${fmtDay(p.fin, { weekday: "long" })}` : ""} : ${n} jour${n > 1 ? "s" : ""}.`);
     lines.push("");
     const low = (t) => t.replace(/^./, (c) => c.toLowerCase());
@@ -185,15 +187,16 @@
       if (d.couches != null) parts.push(`${d.couches} couche${d.couches > 1 ? "s" : ""} mouillée${d.couches > 1 ? "s" : ""}`);
       const seen = d.notes.map((x) => quote(x.observe)).filter(Boolean), done = d.notes.map((x) => quote(x.fait)).filter(Boolean);
       const meds = d.given.map(({ med, at }) => `${med.nom}${med.dose ? ` ${med.dose}` : ""} ×${at.length} (${at.map((x) => fmtTime(x.le, x.fuseau)).join(", ")})`);
-      let line = `• ${fmtDay(d.day)} (jour ${d.n}) : ${parts.length ? parts.join(", ") : seen.length || done.length ? "" : "rien de noté"}`;
-      if (seen.length) line += `${parts.length ? ". " : ""}${seen.join(" ")}`;
-      if (done.length) line += ` Fait : ${done.join(" ")}`;
-      if (meds.length) line += ` Donné : ${meds.join(" ; ")}.`;
-      d.rdvs.forEach((r) => { line += ` Rendez-vous ${rdvWord(r)} à ${fmtTime(r.le, r.fuseau)}${r.diagnostic ? ` : ${r.diagnostic}` : ""}.`; });
-      lines.push(line.replace(/\s+/g, " ").replace(/ \./g, ".").replace(/ : (\S)/, (m, c) => ` : ${c.toUpperCase()}`).trim());
+      const end = (t) => (/[.!?…]$/.test(t) ? t : `${t}.`);
+      let line = `- **${cap1(fmtDay(d.day))}** (jour ${d.n}) : ${parts.length ? cap1(parts.join(", ")) + "." : seen.length || done.length ? "" : "rien de noté."}`;
+      if (seen.length) line += ` ${seen.map((t) => end(cap1(t))).join(" ")}`;
+      if (done.length) line += ` *Fait :* ${done.map(end).join(" ")}`;
+      if (meds.length) line += ` *Donné :* ${meds.join(" ; ")}.`;
+      d.rdvs.forEach((r) => { line += ` *Rendez-vous* ${rdvWord(r)} à ${fmtTime(r.le, r.fuseau)}${r.diagnostic ? ` : ${r.diagnostic}` : ""}.`; });
+      lines.push(line.replace(/\s+/g, " ").replace(/\.\./g, ".").trim());
     });
     const meds = medsOf(p.id);
-    if (meds.length) { lines.push(""); meds.forEach((m) => lines.push(`Traitement : ${m.nom}${m.dose ? ` ${m.dose}` : ""}, ${posologie(m)}${m.fin ? ` jusqu'au ${fmtDay(m.fin)}` : ""}.`)); }
+    if (meds.length) { lines.push("", "**Traitement**"); meds.forEach((m) => lines.push(`- ${m.nom}${m.dose ? ` ${m.dose}` : ""}, ${posologie(m)}${m.fin ? ` jusqu'au ${fmtDay(m.fin)}` : ""}.`)); }
     return lines.join("\n").replace(/\.\./g, ".");
   }
 
