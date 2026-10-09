@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v33";
+const VERSION = "thomas911-v34";
 importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
 const FILES = [
   "./",
@@ -26,6 +26,11 @@ const FILES = [
   "./app.js",
   "./manifest.webmanifest",
   "./icon-192.png",
+  "./notif/matin.png",
+  "./notif/midi.png",
+  "./notif/soir.png",
+  "./notif/bain.png",
+  "./notif/badge.png",
   "./icon-poussette.svg",
   "./icon-bruit.svg",
   "./icon-habitudes.svg",
@@ -79,9 +84,12 @@ self.addEventListener("fetch", (e) => {
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data.json(); } catch (err) {}
+  // Android shows the app icon on the left already: the picture on the right says what it's about
+  // (morning sun, midday sun, evening moon, or the duck when the bath is in it); the badge goes in the status bar
+  const pic = /bain/.test(d.body || "") ? "bain" : ["matin", "midi", "soir"].includes(d.slot) ? d.slot : null;
   e.waitUntil(self.registration.showNotification(d.title || "THOMAS911", {
     body: d.body || "", tag: "rappel", renotify: true,
-    icon: "icon-192.png",
+    icon: pic ? `notif/${pic}.png` : "icon-192.png", badge: "notif/badge.png",
     data: { jour: d.jour, slot: d.slot, cles: d.cles },
     actions: [{ action: "fait", title: "C'est fait" }, { action: "plus-tard", title: "Plus tard" }]
   }));
