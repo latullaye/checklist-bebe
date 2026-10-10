@@ -354,8 +354,28 @@
     return m.fin ? `jour ${Math.min(n, daysBetween(first, m.fin) + 1)} sur ${daysBetween(first, m.fin) + 1}` : `jour ${n}`;
   }
   const give = (m, extra = {}) => save("prises", { medicament: m.id, le: new Date().toISOString(), fuseau: HERE, ...extra });
+  // The doses due now among those with reminders (the same ones the server reminds of)
+  const dueNow = (now = Date.now()) => meds().filter((m) => m.rappels !== false && m.mode !== "besoin" && (nextDose(m, now) || {}).late);
+
+  // The app icon and the tray follow the doses: the red badge counts the doses due (with the habits' part, pastille.js),
+  // and a dose reminder goes once its dose is noted, here or on the other phone (not one due within 15 min: clocks drift)
+  function badge() {
+    if (!server.medicaments) return; // nothing known yet
+    const now = Date.now(), due = dueNow(now);
+    if (window.Pastille) Pastille.set("prises", due.length);
+    if (!("serviceWorker" in navigator)) return;
+    navigator.serviceWorker.getRegistration()
+      .then((reg) => reg && reg.getNotifications && reg.getNotifications())
+      .then((list) => (list || []).forEach((note) => {
+        const d = note.data || {}, m = d.kind === "prise" && byId("medicaments", d.med), n = m && nextDose(m, now);
+        if (d.kind === "prise" && !(n && n.at <= now + 15 * 6e4)) note.close();
+      }))
+      .catch(() => {});
+  }
+  listeners.push(badge);
 
   load();
+  badge();
   window.Sante = {
     TABLES, rows, byId, load, save, remove, flush, onChange: (fn) => listeners.push(fn), shared,
     get error() { return error; }, get waiting() { return outbox.length; }, get loaded() { return loaded; },
@@ -364,6 +384,6 @@
     nameOf, isOpen, problems, openProblems, dayNumber, notesOf, medsOf, rdvOf, journal, resume,
     RDV_TYPES, rdvType, shortPlace, rdvWord, rdvTitle, appointments, upcoming, fromAgenda, agendaLink,
     pros, proOf, rdvsWith, proLabel, proPlace, fromPro, proFor, isPlace, telLink,
-    meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, clock, hours
+    meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, dueNow, clock, hours
   };
 })();
