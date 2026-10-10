@@ -125,7 +125,7 @@
       .catch(() => {});
   }
 
-  // The phone's time zone: reminders come at 9:00, 12:30 and 17:30 wherever it is (Paris, Montréal...).
+  // The phone's time zone: reminders come at 9:00, 12:30 and 17:30 wherever it is (at home or travelling).
   const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } };
   const TZ_SENT = "thomas911-fuseau";
   // After a trip, tell the server this phone's new zone (only when it changed and the phone gets reminders).

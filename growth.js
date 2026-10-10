@@ -41,8 +41,8 @@
   // (date of the measure minus date of birth); the exact time gives the gain per day.
   function weights(rows) {
     return rows.filter((r) => r.poids_g != null).map((r) => {
-      const t = tsOf(r), age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), v = r.poids_g / 1000;
-      return { row: r, day: r.jour, t, age, ageF: (t - Thomas.BIRTH) / DAY_MS, v, z: zScore("wfa", age, v) };
+      const t = tsOf(r), age = Thomas.known ? Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour) : null, v = r.poids_g / 1000;
+      return { row: r, day: r.jour, t, age, ageF: Thomas.known ? (t - Thomas.BIRTH) / DAY_MS : null, v, z: age == null ? null : zScore("wfa", age, v) };
     }).sort((a, b) => a.t - b.t);
   }
   // Grams per day between two weighings, from their exact times. Under 12 h apart the number means nothing.

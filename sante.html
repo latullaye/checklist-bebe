@@ -2,6 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Data only goes to the family's Supabase project and the weather service; no page address leaks to the sites it links to;
+     search engines are asked not to index the app -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://vvkkxphkyjejyhbcdcuw.supabase.co https://api.open-meteo.com; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
@@ -368,7 +373,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="field"><label for="rCarnet">Avec qui</label><select id="rCarnet"></select>
       <div class="chips" id="rRecent" style="margin-top:8px"></div><div class="picked" id="rPicked" hidden></div></div>
     <div class="field"><span class="lab">Type</span><div class="chips" id="rType" role="radiogroup"></div></div>
-    <div class="field"><label for="rLieu">Où</label><input id="rLieu" autocomplete="off" placeholder="CLSC de la Petite-Patrie, cabinet du Dr…"></div>
+    <div class="field"><label for="rLieu">Où</label><input id="rLieu" autocomplete="off" placeholder="CLSC du quartier, cabinet du Dr…"></div>
     <div class="field"><label for="rPro">Qui</label><input id="rPro" autocomplete="off" placeholder="Dre Tremblay, pédiatre"></div>
     <div class="field"><label for="rMotif">Pourquoi</label><input id="rMotif" autocomplete="off" placeholder="Diarrhée depuis 3 jours, vaccins des 4 mois…"></div>
     <div class="field" id="rForWrap"><span class="lab">Pour les problèmes</span><div class="chips" id="rFor"></div></div>
@@ -376,7 +381,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="field"><span class="lab">Photos (ordonnance, consignes…)</span><div id="rPhotos"></div></div>
     <div class="tell">
       <div class="tell-head"><span class="lab">Raconter</span><span>le rendez-vous en quelques phrases ; l'assistant lit aussi l'ordonnance en photo</span></div>
-      <textarea class="plain" id="rTell" rows="3" placeholder="Elle l'a examiné, pas déshydraté, 5,9 kg. C'est une gastro. Continuer le lait, solution de réhydratation après chaque selle, revenir si fièvre plus de 48 h."></textarea>
+      <textarea class="plain" id="rTell" rows="3" placeholder="Elle l'a examiné, les oreilles sont un peu rouges. Continuer comme avant, revenir si fièvre plus de 48 h."></textarea>
       <div class="tell-acts"><button type="button" class="btn mic" id="rMic"></button><button type="button" class="btn primary grow" id="rGo"></button></div>
       <p class="tell-msg" id="rTellMsg"></p><ul class="checks" id="rChecks" hidden></ul>
     </div>
@@ -400,12 +405,12 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     <div class="field"><label for="cNom" id="cNomLab">Nom</label><input id="cNom" autocomplete="off"></div>
     <div class="field"><label for="cRole" id="cRoleLab">Métier, spécialité</label><input id="cRole" autocomplete="off"></div>
     <div class="field"><span class="lab">Ses rendez-vous</span><div class="chips" id="cType" role="radiogroup"></div></div>
-    <div class="field" id="cLieuWrap"><label for="cLieu">Clinique, établissement</label><input id="cLieu" autocomplete="off" placeholder="Clinique Sauge, à domicile…"></div>
-    <div class="field"><label for="cAdresse">Adresse</label><input id="cAdresse" autocomplete="off" placeholder="319 rue Saint-Zotique Est, Montréal QC H2S 1L5"></div>
+    <div class="field" id="cLieuWrap"><label for="cLieu">Clinique, établissement</label><input id="cLieu" autocomplete="off" placeholder="Clinique du parc, à domicile…"></div>
+    <div class="field"><label for="cAdresse">Adresse</label><input id="cAdresse" autocomplete="off" placeholder="123 rue Principale, Ville QC A1A 1A1"></div>
     <div class="field"><label for="cTel">Téléphone</label><input id="cTel" type="tel" autocomplete="off" placeholder="514 555-1234"></div>
     <div class="field"><label for="cMail">Courriel</label><input id="cMail" inputmode="email" autocomplete="off" autocapitalize="off"></div>
     <div class="field"><label for="cSite">Prise de rendez-vous (lien)</label><input id="cSite" inputmode="url" autocomplete="off" autocapitalize="off" placeholder="https://…"></div>
-    <div class="field"><label for="cMots">Reconnu dans l'agenda par</label><input id="cMots" autocomplete="off" placeholder="GMF HMR, Shriners… (séparés par des virgules)"></div>
+    <div class="field"><label for="cMots">Reconnu dans l'agenda par</label><input id="cMots" autocomplete="off" placeholder="GMF du quartier, nom de l'hôpital… (séparés par des virgules)"></div>
     <p class="hint">Le nom, la clinique ou l'adresse suffisent le plus souvent ; ces mots servent quand l'agenda dit autre chose.</p>
     <div class="field"><label for="cNotes">Notes</label><textarea id="cNotes" placeholder="Horaires, tarif, numéro de membre…"></textarea></div>
     <label class="check" id="cOldWrap"><input type="checkbox" id="cOld"> Plus suivi : caché du choix, gardé pour ses rendez-vous</label>
@@ -495,7 +500,9 @@ const IC = {
 };
 const H = S.H, DAY = S.DAY;
 // Time of a record on the clock where it happened, and "(heure de France)" when that's not here
-const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+// The family's town comes with the shared settings (famille.js), not from this public code
+const HOME = (window.Famille && Famille.info().ville) || "l'Est";
+const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const tzNote = (tz) => tz && tz !== S.HERE ? ` (heure ${CITY[tz] === "France" ? "de France" : `de ${CITY[tz] || tz.split("/").pop().replace(/_/g, " ")}`})` : "";
 // "14 h 30", "hier à 20 h", "jeu. 8 oct. à 9 h"
 function whenText(t, tz) {
@@ -704,7 +711,7 @@ function giveNow(m) {
 function head(title) {
   return `<header class="top"><button class="back" type="button" data-back aria-label="Retour">${svg('<path d="M15 18l-6-6 6-6"/>')}</button><h1>${esc(title)}</h1></header>`;
 }
-const by = (p) => (p ? `<span class="by"><i class="${p === "Edith" ? "e" : ""}">${esc(p[0])}</i>${esc(p)}</span>` : "");
+const by = (p) => (p ? `<span class="by"><i class="${Famille.PEOPLE.indexOf(p) === 1 ? "e" : ""}">${esc(p[0])}</i>${esc(p)}</span>` : ""); // the second parent in its own color
 // A note in Markdown; its to-dos can be ticked right here (data-t / data-id / data-f: where the text lives)
 const md = (text, t, id, f, cls = "") => `<div class="md${cls ? ` ${cls}` : ""}" data-t="${t}" data-id="${id}" data-f="${f}">${Markdown.html(text)}</div>`;
 // Photos of a note or an appointment: small, full screen on a tap (photos.js)
@@ -959,7 +966,7 @@ function tellBox(p, { sorte, label, collect, apply, hasInput = () => false }) {
   return { reset() { run++; Assistant.stopDictation(); ta.value = ""; Markdown.fit(ta); say(""); checks.hidden = true; idle(); micIdle(); } };
 }
 const nowText = () => `${S.fmtDay(S.today(), { weekday: "long", month: "long", year: "numeric" })} (${S.today()}), ${S.fmtTime(Date.now())} (heure de ${CITY[S.HERE] || S.HERE.split("/").pop().replace(/_/g, " ")})`;
-const ageText = () => (window.Thomas ? Thomas.age().text.monthsWeeks : "");
+const ageText = () => (window.Thomas && Thomas.known ? Thomas.age().text.monthsWeeks : "");
 const pressGroup = (el, value, attr = "aria-checked") => el.querySelectorAll("button").forEach((b) => b.setAttribute(attr, b.dataset.v === String(value)));
 const nowParts = () => S.partsIn(Date.now());
 const num = (s) => { const n = Number(String(s || "").replace(",", ".").trim()); return String(s || "").trim() && isFinite(n) ? n : null; };

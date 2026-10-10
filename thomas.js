@@ -1,8 +1,26 @@
 // Thomas's age and the milestones worth celebrating. Shared by the home page, the age and growth screens.
+// The date and time of birth are not in this public code: they come with the shared settings (table reglages, key
+// "famille", behind the family code; prefs.js keeps the phone's copy). Until this phone has them, Thomas.known is false
+// and the screens say so; the first time they arrive, the page reloads with them.
 (function () {
-  // Born June 26, 2026 at 3:50 a.m., Montréal time (EDT, UTC-4)
-  const BIRTH = new Date("2026-06-26T03:50:00-04:00");
-  const BIRTH_DAY = "2026-06-26"; // calendar date of birth: day counts and "monthiversaries" use it
+  const VALS = "thomas911-reglages"; // prefs.js's copy of the settings
+  const famille = () => { try { return (JSON.parse(localStorage.getItem(VALS)) || {}).famille || {}; } catch (e) { return {}; } };
+  const fam = famille();
+  const BIRTH = fam.naissance ? new Date(fam.naissance) : null; // the exact instant
+  const BIRTH_DAY = BIRTH && /^\d{4}-\d\d-\d\d$/.test(fam.jour || "") ? fam.jour : null; // calendar date of birth: day counts and "monthiversaries" use it
+  const known = !!BIRTH_DAY;
+  if (!known) {
+    const cfg = self.T911 || {};
+    if (cfg.SUPABASE_URL && window.Famille && Famille.ok())
+      fetch(`${cfg.SUPABASE_URL}/rest/v1/reglages?select=valeur&cle=eq.famille`, { headers: { apikey: cfg.SUPABASE_KEY } })
+        .then((r) => (r.ok ? r.json() : [])).then((rows) => {
+          const v = rows[0] && rows[0].valeur;
+          if (!v || !v.naissance || !v.jour) return;
+          let all = {}; try { all = JSON.parse(localStorage.getItem(VALS)) || {}; } catch (e) {}
+          all.famille = v; localStorage.setItem(VALS, JSON.stringify(all));
+          if (famille().jour === v.jour) location.reload(); // not when the phone can't keep it (no reload loop)
+        }).catch(() => {});
+  }
 
   const pad = (n) => String(n).padStart(2, "0");
   const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -94,5 +112,5 @@
   const fmtDay = (day, opts = { weekday: "long", day: "numeric", month: "long" }) => toUTC(day).toLocaleDateString("fr-CA", { ...opts, timeZone: "UTC" });
   const fmtTime = (d) => d.toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit" });
 
-  window.Thomas = { BIRTH, BIRTH_DAY, today, addDays, daysBetween, addMonths, age, short, milestones, on, upcoming, past, fmtDay, fmtTime };
+  window.Thomas = { known, BIRTH, BIRTH_DAY, famille, today, addDays, daysBetween, addMonths, age, short, milestones, on, upcoming, past, fmtDay, fmtTime };
 })();

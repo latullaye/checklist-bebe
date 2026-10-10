@@ -1,17 +1,21 @@
 // Family code: the shared data (habits, measures, health...) only opens with it. Typed once on each phone,
-// with who uses the phone (Arthur or Edith). Every call to the database carries it (header x-famille);
+// then who uses the phone. Every call to the database carries it (header x-famille);
 // without it, the calls fail like when offline, so each screen keeps its copy and what waits to be sent.
 // Load it right after config.js, before sync.js.
-//   Famille.ok()  Famille.qui()  Famille.ask()  Famille.setQui("Edith")
+// The parents' first names are not in this public code: they come with the shared settings (table reglages, key
+// "famille", behind the code), so "who uses this phone" is asked once the code is right.
+//   Famille.ok()  Famille.qui()  Famille.ask()  Famille.setQui(name)  Famille.PEOPLE  Famille.info()
 (function () {
   const cfg = self.T911 || {};
   if (!cfg.SUPABASE_URL) { window.Famille = { ok: () => true, qui: () => "", ask() {}, setQui() {}, PEOPLE: [] }; return; }
   const KEY = "thomas911-famille", WHO = "thomas911-qui", CHECKED = "thomas911-famille-verifie";
-  const PEOPLE = ["Arthur", "Edith"];
+  const VALS = "thomas911-reglages"; // prefs.js's copy of the settings
+  const info = () => { try { return (JSON.parse(localStorage.getItem(VALS)) || {}).famille || {}; } catch (e) { return {}; } };
+  const people = () => (Array.isArray(info().parents) ? info().parents.filter((p) => typeof p === "string" && p) : []);
   const get = (k) => { try { return localStorage.getItem(k) || ""; } catch (e) { return ""; } };
   const put = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
   // "Galet Renard ciel-tisane 42" -> "galet-renard-ciel-tisane-42"
-  const normalize = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim()
+  const normalize = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
     .replace(/[\s_.,;:/]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
   const code = () => get(KEY);
@@ -36,6 +40,13 @@
   };
   const check = (c) => realFetch(`${rest}rpc/famille_ok`, { method: "POST",
     headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", "x-famille": c }, body: "{}" }).then((r) => r.json());
+  // The family's settings (first names, date of birth...), kept with prefs.js's copy
+  const loadInfo = (c) => realFetch(`${rest}reglages?select=valeur&cle=eq.famille`, { headers: { apikey: cfg.SUPABASE_KEY, "x-famille": c } })
+    .then((r) => (r.ok ? r.json() : [])).then((rows) => {
+      if (!rows[0] || !rows[0].valeur) return;
+      let all = {}; try { all = JSON.parse(localStorage.getItem(VALS)) || {}; } catch (e) {}
+      all.famille = rows[0].valeur; try { localStorage.setItem(VALS, JSON.stringify(all)); } catch (e) {}
+    }).catch(() => {});
 
   // ---------- The sheet: code and who ----------
   let dlg = null;
@@ -65,27 +76,38 @@
       <h2>Code de la famille</h2>
       <p>Les infos de Thomas ne s'ouvrent qu'avec le code de la famille. Tape-le une seule fois sur ce téléphone.</p>
       <div><label for="famCode">Code</label><input id="famCode" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="mot-mot-mot-mot-00"></div>
-      <div><label id="famWhoLab">Qui utilise ce téléphone ?</label><div class="who" role="radiogroup" aria-labelledby="famWhoLab">
-        ${PEOPLE.map((p) => `<button type="button" role="radio" data-p="${p}">${p}</button>`).join("")}</div></div>
+      <div id="famWhoWrap" hidden><label id="famWhoLab">Qui utilise ce téléphone ?</label><div class="who" role="radiogroup" aria-labelledby="famWhoLab"></div></div>
       <div class="err" id="famErr"></div>
       <div class="acts"><button type="button" id="famLater">Plus tard</button><button type="submit" class="go" id="famGo">Valider</button></div>
     </form>`;
     document.body.appendChild(dlg);
-    let who = qui();
+    let who = qui(), verified = ""; // verified: the code already checked in this sheet
+    const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     const pick = (p) => { who = p; dlg.querySelectorAll(".who button").forEach((b) => b.setAttribute("aria-checked", b.dataset.p === p)); };
-    pick(who);
+    const showWho = () => {
+      const names = people();
+      dlg.querySelector(".who").innerHTML = names.map((p) => `<button type="button" role="radio" data-p="${esc(p)}">${esc(p)}</button>`).join("");
+      dlg.querySelector("#famWhoWrap").hidden = names.length < 2;
+      pick(names.includes(who) ? who : names.length === 1 ? names[0] : "");
+    };
+    dlg.showWho = showWho;
     dlg.querySelector(".who").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { window.buzz && buzz(); pick(b.dataset.p); } });
     dlg.querySelector("#famLater").addEventListener("click", () => dlg.close());
     dlg.querySelector("form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const c = normalize(dlg.querySelector("#famCode").value), err = dlg.querySelector("#famErr");
       if (!c) { err.textContent = "Tape le code."; return; }
-      if (!who) { err.textContent = "Choisis qui utilise ce téléphone."; return; }
-      err.textContent = "Vérification…";
-      let good;
-      try { good = await check(c); } catch (x) { good = null; } // offline: kept, checked later
-      if (good === false) { err.textContent = "Ce n'est pas le bon code. Vérifie l'orthographe (les tirets peuvent être des espaces)."; return; }
-      put(KEY, c); put(WHO, who); put(CHECKED, good ? new Date().toISOString().slice(0, 10) : "");
+      let good = verified === c ? true : undefined;
+      if (good === undefined) {
+        err.textContent = "Vérification…";
+        try { good = await check(c); } catch (x) { good = null; } // offline: kept, checked later
+        if (good === false) { err.textContent = "Ce n'est pas le bon code. Vérifie l'orthographe (les tirets peuvent être des espaces)."; return; }
+        if (good) { verified = c; await loadInfo(c); showWho(); }
+        // The right code: then who uses this phone (the first names came with it)
+        if (good && people().length > 1 && !people().includes(who)) { err.textContent = "Code bon ! Choisis qui utilise ce téléphone."; return; }
+      }
+      if (good && people().length > 1 && !people().includes(who)) { err.textContent = "Choisis qui utilise ce téléphone."; return; }
+      put(KEY, c); put(WHO, people().includes(who) ? who : ""); put(CHECKED, good ? new Date().toISOString().slice(0, 10) : "");
       share();
       dlg.close();
       location.reload(); // every screen reloads its data with the code
@@ -96,6 +118,7 @@
     const d = sheet();
     d.querySelector("#famCode").value = code();
     d.querySelector("#famErr").textContent = "";
+    d.showWho();
     if (!d.open) d.showModal();
   }
 
@@ -112,6 +135,6 @@
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 
-  window.Famille = { ok: () => !!code(), qui, ask, PEOPLE, normalize,
-    setQui(p) { put(WHO, PEOPLE.includes(p) ? p : ""); share(); } };
+  window.Famille = { ok: () => !!code(), qui, ask, normalize, info, get PEOPLE() { return people(); },
+    setQui(p) { put(WHO, people().includes(p) ? p : ""); share(); } };
 })();
