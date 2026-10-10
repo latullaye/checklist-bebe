@@ -7,7 +7,7 @@ Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 - **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.
 - **Bonnes habitudes** (`habitudes.html`) : petites routines quotidiennes à cocher (matin, midi, soir ou une fois par jour), avec rappels.
-- **Comment habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
+- **Habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
 - **Réglages** (`reglages.html`) : notifications du téléphone, température de la pièce, cible de lait, état du partage, version de l'app.
 - **Santé** (`sante.html`) : le suivi des problèmes de santé, des rendez-vous et des médicaments, reliés entre eux.
   - *Problèmes* : on commence par noter ce qu'on voit (symptômes à cocher, nombre de selles ou de vomissements, température, couches mouillées, ce qu'on observe, ce qu'on fait) et depuis quand. Le problème se crée tout seul (« Diarrhée ») et prend son diagnostic au rendez-vous (« Gastro-entérite »). Jour par jour, et un résumé prêt à lire ou à envoyer au médecin.

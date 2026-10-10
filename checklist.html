@@ -19,7 +19,7 @@
 <style>
 /* Layout: one phone screen; only unchecked chips show per category, checked ones drop to a quiet "Vérifié" tray at the bottom */
 body { font-size: 14px; }
-.wrap { gap: 12px; padding-bottom: 18px; }
+.wrap { gap: 10px; padding-bottom: 18px; }
 /* Under the title: weather, progress, reset */
 .head2 { display: flex; align-items: center; gap: 10px; }
 .head2 .count { margin-left: auto; }
@@ -36,15 +36,15 @@ body { font-size: 14px; }
 .alerts span { font-weight: 400; color: var(--muted); }
 .bar { height: 5px; border-radius: 3px; background: var(--line); overflow: hidden; }
 .bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .25s ease; }
-.list { display: flex; flex-direction: column; gap: 12px; }
-section { display: flex; flex-direction: column; gap: 6px; }
+.list { display: flex; flex-direction: column; gap: 10px; }
+section { display: flex; flex-direction: column; gap: 5px; }
 h2 { margin: 0; display: flex; justify-content: space-between; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); }
 h2 span { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
 .chip {
-  font: inherit; font-size: 0.9rem; line-height: 1.2; color: var(--ink);
+  font: inherit; font-size: 0.86rem; line-height: 1.2; color: var(--ink);
   background: var(--surface); border: 1px solid var(--line); border-radius: 999px;
-  padding: 6px 11px 6px 9px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px 5px 8px; display: inline-flex; align-items: center; gap: 6px;
   cursor: pointer; text-align: left; -webkit-tap-highlight-color: transparent;
 }
 .chip::before { content: ""; width: 14px; height: 14px; flex: none; border-radius: 50%; border: 1.5px solid var(--line); }
@@ -438,9 +438,9 @@ function updateCounts(bump) {
   const d = document.getElementById("done");
   d.textContent = done;
   document.getElementById("fill").style.width = (done / total * 100) + "%";
-  document.getElementById("msg").textContent = done === total
-    ? "Touche un élément vérifié pour le remettre."
-    : `Il reste ${total - done} élément${total - done > 1 ? "s" : ""}.`;
+  // What's left is the count at the top: the footer only speaks once everything is in the bag
+  document.getElementById("msg").textContent = "Touche un élément vérifié pour le remettre.";
+  document.getElementById("msg").parentElement.hidden = done !== total;
   if (bump && !reduced) { d.classList.remove("bump"); void d.offsetWidth; d.classList.add("bump"); }
   return done;
 }

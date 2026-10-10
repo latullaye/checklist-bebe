@@ -21,9 +21,9 @@
 .set .txt { flex: 1; min-width: 0; }
 .set b { display: block; font-size: 0.98rem; }
 .set .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 2px; }
-.card .set + .set, .card .set + .block, .card .block + .set { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
-.block > .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 8px; }
-.card .label { margin-bottom: 10px; }
+.card .set + .set, .card .set + .block, .card .block + .set { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.block > .hint { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.35; margin-top: 6px; }
+.card .label { margin-bottom: 8px; }
 /* Switch */
 .switch { position: relative; width: 52px; height: 32px; flex: none; }
 .switch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; z-index: 1; }
@@ -32,9 +32,9 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.25); transition: transform .2s; }
 .switch input:checked + span { background: var(--accent); }
 .switch input:checked + span::after { transform: translateX(20px); }
-.msg { font-size: 0.85rem; color: var(--muted); margin: 10px 0 0; line-height: 1.35; }
+.msg { font-size: 0.82rem; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
 .msg:empty { display: none; }
-.btn { font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 12px; padding: 11px 14px; margin-top: 10px; cursor: pointer; width: 100%; }
+.btn { font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 12px; padding: 9px 14px; margin-top: 8px; cursor: pointer; width: 100%; }
 .btn.light { color: var(--accent); background: var(--accent-soft); }
 /* Steppers */
 .step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
@@ -43,7 +43,7 @@
 .step output { min-width: 62px; text-align: center; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
 /* Milk target */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.chip { font: inherit; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 12px; cursor: pointer; }
+.chip { font: inherit; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 11px; cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .foot { text-align: center; font-size: 0.75rem; color: var(--muted); }
 </style>
@@ -58,7 +58,7 @@
   <section class="card" id="rappels">
     <div class="label">Rappels</div>
     <div class="set">
-      <span class="txt"><b>Notifications sur ce téléphone</b><span class="hint">Habitudes à 9 h, 12 h 30 et 17 h 30, s'il reste quelque chose à cocher. Santé : chaque prise de médicament, les rendez-vous la veille à 19 h et une heure avant, et à 20 h pour noter la journée tant qu'un problème dure. À l'heure du téléphone.</span></span>
+      <span class="txt"><b>Notifications sur ce téléphone</b><span class="hint">Habitudes (9 h, 12 h 30, 17 h 30 s'il reste à cocher), chaque prise, rendez-vous (la veille à 19 h et 1 h avant), note du soir à 20 h.</span></span>
       <label class="switch"><input type="checkbox" id="notif" aria-label="Notifications sur ce téléphone" data-buzz><span></span></label>
     </div>
     <p class="msg" id="notifMsg"></p>
@@ -67,9 +67,9 @@
   </section>
 
   <section class="card">
-    <div class="label">Comment habiller Thomas</div>
+    <div class="label">Habiller Thomas</div>
     <div class="set">
-      <span class="txt"><b>Température de la pièce</b><span class="hint">Partagée entre vos téléphones.</span></span>
+      <span class="txt"><b>Température de la pièce</b></span>
       <span class="step"><button type="button" id="tMinus" data-buzz aria-label="Un degré de moins">−</button><output id="tVal"></output><button type="button" id="tPlus" data-buzz aria-label="Un degré de plus">+</button></span>
     </div>
   </section>
@@ -81,7 +81,7 @@
       <div class="chips" id="cible"></div>
     </div>
     <div class="set">
-      <span class="txt"><b>Boires par jour</b><span class="hint">Pour calculer la quantité par biberon.</span></span>
+      <span class="txt"><b>Boires par jour</b><span class="hint">Pour la quantité par biberon.</span></span>
       <span class="step"><button type="button" id="fMinus" data-buzz aria-label="Un boire de moins">−</button><output id="fVal"></output><button type="button" id="fPlus" data-buzz aria-label="Un boire de plus">+</button></span>
     </div>
   </section>
@@ -89,12 +89,12 @@
   <section class="card" id="famille">
     <div class="label">Partage entre vos téléphones</div>
     <div class="set">
-      <span class="txt"><b id="shareTitle">Synchronisation</b><span class="hint" id="shareHint">Checklist, habitudes, mesures, santé et réglages sont partagés.</span></span>
+      <span class="txt"><b id="shareTitle">Synchronisation</b><span class="hint" id="shareHint">Tout est partagé entre vos téléphones.</span></span>
     </div>
     <div class="block">
       <b>Ce téléphone est celui de</b>
       <div class="chips" id="qui"></div>
-      <span class="hint">Pour savoir qui a noté quoi et qui a donné un médicament.</span>
+      <span class="hint">Pour savoir qui a noté ou donné quoi.</span>
     </div>
     <div class="set">
       <span class="txt"><b>Code de la famille</b><span class="hint" id="famHint"></span></span>
@@ -137,7 +137,7 @@ Notifs.sync().then(renderNotif);
 const HOME = (window.Famille && Famille.info().ville) || "l'Est";
 const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const zone = Habits.tz();
-$("tz").textContent = zone ? `Heure du téléphone : heure de ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}). Après un voyage, les rappels suivent tout seuls.` : "";
+$("tz").textContent = zone ? `Heure de ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}) ; en voyage, les rappels suivent.` : "";
 
 // ---------- Room temperature ----------
 const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
@@ -174,7 +174,7 @@ const escH = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&
 function renderFamille() {
   const q = Famille.qui();
   $("qui").innerHTML = Famille.PEOPLE.map((p) => `<button type="button" class="chip" data-buzz data-p="${escH(p)}" aria-pressed="${p === q}">${escH(p)}</button>`).join("") || `<span class="hint">Avec le code de la famille</span>`;
-  $("famHint").textContent = Famille.ok() ? "Enregistré sur ce téléphone. Sans lui, rien ne peut être lu ni écrit." : "Pas encore entré sur ce téléphone.";
+  $("famHint").textContent = Famille.ok() ? "Enregistré ici. Sans lui, rien ne se lit ni ne s'écrit." : "Pas encore entré sur ce téléphone.";
   $("famChange").textContent = Famille.ok() ? "Changer" : "Entrer";
 }
 $("qui").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) { Famille.setQui(b.dataset.p); renderFamille(); } });
@@ -185,8 +185,7 @@ Prefs.on("famille", renderFamille); // the first names come with the shared sett
 function renderShare() {
   const n = window.Sync ? Sync.waiting() : 0, on = window.Sync ? Sync.online : true;
   $("shareTitle").textContent = !on ? "Hors ligne" : n ? `${n} changement${n > 1 ? "s" : ""} en attente` : "À jour";
-  $("shareHint").textContent = !on ? "Ce que vous notez reste sur ce téléphone et part au retour du réseau."
-    : "Checklist, habitudes, mesures, santé et réglages sont partagés entre vos téléphones.";
+  $("shareHint").textContent = !on ? "Ce que vous notez part au retour du réseau." : "Tout est partagé entre vos téléphones.";
 }
 setInterval(renderShare, 2000);
 

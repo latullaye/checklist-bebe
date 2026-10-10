@@ -22,29 +22,29 @@
 .day-nav strong { font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
 .day-nav strong::first-letter { text-transform: uppercase; }
 .day-nav small { display: block; color: var(--muted); font-size: 0.8rem; font-weight: 400; font-family: var(--font-body); }
-.arrow { font: inherit; width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--accent);
+.arrow { font: inherit; width: 36px; height: 36px; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); color: var(--accent);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; flex: none; }
 .arrow:disabled { opacity: .3; cursor: default; }
 .arrow svg { width: 20px; height: 20px; }
 
 /* Grid: one row per habit, one column per moment of the day */
-.grid { display: grid; grid-template-columns: 1fr repeat(3, 56px); align-items: center; row-gap: 10px; column-gap: 4px; margin-top: 14px; }
+.grid { display: grid; grid-template-columns: 1fr repeat(3, 52px); align-items: center; row-gap: 8px; column-gap: 4px; margin-top: 10px; }
 .grid .col { text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding: 3px 0; border-radius: 8px; }
 .grid .col.now { color: var(--accent); background: var(--accent-soft); }
 .hab b { display: block; font-size: 0.98rem; line-height: 1.2; }
 .hab span { color: var(--muted); font-size: 0.8rem; }
-.tick { justify-self: center; width: 48px; height: 48px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); color: var(--accent-ink);
+.tick { justify-self: center; width: 42px; height: 42px; border-radius: 50%; border: 2px solid var(--line); background: var(--bg); color: var(--accent-ink);
   display: inline-flex; align-items: center; justify-content: center; cursor: pointer; -webkit-tap-highlight-color: transparent; padding: 0; transition: background .15s, border-color .15s, transform .1s; }
-.tick svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .15s; }
+.tick svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; opacity: 0; transition: opacity .15s; }
 .tick.now { border-color: var(--accent); }
 .tick[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); }
 .tick[aria-pressed="true"] svg { opacity: 1; }
 .tick:active { transform: scale(.92); }
 
 /* Bath */
-.once { display: flex; flex-direction: column; gap: 12px; }
+.once { display: flex; flex-direction: column; gap: 10px; }
 .bath { display: flex; align-items: center; gap: 12px; }
-.once .bath + .bath { padding-top: 12px; border-top: 1px solid var(--line); }
+.once .bath + .bath { padding-top: 10px; border-top: 1px solid var(--line); }
 .bath .txt { flex: 1; min-width: 0; }
 .bath b { display: block; }
 .bath .txt > span { color: var(--muted); font-size: 0.85rem; }
@@ -86,7 +86,7 @@
 
   <section class="card once">
     <div class="bath">
-      <span class="txt"><b>Vitamine D</b><span>Une fois par jour</span></span>
+      <span class="txt"><b>Vitamine D</b></span>
       <button class="tick" id="vitd" type="button" aria-label="Vitamine D donnée ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     </div>
     <div class="bath">
@@ -102,7 +102,7 @@
 
   <a class="card remind" href="reglages.html#rappels">
     <svg class="i bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9 M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>
-    <span class="txt"><b id="remindTitle">Rappels</b><span id="remindSub">9 h, 12 h 30 et 17 h 30, s'il reste quelque chose à faire</span></span>
+    <span class="txt"><b id="remindTitle">Rappels</b><span id="remindSub">9 h, 12 h 30, 17 h 30 s'il reste à faire</span></span>
     <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
   </a>
 </div>
@@ -118,6 +118,7 @@ const $ = (id) => document.getElementById(id);
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const TUB = '<svg class="i tub" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2Z M6 12V6a2 2 0 0 1 3.7-1 M7 19l-1 2 M17 19l1 2"/></svg>';
 const { SLOTS, HABITS } = Habits;
+const SHORT = { bouche: "Bouche", perinee: "Rééducation" }; // one line each, as on the home page
 let day = Habits.today();
 
 // A reminder's "C'est fait" that couldn't reach the network opens ?fait=jour|matin
@@ -146,7 +147,7 @@ function render() {
   $("prev").disabled = day <= Habits.addDays(t, -13);
 
   $("grid").innerHTML = "<span></span>" + SLOTS.map(([s, name]) => `<span class="col${s === now ? " now" : ""}">${name}</span>`).join("")
-    + HABITS.map(([h, name, who]) => `<span class="hab"><b>${name}</b>${who ? `<span>${who}</span>` : ""}</span>`
+    + HABITS.map(([h, name, who]) => `<span class="hab"><b>${SHORT[h] || name}</b>${who ? `<span>${who}</span>` : ""}</span>`
       + SLOTS.map(([s, sn]) => `<button class="tick${s === now ? " now" : ""}" type="button" data-key="${h}-${s}"
           aria-pressed="${Habits.get(day, `${h}-${s}`)}" aria-label="${name}, ${sn.toLowerCase()}">${CHECK}</button>`).join("")).join("");
 
@@ -154,8 +155,8 @@ function render() {
   $("bath").setAttribute("aria-pressed", Habits.get(day, "bain"));
   // Every 2 or 3 days, in the evening: due from the 2nd day
   const ago = Habits.bathAgo();
-  $("bathLast").textContent = (ago === null ? "Pas de bain noté" : ago === 0 ? "Dernier bain aujourd'hui"
-    : `Dernier bain ${ago === 1 ? "hier" : `il y a ${ago} jours`}`) + (Habits.bathDue() ? " · à donner ce soir" : " · tous les 2 à 3 jours");
+  $("bathLast").textContent = (ago === null ? "Pas noté" : ago === 0 ? "Aujourd'hui" : ago === 1 ? "Hier" : `Il y a ${ago} jours`)
+    + (Habits.bathDue() ? " · ce soir" : "");
 
   const rows = [];
   for (let i = 0; i < 7; i++) {
@@ -181,7 +182,7 @@ document.addEventListener("visibilitychange", () => { if (document.visibilitySta
 // ---------- Reminders: summary here, switch in Settings; keep this phone's subscription up to date ----------
 function renderRemind({ on, msg, ask }) {
   $("remindTitle").textContent = on ? "Rappels activés" : "Rappels désactivés";
-  $("remindSub").textContent = msg || (ask ? "Touche pour autoriser les notifications sur ce téléphone" : on ? "9 h, 12 h 30 et 17 h 30, s'il reste quelque chose à faire" : "Touche pour les activer");
+  $("remindSub").textContent = msg || (ask ? "Touche pour autoriser les notifications" : on ? "9 h, 12 h 30, 17 h 30 s'il reste à faire" : "Touche pour les activer");
 }
 renderRemind(Notifs.state());
 Notifs.sync().then(renderRemind);
