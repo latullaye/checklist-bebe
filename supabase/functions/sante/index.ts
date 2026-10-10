@@ -25,10 +25,12 @@ async function syncAgenda() {
   const r = await fetch(url);
   if (!r.ok) return { agenda: `erreur ${r.status}` };
   const from = Date.parse("2026-06-01T00:00:00Z"), to = Date.now() + 400 * 864e5, seen = new Date().toISOString();
-  const evs = parseICS(await r.text()).filter((e) => e.debut >= from && e.debut <= to && !e.recurring && !e.cancelled && isHealth(e));
+  // The parents' first names and the family's places in France are in its settings, not in this public code
+  const fam = ((await sql`select valeur from reglages where cle = 'famille'`)[0]?.valeur || {}) as { parents?: string[]; lieux_france?: string[] };
+  const evs = parseICS(await r.text()).filter((e) => e.debut >= from && e.debut <= to && !e.recurring && !e.cancelled && isHealth(e, fam.parents || []));
   for (const e of evs) {
     await sql`insert into agenda (uid, debut, fin, journee, titre, lieu, fuseau, vu)
-      values (${e.uid}, ${new Date(e.debut).toISOString()}, ${e.fin ? new Date(e.fin).toISOString() : null}, ${e.journee}, ${e.titre}, ${e.lieu}, ${guessTz(e)}, ${seen})
+      values (${e.uid}, ${new Date(e.debut).toISOString()}, ${e.fin ? new Date(e.fin).toISOString() : null}, ${e.journee}, ${e.titre}, ${e.lieu}, ${guessTz(e, fam.lieux_france || [])}, ${seen})
       on conflict (uid) do update set debut = excluded.debut, fin = excluded.fin, journee = excluded.journee, titre = excluded.titre,
         lieu = excluded.lieu, fuseau = excluded.fuseau, vu = excluded.vu`;
   }

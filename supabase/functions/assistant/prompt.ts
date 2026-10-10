@@ -8,7 +8,7 @@ type Sym = { k: string; n?: number | null };
 export type Ask = {
   sorte: "note" | "rdv";
   texte?: string;
-  maintenant?: string; // "jeudi 9 octobre 2026, 16 h 20 (heure de Montréal)"
+  maintenant?: string; // "jeudi 9 octobre 2026, 16 h 20 (heure de la maison)"
   age?: string; // "3 mois, 1 semaine et 6 jours"
   par?: string;
   dry?: boolean;
@@ -27,9 +27,17 @@ export type Ask = {
 
 const clip = (s: unknown, n: number) => (typeof s === "string" ? s.replace(/\u0000/g, "").trim().slice(0, n) : "");
 const list = (a: unknown) => (Array.isArray(a) ? a : []);
+// "Julie et Marc" (the parents' first names), or "les parents"
+const parentsText = (fam: Famille) => {
+  const p = list(fam.parents).map((x) => clip(x, 40)).filter(Boolean).slice(0, 4);
+  return p.length ? `${p.slice(0, -1).join(", ")}${p.length > 1 ? " et " : ""}${p.at(-1)}` : "les parents";
+};
+
+// The family, from its settings (table reglages, key "famille"): first names, date and town of birth. Not in this public code.
+export type Famille = { prenom?: string; parents?: string[]; jour?: string; ville?: string };
 
 // ---------- Instructions ----------
-const COMMON = `Tu aides Arthur et Edith à tenir le carnet de santé de leur bébé, Thomas, dans leur application familiale. Ils te transmettent ce qu'ils ont dit à voix haute (la dictée du téléphone : souvent sans ponctuation, avec des mots mal reconnus) ou tapé vite, parfois avec des photos. Tu remplis les champs de l'app à leur place ; ils relisent avant d'enregistrer, et ce texte sert ensuite au résumé montré au médecin.
+const COMMON = `Tu aides PARENTS à tenir le carnet de santé de leur bébé, Thomas, dans leur application familiale. Ils te transmettent ce qu'ils ont dit à voix haute (la dictée du téléphone : souvent sans ponctuation, avec des mots mal reconnus) ou tapé vite, parfois avec des photos. Tu remplis les champs de l'app à leur place ; ils relisent avant d'enregistrer, et ce texte sert ensuite au résumé montré au médecin.
 
 Ce que tu fais :
 - Tu reprends fidèlement ce qu'ils disent, rangé dans les bons champs et bien écrit. Tu n'ajoutes rien qui n'a pas été dit ou qui n'est pas clairement lisible sur une photo : pas de diagnostic, pas de conseil, pas d'interprétation, pas de dose calculée ou suggérée. Quand une information manque, le champ reste vide (null, liste vide ou texte vide).
@@ -108,13 +116,15 @@ const RDV_SCHEMA = {
 
 // ---------- The request: instructions, photos, then the context, the current fields and the account ----------
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
-export function build(ask: Ask) {
+export function build(ask: Ask, fam: Famille = {}) {
   if (!ask || (ask.sorte !== "note" && ask.sorte !== "rdv")) return "Sorte inconnue.";
   const texte = clip(ask.texte, 6000);
   const photos = ask.sorte === "rdv" ? list(ask.photos).slice(0, 4) as Img[] : [];
   if (photos.some((p) => !p || !IMAGE_TYPES.includes(p.media_type) || typeof p.data !== "string" || p.data.length > 3_500_000 || !/^[A-Za-z0-9+/=]+$/.test(p.data.slice(0, 200)))) return "Photo refusée.";
   if (!texte && !photos.length) return "Rien à mettre en forme.";
-  const lines = [`Maintenant : ${clip(ask.maintenant, 80) || "inconnu"}.`, `Thomas : né le 26 juin 2026 à Montréal${ask.age ? ` ; il a ${clip(ask.age, 80)}` : ""}.`];
+  const born = /^\d{4}-\d\d-\d\d$/.test(fam.jour || "") ? new Date(`${fam.jour}T12:00:00Z`).toLocaleDateString("fr-CA", { timeZone: "UTC", day: "numeric", month: "long", year: "numeric" }) : "";
+  const lines = [`Maintenant : ${clip(ask.maintenant, 80) || "inconnu"}.`,
+    `Thomas${born ? ` : né le ${born}${fam.ville ? ` à ${clip(fam.ville, 60)}` : ""}` : ""}${ask.age ? ` ; il a ${clip(ask.age, 80)}` : ""}.`];
   if (ask.sorte === "note") {
     const p = ask.probleme;
     lines.push(ask.nouveau || !p ? "Cette note ouvre un nouveau problème (pas encore nommé)." : `Problème suivi : « ${clip(p.nom, 80)} », commencé ${clip(p.depuis, 60)}.`);
@@ -135,7 +145,7 @@ export function build(ask: Ask) {
   const text = `<contexte>\n${lines.join("\n")}\n</contexte>\n\n<champs_actuels>\n${actuel}\n</champs_actuels>\n\n<recit>\n${texte || "(rien de dit : seulement les photos)"}\n</recit>\n\n`
     + (ask.sorte === "note" ? "Remplis les champs de la note à partir du récit." : "Remplis le compte rendu du rendez-vous à partir du récit et des photos.");
   return {
-    system: `${COMMON}\n\n${ask.sorte === "note" ? NOTE : RDV}`,
+    system: `${COMMON.replace("PARENTS", parentsText(fam))}\n\n${ask.sorte === "note" ? NOTE : RDV}`,
     content: [
       ...photos.map((p) => ({ type: "image" as const, source: { type: "base64" as const, media_type: p.media_type as "image/jpeg", data: p.data } })),
       { type: "text" as const, text }

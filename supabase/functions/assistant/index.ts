@@ -2,11 +2,12 @@
 // or the report of an appointment (with the prescription read from its photo). Claude writes; nothing is saved here:
 // the phone fills its sheet and the parents check it before saving.
 // Called by the phones with the family code (header x-famille). The Anthropic key is the function's secret ANTHROPIC_API_KEY,
-// or else the row "anthropic_api_key" of the table prive (server only, like the notification keys).
+// or else the row "anthropic_api_key" of the table prive (server only, like the notification keys). The family's first names
+// and date of birth come from its settings (table reglages, key "famille"), not from this public code.
 // Body: { sorte: "note" | "rdv", texte, ...context } (see prompt.ts); with "dry": true it returns the request without sending it.
 import Anthropic from "npm:@anthropic-ai/sdk@0.127.0";
 import postgres from "npm:postgres@3.4.5";
-import { MODEL, build, clean, type Ask } from "./prompt.ts";
+import { MODEL, build, clean, type Ask, type Famille } from "./prompt.ts";
 
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false });
 const ORIGINS = [/^https:\/\/latullaye\.github\.io$/, /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/];
@@ -49,7 +50,8 @@ Deno.serve(async (req) => {
 
   let ask: Ask;
   try { ask = await req.json(); } catch (_) { return json({ error: "requete", message: "Requête illisible." }, 400); }
-  const built = build(ask);
+  const fam = ((await sql`select valeur from reglages where cle = 'famille'`)[0]?.valeur || {}) as Famille; // first names, birth: in the settings
+  const built = build(ask, fam);
   if (typeof built === "string") return json({ error: "requete", message: built }, 400);
   if (ask.dry) return json({ model: MODEL, effort: built.effort, system: built.system, schema: built.schema,
     content: built.content.map((b) => (b.type === "image" ? { type: "image", media_type: b.source.media_type, octets: Math.round(b.source.data.length * 0.75) } : b)) });

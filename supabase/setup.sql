@@ -46,6 +46,11 @@ create table reglages (
 alter table reglages enable row level security;
 create policy "app" on reglages for all to anon using (true) with check (true);
 insert into reglages (cle, valeur) values ('temp_interieur', '21');
+-- The family itself, kept out of this public code: entered once in the database, read by the screens (behind the family
+-- code), the assistant, the Claude connector and the calendar reading. Fill in your own values.
+-- insert into reglages (cle, valeur) values ('famille', jsonb_build_object(
+--   'prenom', '<prénom du bébé>', 'naissance', '<AAAA-MM-JJTHH:MM:00-04:00>', 'jour', '<AAAA-MM-JJ>', 'fuseau', 'America/Toronto',
+--   'ville', '<ville>', 'parents', jsonb_build_array('<parent 1>', '<parent 2>'), 'lieux_france', jsonb_build_array('<lieu>', '<lieu>')));
 
 -- Growth measures (weight to the gram; length and head circumference optional).
 -- pese_le: exact time of the measure (gain per day is computed from it); fuseau: the phone's time zone then;
@@ -208,3 +213,11 @@ alter table sante_pros enable row level security;
 create policy famille on sante_pros for all to anon using ((select famille_ok())) with check ((select famille_ok()));
 alter table sante_rdv add column pro_id uuid references sante_pros(id) on delete set null;
 create index sante_rdv_pro_id on sante_rdv (pro_id);
+
+-- ---------- Clean-up after the security review (2026-10) ----------
+-- The test bucket "essai-entete" is closed (its three policies say false); the duplicate Anthropic key is emptied
+-- (the function reads its secret ANTHROPIC_API_KEY). To remove them for good, in the SQL Editor:
+--   drop policy "essai entete ajoute" on storage.objects; drop policy "essai entete lit" on storage.objects;
+--   drop policy "essai entete supprime" on storage.objects;
+--   delete from prive where cle = 'anthropic_api_key_a_supprimer';
+--   then delete the empty bucket "essai-entete" in Storage.

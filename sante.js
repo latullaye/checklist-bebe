@@ -190,7 +190,7 @@
   // What to tell the doctor, ready to read out or send. In Markdown: shown formatted, copied or sent as plain text.
   function resume(p, extra = {}) {
     const days = journal(p), lines = [];
-    const a = window.Thomas ? Thomas.age(p.fin || today()) : null;
+    const a = window.Thomas && Thomas.known ? Thomas.age(p.fin || today()) : null;
     lines.push(`**Thomas**${a ? `, ${a.text.months} (${a.days} j)` : ""}${extra.poids ? `, ${extra.poids}` : ""}.`);
     const n = dayNumber(p, p.fin || today());
     lines.push(`**${p.titre}**${p.diagnostic && p.diagnostic !== p.titre ? ` (diagnostic : ${p.diagnostic})` : ""} depuis le ${fmtDay(p.debut, { weekday: "long" })}`
@@ -229,7 +229,7 @@
   function fromAgenda(ev) {
     const t = `${ev.titre} ${ev.lieu || ""}`.toLowerCase();
     const type = /urgence/.test(t) ? "urgences" : /clsc|vaccin/.test(t) ? "clsc" : /ost[ée]o|lactation|allaitement|physio|masso|chiro/.test(t) ? "soin"
-      : /h[ôo]pital|hospital|clinique|shriners|[ée]chograph|fr[ée]notomie/.test(t) ? "hopital" : "medecin";
+      : /h[ôo]pital|hospital|clinique|[ée]chograph|fr[ée]notomie/.test(t) ? "hopital" : "medecin";
     const r = { le: ev.debut, fuseau: ev.fuseau || HERE, type, motif: ev.titre, lieu: ev.lieu || null, agenda_uid: ev.uid, problemes: [] };
     const p = proFor(`${ev.titre} ${ev.lieu || ""}`);
     if (!p) return r;
@@ -247,17 +247,17 @@
   }
 
   // ---------- The address book ----------
-  // A person (Dre Mauguière, an osteopath) or a place (a CLSC, a hospital: personne false). type: the kind of appointment
-  // they give; mots: other words the calendar uses for them ("GMF HMR"). Not followed any more (actif false): kept for the past.
+  // A person (a family doctor, an osteopath) or a place (a CLSC, a hospital: personne false). type: the kind of appointment
+  // they give; mots: other words the calendar uses for them ("GMF du quartier"). Not followed any more (actif false): kept for the past.
   const bare = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
-  const nameKey = (p) => bare(p.nom).replace(/^(dre?|docteure?|mme|m) /, ""); // "dre edith mauguiere" -> "edith mauguiere"
+  const nameKey = (p) => bare(p.nom).replace(/^(dre?|docteure?|mme|m) /, ""); // "dre julie tremblay" -> "julie tremblay"
   const isPlace = (p) => p.personne === false;
   const pros = () => rows("pros").sort((a, b) => (b.actif !== false) - (a.actif !== false) || nameKey(a).localeCompare(nameKey(b), "fr"));
   const proOf = (r) => (r && r.pro_id ? byId("pros", r.pro_id) : null);
   const rdvsWith = (id) => appointments().filter((r) => r.pro_id === id);
-  // "Mylène Savoie, ostéopathe D.O." (a place is just its name)
+  // "Julie Tremblay, ostéopathe D.O." (a place is just its name)
   const proLabel = (p) => (isPlace(p) || !p.role ? p.nom : `${p.nom}, ${p.role.replace(/^\p{Lu}(?=\p{Ll})/u, (c) => c.toLowerCase())}`);
-  // "Clinique Sauge, 319 rue Saint-Zotique Est, Montréal QC H2S 1L5", "Hôpital général juif, 3755 chemin…"
+  // "Clinique du parc, 123 rue Principale, Ville QC A1A 1A1", "Hôpital de la ville, 45 boulevard…"
   const proPlace = (p) => [p.lieu || (isPlace(p) ? p.nom : ""), p.adresse].filter(Boolean).join(", ");
   // What an appointment takes from its entry
   const fromPro = (p) => ({ pro_id: p.id, type: p.type || "medecin", pro: isPlace(p) ? null : proLabel(p), lieu: proPlace(p) || null });

@@ -2,6 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Data only goes to the family's Supabase project and the weather service; no page address leaks to the sites it links to;
+     search engines are asked not to index the app -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://vvkkxphkyjejyhbcdcuw.supabase.co https://api.open-meteo.com; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
@@ -93,6 +98,7 @@ details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); 
     <h1>L'âge de Thomas</h1>
   </header>
 
+  <div class="card" id="locked" style="color:var(--muted);line-height:1.45" hidden>L'âge s'affiche avec le code de la famille : entre-le dans <a href="reglages.html" style="color:var(--accent);font-weight:700;text-decoration:none">Réglages</a>.</div>
   <section class="card today" id="today" hidden></section>
 
   <section class="card hero">
@@ -126,6 +132,8 @@ details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); 
 
 <div class="party" id="party" hidden></div>
 
+<script src="config.js"></script>
+<script src="famille.js"></script>
 <script src="thomas.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -230,8 +238,9 @@ function renderAge() {
   $("wMonths").textContent = a.text.months;
   $("wMonthsWeeks").textContent = a.text.monthsWeeks;
   $("wHours").textContent = `${nf(a.hours)} heures`;
-  const birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: "America/Toronto", weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
-  $("born").textContent = `Né le ${birth} (heure de Montréal)`;
+  const fam = Thomas.famille(), tz = fam.fuseau || "America/Toronto";
+  const birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
+  $("born").textContent = `Né le ${birth}${fam.ville ? ` (heure de ${fam.ville})` : ""}`;
   const n = Thomas.upcoming(1)[0];
   const inDays = Thomas.daysBetween(Thomas.today(), n.day);
   $("next").innerHTML = `Prochaine fête : <b>${n.title}</b> ${inDays === 1 ? "demain" : `dans ${inDays} jours`} (${Thomas.fmtDay(n.day)})`;
@@ -276,10 +285,16 @@ document.addEventListener("click", (e) => {
   if (m) party([m], true);
 });
 
-function render() { renderAge(); renderToday(); renderLists(); }
+function render() {
+  if (!Thomas.known) { // the date of birth comes with the family code
+    document.querySelectorAll(".wrap > section").forEach((s) => { s.hidden = true; });
+    $("locked").hidden = false; return;
+  }
+  renderAge(); renderToday(); renderLists();
+}
 render();
 // Keep the hours ticking, and roll over at midnight
-setInterval(renderAge, 60000);
+setInterval(() => { if (Thomas.known) renderAge(); }, 60000);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") render(); });
 </script>
 <script src="app.js"></script>

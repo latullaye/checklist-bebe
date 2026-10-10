@@ -2,7 +2,7 @@
 export const H = 36e5;
 export const DEFAULT_TZ = "America/Toronto";
 
-// Instant -> wall clock in a time zone (an unknown zone falls back to Montréal)
+// Instant -> wall clock in a time zone (an unknown zone falls back to the family's)
 export function partsIn(t: number, tz: string) {
   let f: Intl.DateTimeFormat;
   try {
@@ -92,11 +92,16 @@ export function parseICS(text: string): Ev[] {
   }
   return out;
 }
-// Health-looking: a care word in the title or the place; not an appointment of a parent alone
+// Health-looking: a care word in the title or the place; not an appointment of a parent alone. The parents' first names
+// come from the family's settings (table reglages, key "famille"), not from this public code.
 const CARE = /thomas|clsc|vaccin|m[ée]decin|docteur|\bdre?\b|p[ée]diatr|ost[ée]o|fr[ée]notomie|[ée]chograph|\bgmf\b|h[ôo]pital|hospital|clinique|lactation|allaitement|urgence|info-sant|\b811\b|massoth|chiropra|consultation|rdv m[ée]dical|rendez-vous m[ée]dical/i;
-const PARENT = /\b(edith|arthur)\b/i;
 const BABY = /thomas|lactation|allaitement|b[ée]b[ée]/i;
-export const isHealth = (e: Ev) => CARE.test(`${e.titre} ${e.lieu || ""}`) && (!PARENT.test(e.titre) || BABY.test(e.titre));
-// Most events are stored in UTC: their wall clock is Montréal's, unless the place says France
-const FRANCE = /france|\b\d{5}\b|sables|paris|bordeaux|nantes|itxassou|bayonne|biarritz|m[ée]rignac/i;
-export const guessTz = (e: Ev) => e.fuseau || (FRANCE.test(`${e.lieu || ""} ${e.titre}`) ? "Europe/Paris" : DEFAULT_TZ);
+const bare = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+// One of these words, whole, in the text (accents and capitals don't matter)
+const hasWord = (text: string, words: string[]) => { const t = ` ${bare(text)} `; return words.map(bare).some((w) => w && t.includes(` ${w} `)); };
+export const isHealth = (e: Ev, parents: string[] = []) => CARE.test(`${e.titre} ${e.lieu || ""}`) && (!hasWord(e.titre, parents) || BABY.test(e.titre));
+// Most events are stored in UTC: their wall clock is home's, unless the place says France (or one of the family's places
+// there, from its settings)
+const FRANCE = /france|\b\d{5}\b/i;
+export const guessTz = (e: Ev, places: string[] = []) =>
+  e.fuseau || (FRANCE.test(`${e.lieu || ""} ${e.titre}`) || hasWord(`${e.lieu || ""} ${e.titre}`, places) ? "Europe/Paris" : DEFAULT_TZ);

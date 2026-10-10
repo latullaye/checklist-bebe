@@ -1,14 +1,14 @@
 // The MCP server (Streamable HTTP, stateless): checks the family code, then answers with the tools of outils.ts.
 // The code comes in the address (?cle=<code>: claude.ai only sends approved header names) or in a header,
 // "x-famille: <code>" or "Authorization: Bearer <code>"; typed like on the phones (spaces, capitals and accents don't
-// matter). Also in the address: ?qui=Arthur (who writes), ?tz=Europe/Paris (else Montréal).
+// matter). Also in the address: ?qui=<first name> (who writes: one of the parents in the family's settings), ?tz=Europe/Paris
+// (else the family's time zone).
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { DEFAULT_TZ } from "../sante/logic.ts";
-import { register, INSTRUCTIONS, type Db } from "./outils.ts";
+import { register, instructions, type Db, type Famille } from "./outils.ts";
 
-export type Deps = { db: Db; familleSha256: () => Promise<string | null>; now?: () => number };
-const PEOPLE = ["Arthur", "Edith"];
+export type Deps = { db: Db; familleSha256: () => Promise<string | null>; famille: () => Promise<Famille | null>; now?: () => number };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type, x-famille, mcp-protocol-version, mcp-session-id, last-event-id",
@@ -34,9 +34,10 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
     return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Code de la famille manquant ou faux (?cle= dans l'adresse, ou en-tête x-famille)." }, id: null }),
       { status: 401, headers: { ...CORS, "Content-Type": "application/json" } });
   }
-  const qui = PEOPLE.find((p) => p.toLowerCase() === (url.searchParams.get("qui") || "").toLowerCase()) || null;
-  const server = new McpServer({ name: "thomas911", title: "THOMAS911", version: "1.0.0" }, { instructions: INSTRUCTIONS });
-  register(server, { db: deps.db, par: qui, tz: zone(url.searchParams.get("tz")) || DEFAULT_TZ, now: deps.now || Date.now });
+  const fam = (await deps.famille()) || {}, people = Array.isArray(fam.parents) ? fam.parents : [];
+  const qui = people.find((p) => p.toLowerCase() === (url.searchParams.get("qui") || "").toLowerCase()) || null;
+  const server = new McpServer({ name: "thomas911", title: "THOMAS911", version: "1.0.0" }, { instructions: instructions(fam) });
+  register(server, { db: deps.db, par: qui, tz: zone(url.searchParams.get("tz")) || DEFAULT_TZ, now: deps.now || Date.now, famille: fam });
   // No session: every request stands alone, answered in plain JSON
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);

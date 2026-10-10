@@ -2,6 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Data only goes to the family's Supabase project and the weather service; no page address leaks to the sites it links to;
+     search engines are asked not to index the app -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://vvkkxphkyjejyhbcdcuw.supabase.co https://api.open-meteo.com; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
@@ -312,7 +317,7 @@ Growth.onChange(() => { rows = Growth.rows(); render(); });
 const load = () => Growth.load();
 
 // ---------- Time of each measure ----------
-// pese_le is the exact instant; fuseau the phone's time zone when it was taken, so 12 h 44 in Montréal stays 12 h 44
+// pese_le is the exact instant; fuseau the phone's time zone when it was taken, so 12 h 44 at home stays 12 h 44
 const HERE = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Paris";
 function partsIn(t, tz) { // instant -> { day: "YYYY-MM-DD", time: "HH:MM" } on the wall clock of tz
   const f = new Intl.DateTimeFormat("en-CA", { timeZone: tz, year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
@@ -326,7 +331,9 @@ function instant(day, time, tz) { // wall clock in tz -> Date
   t = wall - offset(t); // second pass, right around a daylight-saving change
   return new Date(t);
 }
-const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+// The family's town comes with the shared settings (famille.js), not from this public code
+const HOME = (window.Famille && Famille.info().ville) || "l'Est";
+const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const tzName = (tz) => CITY[tz] || (tz || "").split("/").pop().replace(/_/g, " ");
 const tsOf = Growth.tsOf;
 const fmtTime = (t, tz) => new Date(t).toLocaleTimeString("fr-CA", { hour: "numeric", minute: "2-digit", timeZone: tz || HERE });
@@ -337,8 +344,8 @@ function points(k = kind) {
   return rows.filter((r) => r[K.field] != null).map((r) => {
     // Percentiles use the age in days like the WHO tools (date of the measure minus date of birth);
     // the exact time places the point on the chart and gives the gain per day
-    const t = tsOf(r), age = Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour), v = Number(r[K.field]) / K.scale;
-    return { row: r, day: r.jour, t, age, ageF: (t - Thomas.BIRTH) / DAY_MS, v, z: zScore(K.table, age, v) };
+    const t = tsOf(r), age = Thomas.known ? Thomas.daysBetween(Thomas.BIRTH_DAY, r.jour) : null, v = Number(r[K.field]) / K.scale;
+    return { row: r, day: r.jour, t, age, ageF: Thomas.known ? (t - Thomas.BIRTH) / DAY_MS : null, v, z: age == null ? null : zScore(K.table, age, v) };
   }).sort((a, b) => a.t - b.t);
 }
 const MIN_GAP = Growth.MIN_GAP;
@@ -783,6 +790,10 @@ $("feedPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lai
 
 function render() {
   document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", t.dataset.k === kind));
+  if (!Thomas.known) { // the date of birth comes with the family code
+    $("sumCard").innerHTML = `<p class="empty">Les courbes s'affichent avec le code de la famille (Réglages).</p>`;
+    ["trendCard", "milkCard"].forEach((id) => { $(id).hidden = true; }); return;
+  }
   renderSummary(); renderTrend(); renderMilk(); renderChart(); renderTable();
   $("err2").textContent = Growth.error;
 }
@@ -814,11 +825,11 @@ function readWeight() {
   el.classList.toggle("bad", g != null && (isNaN(g) || g < 1000 || g > 30000));
   if (g == null) { el.textContent = ""; return; }
   if (isNaN(g)) { el.innerHTML = "<b>Nombre invalide</b>"; return; }
-  const t = sheetTime(), ok = g >= 1000 && g <= 30000, z = t && zScore("wfa", Thomas.daysBetween(Thomas.BIRTH_DAY, $("fDate").value), g / 1000);
+  const t = sheetTime(), ok = g >= 1000 && g <= 30000, z = t && Thomas.known && zScore("wfa", Thomas.daysBetween(Thomas.BIRTH_DAY, $("fDate").value), g / 1000);
   // What this weighing would give: percentile, and grams per day since the one before (to the minute)
   let gain = "";
   const before = points("poids").filter((p) => (!editing || p.row.id !== editing.id) && t && (t - p.t) / DAY_MS >= MIN_GAP).at(-1);
-  if (ok && before) {
+  if (ok && before && Thomas.known) {
     const d = (t - before.t) / DAY_MS, gd = (g / 1000 - before.v) * 1000 / d, v = Growth.velocity(before.ageF, (t - Thomas.BIRTH) / DAY_MS, gd);
     gain = `<br><b>${sign(gd, 0)} g/j</b> depuis le ${fmtDate(before.day)} à ${fmtTime(before.t, before.row.fuseau)} (${span(d)})`
       + (v ? `<br>Habituel à cet âge : ${usual(v)} · ${Growth.velWords(v.z)}` : "");
@@ -872,7 +883,7 @@ $("form").addEventListener("submit", (e) => {
   const stamp = sheetTime();
   if (!$("fDate").value) return bad("Choisis une date.");
   if (!stamp) return bad("Indique l'heure de la mesure.");
-  if (stamp < Thomas.BIRTH.getTime()) return bad("C'est avant la naissance.");
+  if (Thomas.known && stamp < Thomas.BIRTH.getTime()) return bad("C'est avant la naissance.");
   if (stamp > Date.now() + 10 * 60e3) return bad("C'est dans le futur : vérifie la date et l'heure.");
   if (Number.isNaN(g) || (g != null && (g < 1000 || g > 30000))) return bad("Poids à vérifier : entre 1 000 et 30 000 g.");
   if (Number.isNaN(t) || (t != null && (t < 40 || t > 130))) return bad("Taille à vérifier : entre 40 et 130 cm.");
@@ -1006,10 +1017,10 @@ async function buildExport() {
   };
   const notes = (lines, y) => { c.fillStyle = MUTED; c.font = NOTE; lines.forEach((l, i) => c.fillText(l, pad, y + i * 19)); return y + lines.length * 19; };
   // Title block
-  const a = Thomas.age(), birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: "America/Toronto", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
+  const fam = Thomas.famille(), a = Thomas.age(), birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: fam.fuseau || "America/Toronto", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
   c.fillStyle = INK; c.font = `800 30px ${DISP}`; c.fillText("Courbes de croissance de Thomas", pad, 50);
   c.fillStyle = MUTED; c.font = `16px ${BODY}`;
-  c.fillText(`Né le ${birth} (heure de Montréal) · garçon · référentiel OMS 2006`, pad, 82);
+  c.fillText(`Né le ${birth}${fam.ville ? ` (heure de ${fam.ville})` : ""} · garçon · référentiel OMS 2006`, pad, 82);
   c.fillText(`${a.text.months} (${a.days} jours) le ${Thomas.fmtDay(Thomas.today(), { day: "numeric", month: "long", year: "numeric" })}`, pad, 106);
   let y = 140;
   // Trend first: what the doctor asks about

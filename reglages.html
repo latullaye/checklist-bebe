@@ -2,6 +2,11 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
+<!-- Data only goes to the family's Supabase project and the weather service; no page address leaks to the sites it links to;
+     search engines are asked not to index the app -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https://vvkkxphkyjejyhbcdcuw.supabase.co https://api.open-meteo.com; media-src 'self' blob: data:; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex, nofollow">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
@@ -127,9 +132,11 @@ $("notif").addEventListener("change", (e) => Notifs.setWanted(e.target.checked).
 $("notifAsk").addEventListener("click", () => Notifs.ask().then(renderNotif));
 renderNotif(Notifs.state());
 Notifs.sync().then(renderNotif);
-const CITY = { "America/Toronto": "Montréal", "America/Montreal": "Montréal", "Europe/Paris": "France" };
+// The family's town comes with the shared settings (famille.js), not from this public code
+const HOME = (window.Famille && Famille.info().ville) || "l'Est";
+const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const zone = Habits.tz();
-$("tz").textContent = zone ? `Heure du téléphone : ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}). Après un voyage, les rappels suivent tout seuls.` : "";
+$("tz").textContent = zone ? `Heure du téléphone : heure de ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}). Après un voyage, les rappels suivent tout seuls.` : "";
 
 // ---------- Room temperature ----------
 const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
@@ -162,14 +169,16 @@ $("fPlus").addEventListener("click", () => setLait({ boires: Math.min(14, lait()
 Prefs.on("lait", renderLait);
 
 // ---------- This phone: who, and the family code (famille.js) ----------
+const escH = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 function renderFamille() {
   const q = Famille.qui();
-  $("qui").innerHTML = Famille.PEOPLE.map((p) => `<button type="button" class="chip" data-buzz data-p="${p}" aria-pressed="${p === q}">${p}</button>`).join("");
+  $("qui").innerHTML = Famille.PEOPLE.map((p) => `<button type="button" class="chip" data-buzz data-p="${escH(p)}" aria-pressed="${p === q}">${escH(p)}</button>`).join("") || `<span class="hint">Avec le code de la famille</span>`;
   $("famHint").textContent = Famille.ok() ? "Enregistré sur ce téléphone. Sans lui, rien ne peut être lu ni écrit." : "Pas encore entré sur ce téléphone.";
   $("famChange").textContent = Famille.ok() ? "Changer" : "Entrer";
 }
 $("qui").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) { Famille.setQui(b.dataset.p); renderFamille(); } });
 $("famChange").addEventListener("click", () => Famille.ask());
+Prefs.on("famille", renderFamille); // the first names come with the shared settings
 
 // ---------- Sharing ----------
 function renderShare() {
