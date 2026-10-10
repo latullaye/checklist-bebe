@@ -30,7 +30,7 @@
 
 /* Big action button (as "Nouvelle mesure") */
 .add { font: inherit; font-family: var(--font-display); font-weight: 700; font-size: 1.02rem; color: var(--accent-ink); background: var(--accent); border: 0;
-  border-radius: 16px; padding: 13px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; width: 100%; }
+  border-radius: 14px; padding: 11px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; width: 100%; }
 .add svg { width: 22px; height: 22px; }
 .group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 4px 2px -6px; }
 .empty { color: var(--muted); font-size: 0.9rem; line-height: 1.45; }
@@ -38,46 +38,46 @@
 
 /* "Right now" */
 .now { padding: 0; overflow: hidden; }
-.now .label { padding: 13px 16px 0; }
-.now .row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.now .label { padding: 11px 14px 0; }
+.now .row { display: flex; align-items: center; gap: 12px; padding: 9px 14px; }
 .now .row + .row { border-top: 1px solid var(--line); }
 .now .row > a { flex: 1; min-width: 0; color: inherit; text-decoration: none; display: flex; align-items: center; gap: 12px; }
-.now .ic { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.now .ic { width: 34px; height: 34px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
 .now .ic svg { width: 21px; height: 21px; }
 .now .ic.warn { background: var(--warn-soft); color: var(--warn); }
-.ttl { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; line-height: 1.2; }
-.sub { display: block; color: var(--muted); font-size: 0.84rem; line-height: 1.35; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.ttl { display: block; font-family: var(--font-display); font-weight: 700; font-size: 1rem; line-height: 1.2; }
+.sub { display: block; color: var(--muted); font-size: 0.82rem; line-height: 1.35; margin-top: 1px; font-variant-numeric: tabular-nums; }
 .sub b { color: var(--ink); }
 .sub b.late, .late { color: var(--warn); }
-.pillbtn { font: inherit; font-weight: 800; font-size: 0.85rem; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 999px; padding: 8px 12px;
+.pillbtn { font: inherit; font-weight: 800; font-size: 0.82rem; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 999px; padding: 7px 11px;
   display: inline-flex; align-items: center; gap: 4px; flex: none; cursor: pointer; }
 .pillbtn svg { width: 16px; height: 16px; }
 .pillbtn.soft { color: var(--accent); background: var(--accent-soft); }
-.nothing { padding: 14px 16px; color: var(--muted); font-size: 0.9rem; }
+.nothing { padding: 11px 14px; color: var(--muted); font-size: 0.9rem; }
 
 /* Lists */
 .list { padding: 0; overflow: hidden; }
-.li { display: flex; align-items: center; gap: 12px; padding: 12px 14px; color: inherit; text-decoration: none; }
+.li { display: flex; align-items: center; gap: 12px; padding: 9px 12px; color: inherit; text-decoration: none; }
 .li + .li, .li + .cand, .cand + .cand, .cand + .li { border-top: 1px solid var(--line); }
 .li .txt { flex: 1; min-width: 0; }
 .li b { display: block; font-size: 0.96rem; line-height: 1.25; }
 .li .go { width: 18px; height: 18px; color: var(--muted); flex: none; }
-.date { width: 44px; flex: none; text-align: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); padding: 5px 0 4px; line-height: 1; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
-.date b { display: block; font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 2px; }
+.date { width: 40px; flex: none; text-align: center; border-radius: 12px; background: var(--accent-soft); color: var(--accent); padding: 5px 0 4px; line-height: 1; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; }
+.date b { display: block; font-family: var(--font-display); font-size: 1.1rem; margin-bottom: 2px; }
 .date.past { background: var(--group); color: var(--muted); }
 .dx { display: inline-block; margin-top: 4px; font-size: 0.78rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
 .cancel b { text-decoration: line-through; color: var(--muted); }
 /* Events found in the Family calendar */
-.cand { display: flex; align-items: center; gap: 10px; padding: 11px 14px; flex-wrap: wrap; }
+.cand { display: flex; align-items: center; gap: 8px 10px; padding: 9px 12px; flex-wrap: wrap; }
 .cand .txt { flex: 1; min-width: 180px; }
 .cand .btns { display: flex; gap: 6px; }
 .cand button { font: inherit; font-size: 0.82rem; font-weight: 700; border-radius: 999px; padding: 7px 11px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .cand button.yes { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.agenda-head { display: flex; align-items: center; gap: 8px; padding: 13px 14px 4px; }
+.agenda-head { display: flex; align-items: center; gap: 8px; padding: 11px 12px 2px; }
 .agenda-head .label { flex: 1; }
 .agenda-head span { font-size: 0.78rem; color: var(--muted); }
 /* The address book */
-.li .ic { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
+.li .ic { width: 34px; height: 34px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; flex: none; background: var(--accent-soft); color: var(--accent); }
 .li .ic svg { width: 21px; height: 21px; }
 .kv a, .sub a { color: var(--accent); font-weight: 700; text-decoration: none; overflow-wrap: anywhere; }
 .tag.pro { display: inline-flex; align-items: center; gap: 5px; text-decoration: none; color: var(--accent); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
@@ -89,7 +89,7 @@
 .picked svg { width: 15px; height: 15px; }
 
 /* Problem and medication cards */
-.prob, .med { display: flex; flex-direction: column; gap: 10px; }
+.prob, .med { display: flex; flex-direction: column; gap: 8px; }
 .prob > a, .med > a { color: inherit; text-decoration: none; display: flex; align-items: flex-start; gap: 10px; }
 .prob > a .txt, .med > a .txt { flex: 1; min-width: 0; }
 .was { display: block; font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
@@ -98,7 +98,7 @@
 .tag.hot { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, var(--line)); }
 .tag.muted { font-weight: 400; color: var(--muted); }
 .btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
-.btn { font: inherit; font-weight: 700; font-size: 0.88rem; border-radius: 12px; padding: 10px 13px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+.btn { font: inherit; font-weight: 700; font-size: 0.86rem; border-radius: 12px; padding: 8px 12px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
   display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 .btn svg { width: 17px; height: 17px; }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
@@ -132,8 +132,8 @@
 .card > .label + .btnrow, .card > .label + .li { margin-top: 10px; }
 .addline { font: inherit; font-weight: 700; font-size: 0.88rem; color: var(--accent); background: none; border: 0; padding: 10px 0 0; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
 .addline svg { width: 17px; height: 17px; }
-.inlist { margin: 10px -16px 0; border-top: 1px solid var(--line); }
-.inlist .li { padding-left: 16px; padding-right: 16px; }
+.inlist { margin: 10px -14px 0; border-top: 1px solid var(--line); }
+.inlist .li { padding-left: 14px; padding-right: 14px; }
 /* Day by day */
 .day { padding: 12px 0; }
 .day + .day { border-top: 1px solid var(--line); }
@@ -564,7 +564,7 @@ function doseStatus(m, now = Date.now()) {
   const n = S.nextDose(m, now);
   if (!n) return { text: m.mode === "heures" ? "Prises du jour faites" : "Plus de prise prévue", late: false };
   if (n.kind === "possible") return n.at <= now ? { text: "Possible maintenant", late: false } : { text: `Possible dès <b>${whenText(n.at)}</b>`, late: false };
-  if (n.at <= now) return { text: `<b class="late">À donner${now - n.at > 10 * 6e4 ? ` (prévue à ${S.fmtTime(n.at, m.fuseau)})` : " maintenant"}</b>`, late: true };
+  if (n.at <= now) return { text: `<b class="late">À donner${now - n.at > 10 * 6e4 ? ` · prévue ${S.fmtTime(n.at, m.fuseau)}` : " maintenant"}</b>`, late: true };
   return { text: `Prochaine prise <b>${whenText(n.at, m.fuseau)}</b> <span>(dans ${S.ago(n.at - now)})</span>`, late: false };
 }
 function renderNow() {
@@ -580,7 +580,7 @@ function renderNow() {
   act.forEach((m) => {
     // "Donné" stands out when a dose is due (or close), stays soft otherwise
     const nd = S.nextDose(m, now), st = doseStatus(m, now), canGive = !nd || nd.at - now < 30 * 6e4;
-    rows.push(`<div class="row"><a href="#m/${m.id}"><span class="ic${st.late ? " warn" : ""}">${IC.pill}</span><span class="txt"><span class="ttl">${esc(m.nom)}${m.dose ? ` <small class="sub" style="display:inline">${esc(m.dose)}</small>` : ""}</span>
+    rows.push(`<div class="row"><a href="#m/${m.id}"><span class="ic${st.late ? " warn" : ""}">${IC.pill}</span><span class="txt"><span class="ttl">${esc(S.shortName(m.nom))}${m.dose ? ` <small class="sub" style="display:inline">${esc(m.dose)}</small>` : ""}</span>
       <span class="sub">${st.text}</span></span></a>
       <button class="pillbtn${canGive ? "" : " soft"}" type="button" data-give="${m.id}">${IC.check}Donné</button></div>`);
   });
@@ -589,7 +589,7 @@ function renderNow() {
       <span class="sub">${cap(whenText(Date.parse(r.le), r.fuseau))}${r.lieu ? ` · ${esc(S.shortPlace(r.lieu))}` : ""}</span></span></a></div>`);
   });
   $("now").innerHTML = rows.length ? `<div class="label">En ce moment</div>${rows.join("")}`
-    : `<div class="label">En ce moment</div><p class="nothing">Rien en cours. Quand quelque chose t'inquiète, note ce que tu vois : le nom viendra après.</p>`;
+    : `<div class="label">En ce moment</div><p class="nothing">Rien en cours. Si quelque chose t'inquiète, note ce que tu vois.</p>`;
 }
 document.addEventListener("click", (e) => {
   const n = e.target.closest("[data-note]"); if (n && !n.closest("dialog")) { openNote({ probleme: n.dataset.note }); return; }
@@ -637,7 +637,7 @@ function renderRdv() {
   let h = `<button class="add" type="button" id="addRdv" data-buzz>${IC.plus}Rendez-vous</button>`;
   const book = S.pros().filter((p) => p.actif !== false).length;
   h += `<div class="card list"><a class="li" href="#c"><span class="ic">${IC.book}</span><span class="txt"><b>Carnet des pros</b>
-    <span class="sub">${book ? `${book} personne${book > 1 ? "s" : ""} et endroit${book > 1 ? "s" : ""} : téléphone, adresse, prise de rendez-vous` : "Les pros de Thomas, pour les choisir en un geste"}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a></div>`;
+    <span class="sub">${book ? `${book} fiche${book > 1 ? "s" : ""} : téléphone, adresse, rendez-vous` : "Médecins, CLSC, hôpitaux : à choisir en un geste"}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a></div>`;
   if (cands.length) h += `<div class="card list"><div class="agenda-head"><div class="label">Dans l'agenda Family</div><span>Pour Thomas ?</span></div>`
     + cands.map((ev) => { const t = Date.parse(ev.debut);
       return `<div class="cand"><span class="txt"><b>${esc(ev.titre)}</b><span class="sub">${cap(S.fmtDay(S.dayOf(t, ev.fuseau), { year: t < now - 300 * DAY ? "numeric" : undefined }))}${ev.journee ? "" : ` à ${S.fmtTime(t, ev.fuseau)}`}${ev.lieu ? ` · ${esc(S.shortPlace(ev.lieu))}` : ""}</span></span>

@@ -19,35 +19,35 @@
 <style>
 /* Tabs */
 .tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--group); }
-.tab { font: inherit; font-weight: 700; font-size: 0.92rem; color: var(--muted); background: none; border: 0; border-radius: 10px; padding: 9px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.tab { font: inherit; font-weight: 700; font-size: 0.92rem; color: var(--muted); background: none; border: 0; border-radius: 10px; padding: 7px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .tab[aria-selected="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
 
 /* Summary */
 .sum { display: flex; align-items: flex-end; justify-content: space-between; gap: 10px; }
-.sum .val { font-family: var(--font-display); font-weight: 800; font-size: 2.3rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.sum .val { font-family: var(--font-display); font-weight: 800; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .sum .val small { font-size: 1rem; margin-left: 4px; }
 .sum .pct { text-align: right; }
 .sum .pct b { display: inline-block; font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 4px 12px; }
 .sum .pct span { display: block; font-size: 0.78rem; color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
-.sub { margin-top: 8px; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+.sub { margin-top: 6px; font-size: 0.84rem; color: var(--muted); line-height: 1.4; }
 .sub b { color: var(--ink); }
 .nw { white-space: nowrap; }
 .empty { color: var(--muted); font-size: 0.9rem; }
 
 /* Milk per day */
-.milk { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-.mcol { background: var(--bg); border-radius: 14px; padding: 10px 12px; min-width: 0; }
+.milk { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+.mcol { background: var(--bg); border-radius: 12px; padding: 8px 10px; min-width: 0; }
 .mcol span { display: block; font-size: 0.78rem; color: var(--muted); font-weight: 700; }
-.mcol b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.7rem; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.mcol b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.5rem; line-height: 1.1; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .mcol b small { font-size: 0.9rem; margin-left: 3px; }
 .mcol em { display: block; font-style: normal; font-size: 0.78rem; color: var(--muted); margin-top: 3px; font-variant-numeric: tabular-nums; }
 .mcol.tgt { background: var(--accent-soft); }
 .mcol.tgt b { color: var(--accent); }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; align-items: center; }
 .chips .lab { font-size: 0.8rem; color: var(--muted); font-weight: 700; margin-right: 2px; }
 .chip { font: inherit; font-size: 0.82rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 11px; cursor: pointer; font-variant-numeric: tabular-nums; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
-.feeds { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 0.88rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
+.feeds { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 0.88rem; line-height: 1.35; font-variant-numeric: tabular-nums; }
 .step { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; flex: none; }
 .step button { font: inherit; font-weight: 800; font-size: 1rem; width: 34px; height: 32px; border: 0; background: var(--bg); color: var(--accent); cursor: pointer; }
 .step b { min-width: 26px; text-align: center; }
@@ -107,13 +107,13 @@
 
 /* Add button */
 .add { font: inherit; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; color: var(--accent-ink); background: var(--accent); border: 0;
-  border-radius: 16px; padding: 14px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
+  border-radius: 14px; padding: 11px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .add svg { width: 22px; height: 22px; }
 
 /* Table */
 table.m { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
 table.m th { text-align: left; font-size: 0.66rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); padding: 0 4px 6px 0; font-weight: 700; }
-table.m td { padding: 9px 4px 9px 0; border-top: 1px solid var(--line); white-space: nowrap; }
+table.m td { padding: 7px 4px 7px 0; border-top: 1px solid var(--line); white-space: nowrap; }
 table.m tr.r { cursor: pointer; }
 table.m tr.latest td { color: var(--accent); font-weight: 700; }
 table.m td.neg { color: #c4553f; }
@@ -125,7 +125,7 @@ table.m td small { display: block; font-size: 0.7rem; color: var(--muted); font-
 .gauge i { position: absolute; top: -3px; width: 3px; height: 12px; margin-left: -1.5px; border-radius: 2px; background: var(--ink); box-shadow: 0 0 0 1.5px var(--surface); }
 .gauge.faint { opacity: .45; }
 table.m td small.early { font-size: 0.66rem; }
-.vel { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vel { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--line); }
 .vel-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 0.84rem; color: var(--muted); }
 .vel-head b { color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .vel .gauge { width: 100%; height: 9px; border-radius: 5px; margin-top: 12px; }
@@ -205,7 +205,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
       </span></div>
     <div class="chart" id="chart"></div>
     <div class="tip" id="tip"></div>
-    <p class="src">Référentiel OMS 2006, garçons. Bande grise : entre P15 et P85.</p>
+    <p class="src">OMS 2006, garçons · bande grise : P15 à P85.</p>
   </section>
 
   <button class="add" id="add" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Nouvelle mesure</button>
@@ -224,7 +224,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
     </div>
     <div class="chips" id="tgtChips"></div>
     <div class="feeds"><span class="step"><button type="button" id="feedMinus" data-buzz aria-label="Un boire de moins">−</button><b id="nFeeds"></b><button type="button" id="feedPlus" data-buzz aria-label="Un boire de plus">+</button></span><span id="perFeed"></span></div>
-    <p class="src" id="milkNote"></p>
+    <details class="how"><summary>Repères</summary><p id="milkNote"></p></details>
   </section>
 </div>
 
@@ -372,11 +372,11 @@ function renderSummary() {
   if (!pts.length) { $("sumCard").innerHTML = `<p class="empty">Aucune ${K.what} pour l'instant. Touche « Nouvelle mesure ».</p>`; return; }
   const last = pts.at(-1);
   const nb = (t) => `<span class="nw">${t}</span>`; // keep "12 sem 4 j" or "+36 g/j" on one line
-  const where = last.row.lieu ? ` (${Growth.lieuName(last.row.lieu, true)})` : "";
-  let sub = `Dernière ${K.what}${where} le <b>${nb(when(last, true))}</b>, à ${nb(Thomas.short(last.day))} ${nb(`(${last.age} j)`)}`;
+  const where = last.row.lieu ? ` · ${Growth.lieuName(last.row.lieu)}` : "";
+  let sub = `<b>${nb(when(last))}</b>${where} · ${nb(Thomas.short(last.day))}`;
   const gain = kind === "poids" && gainOf(pts, pts.length - 1);
   // Since the weighing before (the trend over several days is in the card below)
-  if (gain) sub += `<br><b>${nb(`${sign(gain.g, 0)} g/j`)}</b> sur ${nb(span(gain.days))}, depuis la pesée du ${nb(when(gain.from))}`;
+  if (gain) sub += `<br><b>${nb(`${sign(gain.g, 0)} g/j`)}</b> sur ${nb(span(gain.days))} depuis le ${nb(fmtDate(gain.from.day))}`;
   if (kind === "taille" && wfl(last.row)) sub += `<br>Poids-pour-taille : <b>${wfl(last.row)}</b>`;
   $("sumCard").innerHTML = `<div class="sum"><div class="val">${nf(last.v, K.dec)}<small>${K.unit}</small></div>
     <div class="pct"><b>${last.z == null ? "—" : pctText(last.z)}</b><span>${last.z == null ? "" : `score-z ${sign(last.z)}`}</span></div></div>
@@ -398,7 +398,7 @@ const period = (t) => `${t.days} jours` + (offSpan(t) ? ` (en fait ${Math.round(
 const TREND_HOW = "Pour chaque période qui se termine à la dernière pesée : pente de la droite qui passe au plus près de toutes ses pesées "
   + "(à la minute près), ramenée à 24 h. Une pesée un peu haute ou basse (boire, couche) y compte moins que dans un simple écart entre deux pesées.";
 const TREND_WHO = "Habituel : gain de 70 % des garçons de cet âge (OMS 2009, P15 à P85), repère calculé sur un mois : sur 3 à 5 jours, les écarts sont fréquents.";
-const TREND_MIX = "* Balances différentes dans la période : leur écart fausse surtout les courtes périodes.";
+const TREND_MIX = "* Balances différentes : moins fiable sur peu de jours.";
 const TREND_HOME = "À la maison, pour une tendance fiable : même balance, même moment (par exemple avant le boire du matin), même tenue.";
 function renderTrend() {
   const all = points("poids");
@@ -421,7 +421,7 @@ function renderTrend() {
   html += `<table class="m t"><tr><th>Sur</th><th>Depuis le</th><th>Pesées</th><th>g/jour</th></tr>`
     + list.map((t) => `<tr${t === head ? ' class="latest"' : ""}><td>${t.days} j${t.mixed ? "*" : ""}${offSpan(t) ? `<small class="real">en fait ${Math.round(t.span)} j</small>` : ""}</td><td>${fmtDate(t.from.day)}<small>${fmtTime(t.from.t, t.from.row.fuseau)}</small></td>
       <td>${t.n}</td><td class="${t.g < 0 ? "neg" : ""}">${sign(t.g, 0)}${t.vel ? gauge(t.vel) : ""}</td></tr>`).join("")
-    + `</table><p class="legend"><span class="gauge" aria-hidden="true"></span><span>Zone verte : gain habituel à cet âge (OMS, P15 à P85), trait : celui de Thomas.${list.some((t) => t.mixed) ? ` ${TREND_MIX}` : ""}</span></p>`
+    + `</table><p class="legend"><span class="gauge" aria-hidden="true"></span><span>Vert : gain habituel à cet âge (OMS) ; trait : Thomas.${list.some((t) => t.mixed) ? ` ${TREND_MIX}` : ""}</span></p>`
     + `<details class="how"><summary>Comment c'est calculé</summary><p>${TREND_HOW}</p><p>${TREND_WHO}</p>${all.some((p) => p.row.lieu === "maison") ? `<p>${TREND_HOME}</p>` : ""}</details>`;
   $("trend").innerHTML = html;
 }
@@ -530,7 +530,7 @@ function drawChart({ pts, K, W, H, x0, x1, fit, id, big, plain }) { // plain: no
 function tipText(pts, i, oneLine) {
   const sp = pts[i], g = kind === "poids" && gainOf(pts, i), br = oneLine ? " · " : "<br>";
   const v = velOf(g);
-  const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)} à ${fmtTime(g.from.t, g.from.row.fuseau)})`}`
+  const gain = g ? `${br}<span class="nw">${sign(g.g, 0)} g/j</span> sur <span class="nw">${span(g.days)}</span>${oneLine ? "" : ` (depuis le ${fmtDate(g.from.day)})`}`
     + (v ? ` · <span class="nw">habituel ${usual(v)}</span>` : "") : "";
   return `<b>${when(sp, true)}</b>${sp.row.lieu ? ` · ${Growth.lieuName(sp.row.lieu)}` : ""} · ${Thomas.short(sp.day)}${br}<b>${fmtV(sp.v)}</b> · ${sp.z == null ? "" : `<span class="nw">${pctText(sp.z)} (z ${sign(sp.z)})</span>`}${gain}`;
 }
@@ -734,7 +734,7 @@ function renderTable() {
       <td>${p.z == null ? "—" : pctText(p.z)}</td><td>${p.z == null ? "—" : sign(p.z)}</td>${more}</tr>${note}`;
   }).reverse().join("");
   $("table").innerHTML = `<table class="m"><tr><th>Date</th><th>Âge</th><th>${K.unit}</th><th>Perc.</th><th>z</th>${extra}</tr>${lines}</table>`
-    + (kind === "poids" ? `<p class="legend"><span class="gauge" aria-hidden="true"></span><span>Sous le gain : la zone verte est le gain habituel pour l'âge (OMS, P15 à P85), le trait est celui de Thomas. « 1res sem. » : les premiers jours, la perte de poids est normale.</span></p>` : "");
+    + (kind === "poids" ? `<p class="legend"><span class="gauge" aria-hidden="true"></span><span>Sous le gain, vert : habituel pour l'âge (OMS) ; trait : Thomas. « 1res sem. » : perte de poids normale les premiers jours.</span></p>` : "");
 }
 
 // ---------- Milk per day, from his weight and from a target weight ----------
@@ -774,9 +774,9 @@ function renderMilk() {
   const per = (ml) => nf(r5(ml / boires));
   $("perFeed").innerHTML = `boires par jour, soit environ <b>${per(now)}</b>${tgt !== now ? ` à <b>${per(tgt)}</b>` : ""} mL par boire`;
   const appert = (kg) => nf(r5(kg * 100 + 250)); // French rule of thumb: weight in g / 10 + 250 mL
-  $("milkNote").textContent = `Repère : ${ML_PER_KG} mL par kg et par jour, avant 6 mois (selon les bébés, souvent de 120 à 180). `
-    + `Règle d'Appert (poids en g ÷ 10 + 250) : ${appert(last.v)} mL et ${appert(tkg)} mL. `
-    + `Au-delà d'environ 1 litre par jour, en parler au pédiatre. Ce sont des moyennes : l'appétit varie d'un jour à l'autre, et l'avis du pédiatre prime.`;
+  $("milkNote").textContent = `${ML_PER_KG} mL par kg et par jour avant 6 mois (souvent 120 à 180). `
+    + `Règle d'Appert (g ÷ 10 + 250) : ${appert(last.v)} et ${appert(tkg)} mL. `
+    + `Au-delà d'environ 1 L par jour, en parler au pédiatre. Ce sont des moyennes : l'appétit varie, et l'avis du pédiatre prime.`;
 }
 $("tgtChips").addEventListener("click", (e) => {
   const c = e.target.closest(".chip"); if (!c) return;

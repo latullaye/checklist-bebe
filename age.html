@@ -22,33 +22,32 @@
 :root[data-theme="dark"] { --gold: #f4b942; --gold-soft: #3a2e1a; }
 
 /* Today's party */
-.today { display: flex; align-items: center; gap: 14px; background: linear-gradient(135deg, var(--gold-soft), var(--accent-soft)); border-color: transparent; }
+.today { display: flex; align-items: center; gap: 12px; background: linear-gradient(135deg, var(--gold-soft), var(--accent-soft)); border-color: transparent; }
 .today .txt { flex: 1; min-width: 0; }
 .today b { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.2rem; line-height: 1.2; }
 .today span { color: var(--muted); font-size: 0.85rem; }
-.today svg.cake { width: 52px; height: 52px; flex: none; }
+.today svg.cake { width: 44px; height: 44px; flex: none; }
 .go { font: inherit; font-weight: 700; color: #fff; background: var(--gold); border: 0; border-radius: 999px; padding: 10px 16px; cursor: pointer; flex: none; }
 
 /* Age */
-.hero { text-align: center; padding: 20px 16px 18px; }
+.hero { text-align: center; padding: 12px 14px; }
 .hero .lead { color: var(--muted); font-size: 0.9rem; }
-.hero .big { font-family: var(--font-display); font-weight: 800; font-size: 4.2rem; line-height: 1; letter-spacing: -0.02em; margin: 6px 0 0; font-variant-numeric: tabular-nums; color: var(--accent); }
-.hero .unit { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; }
-.ways { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; text-align: left; }
-.way { background: var(--bg); border-radius: 14px; padding: 10px 12px; }
+.hero .big { font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 1; letter-spacing: -0.02em; margin: 2px 0 0; font-variant-numeric: tabular-nums; color: var(--accent); }
+.hero .unit { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; }
+.ways { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; text-align: left; }
+.way { background: var(--bg); border-radius: 12px; padding: 7px 10px; }
 .way small { display: block; font-size: 0.68rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
-.way b { display: block; margin-top: 3px; font-size: 0.98rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
-.way.wide { grid-column: 1 / -1; }
-.born { margin: 14px 0 0; font-size: 0.8rem; color: var(--muted); }
-.next { margin-top: 12px; padding: 10px 12px; border-radius: 14px; border: 1.5px dashed var(--gold); font-size: 0.9rem; }
+.way b { display: block; margin-top: 2px; font-size: 0.95rem; line-height: 1.25; font-variant-numeric: tabular-nums; }
+.born { margin: 8px 0 0; font-size: 0.78rem; color: var(--muted); }
+.next { margin-top: 10px; padding: 7px 10px; border-radius: 12px; border: 1.5px dashed var(--gold); font-size: 0.88rem; }
 .next b { color: var(--gold); }
 
 /* Upcoming */
 .list { margin-top: 8px; }
-.row { display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line);
+.row { display: grid; grid-template-columns: 36px 1fr auto; gap: 10px; align-items: center; padding: 7px 0; border-top: 1px solid var(--line);
   cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .row:first-child { border-top: 0; }
-.chip { width: 40px; height: 40px; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center;
+.chip { width: 36px; height: 36px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center;
   background: var(--accent-soft); color: var(--accent); font-family: var(--font-display); font-weight: 800; line-height: 1; }
 .chip i { font-style: normal; font-size: 0.95rem; }
 .chip em { font-style: normal; font-family: var(--font-body); font-weight: 700; font-size: 0.55rem; margin-top: 2px; text-transform: uppercase; }
@@ -58,7 +57,7 @@
 .row .what span { color: var(--muted); font-size: 0.8rem; }
 .row .when { text-align: right; font-size: 0.8rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .row .when b { display: block; color: var(--ink); font-size: 0.9rem; }
-.more { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 12px; padding: 10px; width: 100%; margin-top: 10px; cursor: pointer; }
+.more { font: inherit; font-weight: 700; color: var(--accent); background: none; border: 1px solid var(--line); border-radius: 12px; padding: 8px; width: 100%; margin-top: 8px; cursor: pointer; }
 details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); }
 .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; }
 
@@ -106,10 +105,10 @@ details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); 
     <div class="big" id="bigDays"></div>
     <div class="unit" id="bigUnit">jours</div>
     <div class="ways">
-      <div class="way"><small>En semaines</small><b id="wWeeks"></b></div>
-      <div class="way"><small>En mois</small><b id="wMonths"></b></div>
-      <div class="way wide"><small>En mois et semaines</small><b id="wMonthsWeeks"></b></div>
-      <div class="way wide"><small>En heures de vie</small><b id="wHours"></b></div>
+      <div class="way"><small>Semaines</small><b id="wWeeks"></b></div>
+      <div class="way"><small>Mois</small><b id="wMonths"></b></div>
+      <div class="way"><small>Mois et semaines</small><b id="wMonthsWeeks"></b></div>
+      <div class="way"><small>Heures de vie</small><b id="wHours"></b></div>
     </div>
     <div class="next" id="next"></div>
     <p class="born" id="born"></p>
@@ -119,7 +118,7 @@ details.past summary { cursor: pointer; font-weight: 700; color: var(--accent); 
     <div class="label">Prochaines célébrations</div>
     <div class="list" id="upcoming"></div>
     <button class="more" id="more" type="button">Voir plus loin</button>
-    <p class="hint">Touche une ligne pour voir un aperçu de la fête.</p>
+    <p class="hint">Touche une ligne pour un aperçu de la fête.</p>
   </section>
 
   <section class="card">
@@ -234,10 +233,11 @@ function renderAge() {
   const a = Thomas.age();
   $("bigDays").textContent = nf(a.days);
   $("bigUnit").textContent = a.days > 1 ? "jours" : "jour";
-  $("wWeeks").textContent = a.text.weeks;
-  $("wMonths").textContent = a.text.months;
-  $("wMonthsWeeks").textContent = a.text.monthsWeeks;
-  $("wHours").textContent = `${nf(a.hours)} heures`;
+  const short = (t) => t.replace(/semaines?/g, "sem.").replace(/jours?/g, "j"); // "15 semaines et 1 jour" -> "15 sem. et 1 j"
+  $("wWeeks").textContent = short(a.text.weeks);
+  $("wMonths").textContent = short(a.text.months);
+  $("wMonthsWeeks").textContent = short(a.text.monthsWeeks);
+  $("wHours").textContent = `${nf(a.hours)} h`;
   const fam = Thomas.famille(), tz = fam.fuseau || "America/Toronto";
   const birth = Thomas.BIRTH.toLocaleString("fr-CA", { timeZone: tz, weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "numeric", minute: "2-digit" });
   $("born").textContent = `Né le ${birth}${fam.ville ? ` (heure de ${fam.ville})` : ""}`;

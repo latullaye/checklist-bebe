@@ -354,6 +354,9 @@
     return m.fin ? `jour ${Math.min(n, daysBetween(first, m.fin) + 1)} sur ${daysBetween(first, m.fin) + 1}` : `jour ${n}`;
   }
   const give = (m, extra = {}) => save("prises", { medicament: m.id, le: new Date().toISOString(), fuseau: HERE, ...extra });
+  // The name it is called by: the brand in brackets, else the words before the strength
+  // ("Racécadotril 4 mg/mL suspension buvable (Tiorfan 4 mg/mL nourrisson-enfant)" -> "Tiorfan", "Amoxicilline 250 mg/5 mL" -> "Amoxicilline")
+  const shortName = (nom) => { const s = String(nom || ""), brand = (s.match(/\(\s*([^\s(),\d][^\s(),]*)/) || [])[1]; return brand || s.split(/[\d(,]/)[0].trim() || s; };
   // The doses due now among those with reminders (the same ones the server reminds of)
   const dueNow = (now = Date.now()) => meds().filter((m) => m.rappels !== false && m.mode !== "besoin" && (nextDose(m, now) || {}).late);
 
@@ -384,6 +387,6 @@
     nameOf, isOpen, problems, openProblems, dayNumber, notesOf, medsOf, rdvOf, journal, resume,
     RDV_TYPES, rdvType, shortPlace, rdvWord, rdvTitle, appointments, upcoming, fromAgenda, agendaLink,
     pros, proOf, rdvsWith, proLabel, proPlace, fromPro, proFor, isPlace, telLink,
-    meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, dueNow, clock, hours
+    meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, dueNow, shortName, clock, hours
   };
 })();

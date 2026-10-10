@@ -19,14 +19,14 @@
 <style>
 /* Now */
 .now { display: flex; align-items: center; gap: 14px; }
-.now svg { width: 64px; height: 64px; color: var(--accent); stroke-width: 1.6; flex: none; }
-.temp { font-family: var(--font-display); font-weight: 800; font-size: 3.2rem; line-height: 0.9; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-.desc { font-weight: 700; margin-top: 6px; }
+.now svg { width: 52px; height: 52px; color: var(--accent); stroke-width: 1.6; flex: none; }
+.temp { font-family: var(--font-display); font-weight: 800; font-size: 2.6rem; line-height: 0.9; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.desc { font-weight: 700; margin-top: 4px; }
 .sub { color: var(--muted); font-size: 0.85rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
 
 /* Rain, next 4 hours by 15 minutes */
-.rain-head { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; margin-top: 6px; line-height: 1.25; }
-.bars { position: relative; display: grid; grid-template-columns: repeat(16, 1fr); align-items: end; gap: 2px; height: 96px; margin-top: 14px;
+.rain-head { font-family: var(--font-display); font-weight: 800; font-size: 1rem; margin-top: 4px; line-height: 1.25; }
+.bars { position: relative; display: grid; grid-template-columns: repeat(16, 1fr); align-items: end; gap: 2px; height: 64px; margin-top: 10px;
   border-bottom: 1px solid var(--line); }
 .bar { height: 100%; display: flex; align-items: flex-end; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .bar i { display: block; width: 100%; min-height: 0; border-radius: 4px 4px 0 0; background: var(--accent); }
@@ -35,15 +35,15 @@
 .bar.dry i { height: 2px !important; background: var(--line); border-radius: 1px; }
 .ticks { display: grid; grid-template-columns: repeat(16, 1fr); gap: 2px; margin-top: 4px; font-size: 0.72rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .ticks span { white-space: nowrap; }
-.caption { margin-top: 10px; font-size: 0.88rem; min-height: 1.3em; font-variant-numeric: tabular-nums; }
+.caption { margin-top: 6px; font-size: 0.88rem; min-height: 1.3em; font-variant-numeric: tabular-nums; }
 .caption b { font-weight: 700; }
 .note { font-size: 0.75rem; color: var(--muted); margin: 6px 0 0; }
 
 /* Hour by hour */
-.hours { display: flex; gap: 4px; overflow-x: auto; margin: 10px -16px -4px; padding: 0 16px 6px; scrollbar-width: none;
+.hours { display: flex; gap: 4px; overflow-x: auto; margin: 8px -14px -4px; padding: 0 14px 4px; scrollbar-width: none;
   -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; touch-action: pan-x pan-y; } /* free native momentum, no snapping */
 .hours::-webkit-scrollbar { display: none; }
-.hour { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 0; border-radius: 12px;
+.hour { flex: none; width: 52px; display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 6px 0; border-radius: 12px;
   font-variant-numeric: tabular-nums; }
 .hour.first { background: var(--accent-soft); }
 .hour .h { font-size: 0.75rem; font-weight: 700; color: var(--muted); }
@@ -53,8 +53,8 @@
 .hour .w { font-size: 0.7rem; color: var(--muted); }
 
 /* 10 days */
-.days { display: flex; flex-direction: column; margin-top: 6px; }
-.day { display: grid; grid-template-columns: 4.6em 28px 3em 2.4em 1fr 2.4em; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line);
+.days { display: flex; flex-direction: column; margin-top: 4px; }
+.day { display: grid; grid-template-columns: 4.6em 28px 3em 2.4em 1fr 2.4em; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line);
   font-variant-numeric: tabular-nums; }
 .day:first-child { border-top: 0; }
 .day .dn { font-weight: 700; white-space: nowrap; }
@@ -65,7 +65,7 @@
 .range { position: relative; height: 6px; border-radius: 3px; background: var(--group); }
 .range i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); }
 
-.more { display: block; text-align: center; color: var(--accent); font-weight: 700; text-decoration: none; padding: 12px; }
+.more { display: block; text-align: center; color: var(--accent); font-weight: 700; text-decoration: none; padding: 8px; }
 .fresh { text-align: center; font-size: 0.75rem; color: var(--muted); margin-top: -8px; }
 .empty { color: var(--muted); }
 .empty button { margin-top: 10px; font: inherit; font-weight: 700; color: var(--accent-ink); background: var(--accent); border: 0; border-radius: 10px; padding: 9px 14px; }
@@ -102,7 +102,7 @@
         <div class="bars" id="bars" role="img"></div>
         <div class="ticks" id="ticks" aria-hidden="true"></div>
         <div class="caption" id="caption"></div>
-        <p class="note">Prévision par tranches de 15 minutes. Touche une barre pour le détail.</p>
+        <p class="note">Par quart d'heure : touche une barre pour le détail.</p>
       </div>
     </section>
 
@@ -153,7 +153,7 @@ function rainSummary(q, w) {
   const stop = q.slice(start).findIndex((x) => !wet(x));
   const again = stop >= 0 ? q.slice(start + stop).findIndex(wet) : -1;
   return `${cap(kind(q[start]))} à partir de ${hm(q[start][0])}${n > 0 ? ` (dans ${dur(n)})` : ""}`
-    + (stop < 0 ? ", pour au moins le reste des 4 h."
+    + (stop < 0 ? ", au moins jusqu'à la fin des 4 h."
       : `, jusqu'à ${hm(q[start + stop][0])} environ` + (again >= 0 ? `, puis reprise vers ${hm(q[start + stop + again][0])}.` : "."));
 }
 const dur = (n) => n < 60 ? `${n} min` : `${Math.floor(n / 60)} h ${String(n % 60).padStart(2, "0")}`;

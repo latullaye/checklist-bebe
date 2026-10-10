@@ -66,7 +66,7 @@
 @media (prefers-reduced-motion: reduce) { .fete img { animation: none; } }
 
 /* Weather, one line (the full forecast is one tap away) */
-.wx { display: block; color: inherit; text-decoration: none; padding: 12px 14px; }
+.wx { display: block; color: inherit; text-decoration: none; padding: 10px 14px; }
 .wx-row { display: flex; align-items: center; gap: 12px; }
 .wx-row svg.ic { width: 36px; height: 36px; color: var(--accent); stroke-width: 1.7; flex: none; }
 .wx-temp { font-family: var(--font-display); font-weight: 800; font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; }
@@ -85,27 +85,27 @@
 
 /* Thomas today */
 .now { display: flex; flex-direction: column; gap: 0; padding: 0; overflow: hidden; }
-.now > * { padding: 13px 16px; }
+.now > * { padding: 10px 14px; }
 .now > * + * { border-top: 1px solid var(--line); }
 .now a.row { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .now .row .txt { flex: 1; min-width: 0; }
-.now .big { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.25rem; line-height: 1.15; }
-.now .sub { display: block; color: var(--muted); font-size: 0.84rem; margin-top: 2px; font-variant-numeric: tabular-nums; }
+.now .big { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.12rem; line-height: 1.15; }
+.now .sub { display: block; color: var(--muted); font-size: 0.8rem; margin-top: 1px; font-variant-numeric: tabular-nums; }
 .now .sub b { color: var(--accent); }
 .now .pct { font-family: var(--font-display); font-weight: 800; font-size: 0.9rem; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 9px; margin-left: 6px; vertical-align: 2px; }
 .now .wrow { display: flex; align-items: center; gap: 12px; }
 .now .wrow > a.txt { color: inherit; text-decoration: none; flex: 1; min-width: 0; }
 .now .go { width: 20px; height: 20px; color: var(--muted); flex: none; }
-.weigh { font: inherit; font-weight: 800; font-size: 0.85rem; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 8px 12px;
+.weigh { font: inherit; font-weight: 800; font-size: 0.82rem; color: var(--accent-ink); background: var(--accent); border-radius: 999px; padding: 7px 11px;
   text-decoration: none; display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .weigh svg { width: 16px; height: 16px; }
 .todo-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .todo-head .label { margin: 0; }
 .todo-head a { font-size: 0.8rem; font-weight: 700; color: var(--accent); text-decoration: none; }
-.todo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.todo button { font: inherit; font-size: 0.88rem; color: var(--ink); background: var(--bg); border: 1.5px solid var(--accent); border-radius: 999px;
-  padding: 7px 12px 7px 9px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; transition: background .15s, color .15s, opacity .3s, transform .3s; }
-.todo button::before { content: ""; width: 15px; height: 15px; border-radius: 50%; border: 1.5px solid var(--accent); flex: none; box-sizing: border-box; }
+.todo { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; }
+.todo button { font: inherit; font-size: 0.84rem; color: var(--ink); background: var(--bg); border: 1.5px solid var(--accent); border-radius: 999px;
+  padding: 6px 10px 6px 7px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; transition: background .15s, color .15s, opacity .3s, transform .3s; }
+.todo button::before { content: ""; width: 14px; height: 14px; border-radius: 50%; border: 1.5px solid var(--accent); flex: none; box-sizing: border-box; }
 .todo button small { font-size: 0.75rem; color: var(--muted); margin-left: 2px; }
 .todo button.late small { color: #b36b12; font-weight: 700; }
 .todo button.done { background: var(--accent); color: var(--accent-ink); }
@@ -115,19 +115,20 @@
 .alldone { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
 .alldone b { color: var(--accent); }
 
-/* Screens: a two-column grid, by kind of moment */
-.group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 4px 2px -6px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: inherit; text-decoration: none; padding: 13px 13px 12px; min-height: 108px; }
-.tile .ico { width: 40px; height: 40px; flex: none; }
-.tile strong { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; line-height: 1.15; }
-.tile .sub { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.3; margin-top: 2px; font-variant-numeric: tabular-nums; }
-.tile .sub b { color: var(--accent); }
-.tile:active, .now a.row:active { transform: scale(0.985); }
-/* Health: a wide tile that says what's going on */
-.tile.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 12px; min-height: 0; }
-.tile.wide > span { flex: 1; min-width: 0; }
-.tile.wide .go { width: 20px; height: 20px; color: var(--muted); flex: none; }
+/* Screens, by kind of moment: one card per moment, one line per screen (its icon, its name, what's worth knowing on the
+   right), lines parted by a thin rule that starts after the icons */
+.group { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 2px 2px -6px; }
+.list { padding: 0; overflow: hidden; }
+.tile { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; padding: 8px 10px 8px 12px; position: relative; transition: background .15s; }
+.tile + .tile::before { content: ""; position: absolute; top: 0; left: 54px; right: 0; border-top: 1px solid var(--line); }
+.tile .ico { width: 30px; height: 30px; flex: none; }
+.tile strong { flex: 1; min-width: 0; font-family: var(--font-display); font-weight: 800; font-size: 0.98rem; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tile .val { max-width: 55%; color: var(--muted); font-size: 0.82rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+.tile .val b { color: var(--accent); }
+.tile .go { width: 18px; height: 18px; color: var(--muted); flex: none; margin-left: -4px; }
+.now a.row:active { transform: scale(0.985); }
+.tile:active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .now .sub b.late { color: #b36b12; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .now .sub b.late { color: #f0b860; } }
 </style>
@@ -183,20 +184,20 @@
   </section>
 
   <div class="group">Sortir</div>
-  <div class="grid">
-    <a class="card tile" href="checklist.html"><img class="ico" src="icon-poussette.svg" alt=""><span><strong>Checklist</strong><span class="sub" id="checkSub">Avant de partir</span></span></a>
-    <a class="card tile" href="habiller.html"><img class="ico" src="icon-habiller.svg" alt=""><span><strong>Habiller</strong><span class="sub">Dedans, dodo, dehors</span></span></a>
+  <div class="card list">
+    <a class="tile" href="checklist.html"><img class="ico" src="icon-poussette.svg" alt=""><strong>Checklist</strong><span class="val" id="checkSub"></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="habiller.html"><img class="ico" src="icon-habiller.svg" alt=""><strong>Habiller</strong><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
   <div class="group">Au quotidien</div>
-  <div class="grid">
-    <a class="card tile" href="habitudes.html"><img class="ico" src="icon-habitudes.svg" alt=""><span><strong>Habitudes</strong><span class="sub" id="habSub">Bouche, rééducation, bain</span></span></a>
-    <a class="card tile" href="bruit.html"><img class="ico" src="icon-bruit.svg" alt=""><span><strong>Boîte à bruit</strong><span class="sub" id="noiseSub">Bruit blanc, chut-chut…</span></span></a>
+  <div class="card list">
+    <a class="tile" href="habitudes.html"><img class="ico" src="icon-habitudes.svg" alt=""><strong>Habitudes</strong><span class="val" id="habSub"></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="bruit.html"><img class="ico" src="icon-bruit.svg" alt=""><strong>Boîte à bruit</strong><span class="val" id="noiseSub"></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
   <div class="group">Suivi</div>
-  <div class="grid">
-    <a class="card tile wide" href="sante.html"><img class="ico" src="icon-sante.svg" alt=""><span><strong>Santé</strong><span class="sub" id="santeSub">Symptômes, rendez-vous, médicaments</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
-    <a class="card tile" href="croissance.html"><img class="ico" src="icon-croissance.svg" alt=""><span><strong>Croissance</strong><span class="sub">Courbes, lait par jour</span></span></a>
-    <a class="card tile" href="age.html"><img class="ico" src="icon-age.svg" alt=""><span><strong>Âge</strong><span class="sub">Toutes les fêtes à venir</span></span></a>
+  <div class="card list">
+    <a class="tile" href="sante.html"><img class="ico" src="icon-sante.svg" alt=""><strong>Santé</strong><span class="val" id="santeSub"></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="croissance.html"><img class="ico" src="icon-croissance.svg" alt=""><strong>Croissance</strong><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="age.html"><img class="ico" src="icon-age.svg" alt=""><strong>Âge</strong><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
 </div>
 
@@ -234,24 +235,25 @@ function renderWeight() {
   const t = Growth.headline(Growth.trends(pts)), g = t ? { g: t.g, days: t.nominal ? t.days : t.span } : Growth.gainOf(pts, pts.length - 1);
   $("wBig").innerHTML = `${nf(last.v, 3)} kg${last.z == null ? "" : `<span class="pct">${Growth.pctText(last.z)}</span>`}`;
   $("wSub").innerHTML = (g ? `<b>${g.g >= 0 ? "+" : "−"}${nf(Math.abs(g.g))} g/j</b> sur ${Math.max(1, Math.round(g.days))} j · ` : "")
-    + `pesé le ${Thomas.fmtDay(last.day, { day: "numeric", month: "short" })}` + (last.row._pending ? " · en attente d'envoi" : "");
+    + Thomas.fmtDay(last.day, { day: "numeric", month: "short" }) + (last.row._pending ? " · à envoyer" : "");
 }
 Growth.onChange(renderWeight);
 
 // Habits of the moment (this slot) and the vitamin D, checkable right here
-const NAMES = { bouche: "Exercices de bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain" };
+const NAMES = { bouche: "Bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain" };
 const MOMENT = { matin: "ce matin", midi: "ce midi", soir: "ce soir" };
 function todoLabel(k) {
   if (k !== "bain") return NAMES[k.split("-")[0]];
+  // It only shows on bath night: how long since the last one only when it's late (3 days and more, in orange)
   const d = Habits.bathAgo();
-  return `Bain<small>${d === null ? "pas noté depuis 2 semaines" : `dernier il y a ${d} jours`}</small>`;
+  return d >= 3 ? `Bain<small>${d} j</small>` : "Bain";
 }
 function renderTodo() {
   const day = Habits.today(), slot = Habits.slotNow(), { done, total } = Habits.progress();
   const left = Habits.left();
   $("todoTitle").textContent = `À faire ${MOMENT[slot]}`;
   $("todoCount").textContent = `${done}/${total} aujourd'hui ›`;
-  $("habSub").innerHTML = done >= total ? "<b>Tout est fait</b> aujourd'hui" : `<b>${done}/${total}</b> aujourd'hui`;
+  $("habSub").innerHTML = done >= total ? "<b>Fait</b>" : `<b>${done}/${total}</b>`;
   $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${k === "bain" && Habits.bathAgo() >= 3 ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
   $("allDone").hidden = !!left.length;
   $("allDone").innerHTML = `<b>Tout est fait ${MOMENT[slot]}.</b> Bravo !`;
@@ -270,22 +272,25 @@ function renderHealth() {
   const now = Date.now(), open = Sante.openProblems(), meds = Sante.meds().filter((m) => Sante.isActive(m));
   const soon = Sante.upcoming(now).filter((r) => Date.parse(r.le) < now + 2 * Sante.DAY);
   const at = (t, tz) => { const day = Sante.dayOf(t, tz), rel = Sante.relDay(day); return `${rel === "aujourd'hui" ? "" : `${rel} `}${Sante.fmtTime(t, tz)}`; };
-  const doses = meds.map((m) => [m, Sante.nextDose(m, now)]).filter(([, n]) => n).sort((a, b) => a[1].at - b[1].at).slice(0, 2)
-    .map(([m, n]) => n.kind === "possible" ? `${esc(m.nom)} possible ${n.at <= now ? "maintenant" : `dès ${at(n.at, m.fuseau)}`}`
-      : n.at <= now ? `<b class="late">${esc(m.nom)} à donner</b>` : `${esc(m.nom)} à ${at(n.at, m.fuseau)}`);
+  // The doses due go together ("Doliprane, Tiorfan à donner"), then the next one; medications by their short name
+  const next2 = meds.map((m) => [m, Sante.nextDose(m, now)]).filter(([, n]) => n).sort((a, b) => a[1].at - b[1].at);
+  const due = next2.filter(([, n]) => n.kind === "due" && n.at <= now).map(([m]) => esc(Sante.shortName(m.nom)));
+  const doses = [...(due.length ? [`<b class="late">${due.join(", ")} à donner</b>`] : []),
+    ...next2.filter(([, n]) => !(n.kind === "due" && n.at <= now)).slice(0, due.length ? 1 : 2)
+      .map(([m, n]) => `${esc(Sante.shortName(m.nom))} ${n.kind === "possible" ? (n.at <= now ? "possible" : `dès ${at(n.at, m.fuseau)}`) : `à ${at(n.at, m.fuseau)}`}`)];
   const rdv = soon.map((r) => `${Sante.rdvTitle(r)} ${at(Date.parse(r.le), r.fuseau)}`).map(esc).slice(0, 1);
   $("hRow").hidden = !open.length && !meds.length && !soon.length;
   if (!$("hRow").hidden) {
     const p = open[0];
-    $("hBig").textContent = p ? `${Sante.nameOf(p)} · jour ${Sante.dayNumber(p)}` : meds.length ? meds[0].nom : "Rendez-vous";
+    $("hBig").textContent = p ? `${Sante.nameOf(p)} · jour ${Sante.dayNumber(p)}` : meds.length ? Sante.shortName(meds[0].nom) : "Rendez-vous";
     const last = p && Sante.notesOf(p.id).at(-1);
     $("hSub").innerHTML = [...doses, ...rdv].join(" · ") || (last ? `Noté ${at(Date.parse(last.le), last.fuseau)}` : "Rien noté encore");
     $("hNote").hidden = !p;
     $("hNote").href = p ? `sante.html#noter/${p.id}` : "sante.html#noter";
   }
   const next = Sante.upcoming(now)[0];
-  $("santeSub").innerHTML = open.length ? `<b>${esc(open.map((p) => Sante.nameOf(p)).join(", "))}</b> en cours`
-    : next ? `Prochain rendez-vous : ${esc(Sante.rdvTitle(next))}, ${Sante.fmtDay(Sante.dayOf(next.le, next.fuseau), { weekday: undefined })}` : "Symptômes, rendez-vous, médicaments";
+  $("santeSub").innerHTML = open.length ? `<b>${esc(open.map((p) => Sante.nameOf(p)).join(", "))}</b>`
+    : next ? `Rendez-vous ${Sante.fmtDay(Sante.dayOf(next.le, next.fuseau), { weekday: undefined })}` : "";
 }
 const esc = (s) => String(s == null ? "" : s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 Sante.onChange(renderHealth);
@@ -296,9 +301,9 @@ const SOUND_NAMES = { blanc: "Bruit blanc", rose: "Bruit rose", brun: "Bruit bru
 function renderLocal() {
   try {
     const p = JSON.parse(localStorage.getItem("sortie-bebe-progress"));
-    if (p && p.total) $("checkSub").innerHTML = p.done >= p.total ? "<b>Prêt !</b> Tout est dans le sac" : `<b>${p.done}/${p.total}</b> dans le sac`;
+    if (p && p.total) $("checkSub").innerHTML = p.done >= p.total ? "<b>Prêt</b>" : `<b>${p.done}/${p.total}</b>`;
   } catch (e) {}
-  try { const s = JSON.parse(localStorage.getItem("thomas911-bruit")); if (s && SOUND_NAMES[s.sound]) $("noiseSub").textContent = `Dernier : ${SOUND_NAMES[s.sound]}`; } catch (e) {}
+  try { const s = JSON.parse(localStorage.getItem("thomas911-bruit")); if (s && SOUND_NAMES[s.sound]) $("noiseSub").textContent = SOUND_NAMES[s.sound]; } catch (e) {}
 }
 
 function renderAll() {

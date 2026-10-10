@@ -18,8 +18,8 @@
 <title>Boîte à bruit · THOMAS911</title>
 <style>
 /* Player */
-.player { display: flex; flex-direction: column; gap: 10px; padding: 14px; }
-.play { width: 100%; height: 64px; border-radius: 16px; border: 0; background: var(--accent); color: var(--accent-ink);
+.player { display: flex; flex-direction: column; gap: 8px; padding: 12px; }
+.play { width: 100%; height: 54px; border-radius: 14px; border: 0; background: var(--accent); color: var(--accent-ink);
   display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; -webkit-tap-highlight-color: transparent;
   font-family: var(--font-display); font-weight: 800; font-size: 1.15rem; }
 .play svg { width: 30px; height: 30px; fill: currentColor; stroke: none; }
@@ -48,7 +48,7 @@
 .snd[aria-pressed="true"] b { color: var(--accent); }
 
 /* Volume */
-.vol-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.vol-row { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
 .vol-row output { font-family: var(--font-display); font-weight: 800; font-size: 1.3rem; min-width: 4.2ch; text-align: right; font-variant-numeric: tabular-nums; }
 .vol-row output.boost { color: #d9822b; }
 input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 34px; background: transparent; margin: 0; }
@@ -62,9 +62,9 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
 .hint { font-size: 0.78rem; color: var(--muted); margin: 8px 0 0; line-height: 1.35; }
 
 /* Timer */
-.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chip { font: inherit; font-size: 0.9rem; color: var(--ink); background: var(--bg); border: 1.5px solid var(--line); border-radius: 999px;
-  padding: 7px 13px; cursor: pointer; -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums; }
+  padding: 6px 12px; cursor: pointer; -webkit-tap-highlight-color: transparent; font-variant-numeric: tabular-nums; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
 .check { display: flex; align-items: center; gap: 10px; margin-top: 14px; font-size: 0.95rem; cursor: pointer; }
 .check input { width: 22px; height: 22px; accent-color: var(--accent); margin: 0; flex: none; }
@@ -105,7 +105,7 @@ details p { margin: 8px 0 0; line-height: 1.4; }
       <output id="volOut" for="vol"></output>
     </div>
     <div class="ticks"><span>0</span><span>100 %</span><b>200 %</b></div>
-    <p class="hint">Au-delà de 100 %, le son est amplifié. Pour ses oreilles, garde le téléphone à au moins 2 m de bébé.</p>
+    <p class="hint">Au-delà de 100 %, le son est amplifié : téléphone à 2 m de bébé au moins.</p>
   </section>
 
   <section class="card">
@@ -120,7 +120,7 @@ details p { margin: 8px 0 0; line-height: 1.4; }
   <button class="dark-btn" id="darkBtn" type="button">
     <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>Écran noir
   </button>
-  <p class="hint" style="margin-top:-6px;text-align:center">Pendant la lecture, l'écran reste allumé pour que le son ne coupe pas. L'écran noir évite la lumière dans la chambre.</p>
+  <p class="hint" style="margin-top:-6px;text-align:center">L'écran reste allumé pour que le son ne coupe pas : l'écran noir évite la lumière.</p>
 
   <details>
     <summary>Pourquoi ces sons ?</summary>
