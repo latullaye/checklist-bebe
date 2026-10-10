@@ -221,3 +221,23 @@ create index sante_rdv_pro_id on sante_rdv (pro_id);
 --   drop policy "essai entete supprime" on storage.objects;
 --   delete from prive where cle = 'anthropic_api_key_a_supprimer';
 --   then delete the empty bucket "essai-entete" in Storage.
+
+-- ---------- A dose noted, told to the other phone ----------
+-- Who uses each phone (one of the parents in the family's settings, kept up to date by the app), so a dose noted on one
+-- phone is announced to the others only. Each new dose calls the "sante" function at once (pg_net, after the commit);
+-- it sends "Doliprane donné · Par … à … · prochaine à …" in place of the dose's reminder. An upsert of a row already
+-- there is an update, not an insert: no second message.
+alter table abonnements add column qui text;
+create or replace function public.prise_notee() returns trigger
+language plpgsql security definer set search_path = public, extensions as $$
+begin
+  perform net.http_post(
+    url := 'https://vvkkxphkyjejyhbcdcuw.supabase.co/functions/v1/sante',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-cron-key', (select valeur from public.prive where cle = 'cron')),
+    body := jsonb_build_object('donne', new.id),
+    timeout_milliseconds := 30000
+  );
+  return new;
+end $$;
+revoke execute on function public.prise_notee() from public, anon, authenticated;
+create trigger prise_notee after insert on sante_prises for each row execute function public.prise_notee();

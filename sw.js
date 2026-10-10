@@ -1,7 +1,7 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v40";
-importScripts("config.js"); // self.T911: where to record "C'est fait" from a reminder
+const VERSION = "thomas911-v41";
+importScripts("config.js", "pastille.js"); // self.T911: where to record "C'est fait" from a reminder; the red badge
 const FILES = [
   "./",
   "./index.html",
@@ -26,6 +26,7 @@ const FILES = [
   "./prefs.js",
   "./growth.js",
   "./notifs.js",
+  "./pastille.js",
   "./who-boys.js",
   "./common.css",
   "./weather.js",
@@ -40,6 +41,10 @@ const FILES = [
   "./notif/medicament.png",
   "./notif/rdv.png",
   "./notif/note.png",
+  "./notif/badge-medicament.png",
+  "./notif/badge-rdv.png",
+  "./notif/badge-note.png",
+  "./notif/badge-donne.png",
   "./icon-poussette.svg",
   "./icon-bruit.svg",
   "./icon-habitudes.svg",
@@ -93,28 +98,35 @@ self.addEventListener("fetch", (e) => {
 
 // ---------- Reminders ----------
 // The habits function sends { title, body, jour, slot, cles, reste } (cles: the boxes the reminder is about, reste: what's left
-// for this moment, the bath included). The health function sends { kind: "prise" | "rdv" | "note", title, body, med | rdv | probleme }.
-// Android shows the picture and the quick actions; iPhone only the text (with an emoji in front) and the tap.
-const EMOJI = { matin: "☀️", midi: "🌞", soir: "🌙", bain: "🛁", medicament: "💊", rdv: "📅", note: "📝" };
+// for this moment, the bath included). The health function sends { kind: "prise" | "donne" | "rdv" | "note", title, body,
+// med | rdv | probleme, dues } (dues: the doses due now, for the red badge; "donne": a dose the other parent just noted).
+// Android shows the picture, its own small icon in the status bar and the quick actions; iPhone only the text (with an emoji
+// in front) and the tap.
+const EMOJI = { matin: "☀️", midi: "🌞", soir: "🌙", bain: "🛁", medicament: "💊", rdv: "📅", note: "📝", donne: "✅" };
 const ua = self.navigator.userAgent || "";
 const apple = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && !/Chrome|Firefox|Edg/.test(ua));
 // The family code and who uses this phone, kept by famille.js for these actions
 const FAMILLE = "thomas911-famille";
 const famille = () => caches.open(FAMILLE).then((c) => c.match("famille.json")).then((r) => (r ? r.json() : {})).catch(() => ({}));
+// pic: the picture (and the emoji on iPhone); badge: the small white icon of the status bar (Android)
 const HEALTH = {
-  prise: (d) => ({ pic: "medicament", tag: `prise-${d.med}`, data: { kind: "prise", med: d.med, at: d.at },
+  prise: (d) => ({ pic: "medicament", badge: "medicament", tag: `prise-${d.med}`, data: { kind: "prise", med: d.med, at: d.at },
     actions: [{ action: "donne", title: "Donné" }, { action: "plus-tard", title: "Plus tard" }] }),
-  rdv: (d) => ({ pic: "rdv", tag: `rdv-${d.rdv}`, data: { kind: "rdv", rdv: d.rdv }, actions: [] }),
-  note: (d) => ({ pic: "note", tag: `note-${d.probleme}`, data: { kind: "note", probleme: d.probleme }, actions: [{ action: "noter", title: "Noter" }] })
+  // Takes the place of the dose's reminder on this phone, quietly (Android; iPhone can't be quiet)
+  donne: (d) => ({ pic: "medicament", emoji: "donne", badge: "donne", tag: `prise-${d.med}`, quiet: true, data: { kind: "donne", med: d.med }, actions: [] }),
+  rdv: (d) => ({ pic: "rdv", badge: "rdv", tag: `rdv-${d.rdv}`, data: { kind: "rdv", rdv: d.rdv }, actions: [] }),
+  note: (d) => ({ pic: "note", badge: "note", tag: `note-${d.probleme}`, data: { kind: "note", probleme: d.probleme }, actions: [{ action: "noter", title: "Noter" }] })
 };
 self.addEventListener("push", (e) => {
   let d = {};
   try { d = e.data.json(); } catch (err) {}
   if (HEALTH[d.kind]) {
     const h = HEALTH[d.kind](d), title = d.title || "THOMAS911";
-    e.waitUntil(self.registration.showNotification(apple ? `${EMOJI[h.pic]} ${title}` : title, {
-      body: d.body || "", tag: h.tag, renotify: true, icon: `notif/${h.pic}.png`, badge: "notif/badge.png", data: h.data, actions: h.actions
-    }));
+    const count = typeof d.dues === "number" ? self.Pastille.set("prises", d.dues) : null;
+    e.waitUntil(Promise.all([count, self.registration.showNotification(apple ? `${EMOJI[h.emoji || h.pic]} ${title}` : title, {
+      body: d.body || "", tag: h.tag, icon: `notif/${h.pic}.png`, badge: `notif/badge-${h.badge}.png`, data: h.data, actions: h.actions,
+      ...(h.quiet ? { silent: true } : { renotify: true })
+    })]));
     return;
   }
   const bain = /bain/.test(d.body || ""), cles = d.cles || [];
@@ -125,7 +137,7 @@ self.addEventListener("push", (e) => {
   const title = d.title || "THOMAS911";
   // The red badge on the app icon (iPhone; Android shows its own dot while the reminder is there)
   const n = d.reste ?? cles.length + (bain && !cles.includes("bain") ? 1 : 0);
-  const count = self.navigator.setAppBadge && n ? self.navigator.setAppBadge(n).catch(() => {}) : null;
+  const count = self.Pastille.set("habitudes", n);
   e.waitUntil(Promise.all([count, self.registration.showNotification(apple && pic ? `${EMOJI[pic]} ${title}` : title, {
     body: d.body || "", tag: "rappel", renotify: true,
     icon: pic ? `notif/${pic}.png` : "icon-192.png", badge: "notif/badge.png",
@@ -161,12 +173,14 @@ self.addEventListener("notificationclick", (e) => {
     if (e.action === "donne") {
       e.waitUntil(famille().then(({ qui }) => post("sante_prises", [{ id: crypto.randomUUID(), medicament: data.med, le: new Date().toISOString(),
         fuseau: Intl.DateTimeFormat().resolvedOptions().timeZone || null, par: qui || null }]))
+        .then(() => self.Pastille.set("prises", (n) => n - 1))
         .catch(() => openPage(`sante.html#donne/${data.med}`)));
       return;
     }
     e.waitUntil(openPage(`sante.html#m/${data.med}`));
     return;
   }
+  if (data.kind === "donne") { e.waitUntil(openPage(`sante.html#m/${data.med}`)); return; }
   if (data.kind === "rdv") { e.waitUntil(openPage(`sante.html#r/${data.rdv}`)); return; }
   if (data.kind === "note") { e.waitUntil(openPage(`sante.html#noter/${data.probleme}`)); return; }
   if (e.action === "fait" && jour && slot) {

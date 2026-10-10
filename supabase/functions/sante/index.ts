@@ -2,12 +2,14 @@
 // - Medications: a reminder when a dose is due (every N hours, or at set times), again 30 min later if it's still not given.
 // - Appointments: the day before at 19:00 (phone's time) and one hour before.
 // - While a problem lasts: at 20:00 (phone's time), if nothing was noted that day, a nudge to note how Thomas is.
+// - A dose noted (the trigger on sante_prises calls with {"donne": id}): the other parent's phone hears of it at once, in
+//   place of its reminder, so nobody gives it twice. Each dose message also says how many doses are due (the red badge).
 // - Every hour: reads the Family calendar (its secret iCal address is in prive), keeps the health-looking events in "agenda"
 //   for the phones to sort ("for Thomas" or "ignore"), and moves the appointments taken from it when the event moves.
 // Body {"agenda": true} reads the calendar now; {"dry": true} sends nothing and says what it would send ({"now": ISO} to try a time).
 import webpush from "npm:web-push@3.6.7";
 import postgres from "npm:postgres@3.4.5";
-import { H, DEFAULT_TZ, partsIn, addDays, fmtTime, nextDue, parseICS, isHealth, guessTz, type Med, type Dose } from "./logic.ts";
+import { H, DEFAULT_TZ, partsIn, addDays, fmtTime, nextDue, nextPossible, parseICS, isHealth, guessTz, type Med, type Dose } from "./logic.ts";
 
 const sql = postgres(Deno.env.get("SUPABASE_DB_URL")!, { prepare: false });
 const SITE = "https://latullaye.github.io/checklist-bebe/";
@@ -47,17 +49,25 @@ async function syncAgenda() {
 }
 
 // ---------- What to send ----------
+// (dates and times as ISO text, as on the phones)
+const MED = () => sql`id, nom, dose, mode, toutes_h, heures, max_jour, to_json(debut) #>> '{}' as debut, fin::text as fin, to_json(arrete) #>> '{}' as arrete, fuseau`;
+const dosesOf = (id: string) => sql`select medicament, to_json(le) #>> '{}' as le from sante_prises where medicament = ${id} order by le` as unknown as Promise<Dose[]>;
+// The medications with reminders and when their next dose is due (the phones count the same ones for the red badge)
+async function nextDoses(now: number) {
+  const meds = await sql`select ${MED()} from sante_medicaments
+    where rappels and mode <> 'besoin' and arrete is null and (fin is null or fin >= current_date - 1)` as unknown as Med[];
+  const out: [Med, number][] = [];
+  for (const m of meds) { const at = nextDue(m, await dosesOf(m.id), now); if (at != null) out.push([m, at]); }
+  return out;
+}
+const duesOf = (list: [Med, number][], now: number) => list.filter(([, at]) => at <= now).length;
+
 async function messages(now: number, zones: string[]) {
   const out: [string, Msg][] = []; // [key that marks it sent, message]
   // Medications: due now (or 30 min ago and still not given)
-  // (dates and times as ISO text, as on the phones)
-  const meds = await sql`select id, nom, dose, mode, toutes_h, heures, to_json(debut) #>> '{}' as debut, fin::text as fin, to_json(arrete) #>> '{}' as arrete, fuseau from sante_medicaments
-    where rappels and mode <> 'besoin' and arrete is null and (fin is null or fin >= current_date - 1)` as unknown as Med[];
-  for (const m of meds) {
-    const doses = await sql`select medicament, to_json(le) #>> '{}' as le from sante_prises where medicament = ${m.id} order by le` as unknown as Dose[];
-    const at = nextDue(m, doses, now);
-    if (at == null) continue;
-    const when = fmtTime(at, m.fuseau || DEFAULT_TZ), base = { kind: "prise", med: m.id, at: new Date(at).toISOString() };
+  const next = await nextDoses(now), dues = duesOf(next, now);
+  for (const [m, at] of next) {
+    const when = fmtTime(at, m.fuseau || DEFAULT_TZ), base = { kind: "prise", med: m.id, at: new Date(at).toISOString(), dues };
     if (inWindow(now, at)) out.push([`prise|${m.id}|${at}`, { ...base, title: m.nom, body: `${m.dose ? `${m.dose} · ` : ""}prise de ${when}` }]);
     else if (inWindow(now, at + 30 * 6e4)) out.push([`prise2|${m.id}|${at}`, { ...base, title: m.nom, body: `Prise de ${when} pas encore notée${m.dose ? ` (${m.dose})` : ""}` }]);
   }
@@ -90,31 +100,33 @@ async function messages(now: number, zones: string[]) {
   return out;
 }
 
-Deno.serve(async (req) => {
-  const token = await setting("cron");
-  if (!token || req.headers.get("x-cron-key") !== token) return json({ erreur: "non autorisé" }, 401);
-  const body = await req.json().catch(() => ({}));
-  const now = body.dry && body.now ? Date.parse(body.now) : Date.now();
-  const report: Record<string, unknown> = {};
+// A dose just noted: "Doliprane donné · Par Camille à 3 h 12 (2,5 mL) · prochaine à 7 h 12". null when noted long after the fact.
+async function given(id: string, now: number): Promise<[string, Msg] | null> {
+  const [d] = await sql`select id, medicament, to_json(le) #>> '{}' as le, fuseau, dose, par from sante_prises where id = ${id}`;
+  if (!d || Math.abs(now - Date.parse(d.le)) > 3 * H) return null;
+  const [m] = await sql`select ${MED()} from sante_medicaments where id = ${d.medicament}` as unknown as Med[];
+  if (!m) return null;
+  const tz = m.fuseau || DEFAULT_TZ, doses = await dosesOf(m.id);
+  const tomorrow = (t: number) => (partsIn(t, tz).day === partsIn(now, tz).day ? "" : "demain ");
+  let next = "";
+  if (m.mode === "besoin") { const at = nextPossible(m, doses, now); if (at > now + 6e4) next = `pas avant ${tomorrow(at)}${fmtTime(at, tz)}`; }
+  else { const at = nextDue(m, doses, now); next = at == null ? "c'était la dernière prise" : `prochaine ${tomorrow(at)}à ${fmtTime(at, tz)}`; }
+  const dose = d.dose || m.dose, by = `${d.par ? `Par ${d.par} à` : "À"} ${fmtTime(Date.parse(d.le), d.fuseau || tz)}${dose ? ` (${dose})` : ""}`;
+  return [`donne|${d.id}`, { kind: "donne", med: m.id, par: d.par, title: `${m.nom} donné`, body: [by, next].filter(Boolean).join(" · "),
+    dues: duesOf(await nextDoses(now), now) }];
+}
 
-  // The calendar, once an hour (or when asked)
-  if (body.agenda || new Date(now).getUTCMinutes() < 5) {
-    try { Object.assign(report, await syncAgenda()); } catch (e) { report.agenda = `erreur ${(e as Error).message}`.slice(0, 200); }
-  }
-  const subs = await sql`select endpoint, abonnement, tz from abonnements`;
-  const zones = [...new Set(subs.map((s) => s.tz || DEFAULT_TZ))];
-  const todo = await messages(now, zones);
-  if (body.dry) return json({ ...report, aEnvoyer: todo.map(([k, m]) => ({ cle: k, ...m })) });
-
+// Each message once (its key is kept for two weeks), to the phones it is for: those in its time zone when it has one, and
+// not the phone of the parent who noted the dose
+async function send(todo: [string, Msg][], subs: Record<string, any>[]) {
   const { pub, priv } = { pub: await setting("vapid_public"), priv: await setting("vapid_private") };
-  if (!pub || !priv) return json({ ...report, erreur: "clés VAPID manquantes" });
+  if (!pub || !priv) return { erreur: "clés VAPID manquantes" };
   webpush.setVapidDetails(SITE, pub, priv);
   const sent: string[] = [], errors: string[] = [];
   for (const [key, msg] of todo) {
-    // Each reminder once: the key is kept for two weeks
     const fresh = await sql`insert into rappels_envoyes (cle) values (${key}) on conflict do nothing returning cle`;
     if (!fresh.length) continue;
-    const to = subs.filter((s) => !msg.tz || (s.tz || DEFAULT_TZ) === msg.tz);
+    const to = subs.filter((s) => (!msg.tz || (s.tz || DEFAULT_TZ) === msg.tz) && !(msg.par && s.qui && s.qui === msg.par));
     for (const s of to) {
       try { await webpush.sendNotification(s.abonnement, JSON.stringify(msg), { TTL: 2 * 3600, urgency: "high" }); }
       catch (e) {
@@ -125,6 +137,33 @@ Deno.serve(async (req) => {
     }
     sent.push(key);
   }
+  return { envoyes: sent, erreurs: errors };
+}
+
+Deno.serve(async (req) => {
+  const token = await setting("cron");
+  if (!token || req.headers.get("x-cron-key") !== token) return json({ erreur: "non autorisé" }, 401);
+  const body = await req.json().catch(() => ({}));
+  const now = body.dry && body.now ? Date.parse(body.now) : Date.now();
+  const report: Record<string, unknown> = {};
+  const subs = await sql`select endpoint, abonnement, tz, qui from abonnements`;
+
+  // A dose just noted: only that, right away
+  if (body.donne) {
+    const g = await given(String(body.donne), now);
+    if (!g || body.dry) return json({ donne: g && { cle: g[0], ...g[1] }, pour: g && subs.filter((s) => !(g[1].par && s.qui === g[1].par)).length });
+    return json(await send([g], subs));
+  }
+
+  // The calendar, once an hour (or when asked)
+  if (body.agenda || new Date(now).getUTCMinutes() < 5) {
+    try { Object.assign(report, await syncAgenda()); } catch (e) { report.agenda = `erreur ${(e as Error).message}`.slice(0, 200); }
+  }
+  const zones = [...new Set(subs.map((s) => s.tz || DEFAULT_TZ))];
+  const todo = await messages(now, zones);
+  if (body.dry) return json({ ...report, aEnvoyer: todo.map(([k, m]) => ({ cle: k, ...m })) });
+
+  const result = await send(todo, subs);
   if (new Date(now).getUTCMinutes() < 5) await sql`delete from rappels_envoyes where le < now() - interval '14 days'`;
-  return json({ ...report, envoyes: sent, erreurs: errors });
+  return json({ ...report, ...result });
 });

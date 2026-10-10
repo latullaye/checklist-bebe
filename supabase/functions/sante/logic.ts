@@ -24,7 +24,7 @@ export const addDays = (day: string, n: number) => { const d = new Date(day + "T
 export const fmtTime = (t: number, tz: string) => { const { time } = partsIn(t, tz); const [h, m] = time.split(":"); return `${Number(h)} h${m === "00" ? "" : ` ${m}`}`; };
 
 // ---------- Medications (same rules as sante.js on the phones) ----------
-export type Med = { id: string; nom: string; dose: string | null; mode: string; toutes_h: number | null; heures: string[] | null; debut: string; fin: string | null; arrete: string | null; fuseau: string | null };
+export type Med = { id: string; nom: string; dose: string | null; mode: string; toutes_h: number | null; heures: string[] | null; debut: string; fin: string | null; arrete: string | null; fuseau: string | null; max_jour?: number | null };
 export type Dose = { medicament: string; le: string };
 function slots(m: Med, from: number, to: number) {
   const tz = m.fuseau || DEFAULT_TZ, out: number[] = [];
@@ -49,6 +49,14 @@ export function nextDue(m: Med, doses: Dose[], now: number): number | null {
     }
   }
   return at != null && at < end ? at : null;
+}
+// When needed: when a dose is possible again (the gap since the last one, and no more than max_jour in 24 h)
+export function nextPossible(m: Med, doses: Dose[], now: number): number {
+  const ds = doses.map((d) => Date.parse(d.le)).sort((a, b) => a - b), last = ds.length ? ds[ds.length - 1] : null;
+  let at = last != null ? last + Number(m.toutes_h || 0) * H : now;
+  const in24 = ds.filter((t) => t > now - 24 * H);
+  if (m.max_jour && in24.length >= m.max_jour) at = Math.max(at, in24[in24.length - m.max_jour] + 24 * H);
+  return at;
 }
 
 // ---------- Family calendar (iCal) ----------

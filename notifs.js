@@ -12,8 +12,10 @@
     const reg = await navigator.serviceWorker.ready;
     const sub = (await reg.pushManager.getSubscription())
       || await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(T911.VAPID_PUBLIC) });
+    // Who uses this phone: a dose noted here is announced to the other phone only
+    const qui = (window.Famille && Famille.qui()) || undefined;
     await Habits.api("abonnements", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify([{ endpoint: sub.endpoint, abonnement: sub.toJSON(), tz: Habits.tz() }]) });
+      body: JSON.stringify([{ endpoint: sub.endpoint, abonnement: sub.toJSON(), tz: Habits.tz(), qui }]) });
   }
   async function unsubscribe() {
     const reg = await navigator.serviceWorker.ready;

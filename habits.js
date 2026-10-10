@@ -109,11 +109,15 @@
   const todo = (slot = slotNow()) => [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : [])];
   const left = () => todo().filter((k) => !get(today(), k));
 
-  // The app icon follows what's left. iPhone: the red badge with the number (the reminder sets it, every tick updates it).
-  // Android has no number for web apps: its dot stays while the reminder is in the tray, so the reminder goes once it's all done.
+  // The app icon follows what's left. iPhone: the red badge with the number (the reminder sets it, every tick updates it;
+  // the doses due are added by pastille.js). Android has no number for web apps: its dot stays while the reminder is in the
+  // tray, so the reminder goes once it's all done.
   function badge() {
     const n = left().length;
-    try { if (navigator.setAppBadge) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {}); } catch (e) {}
+    try {
+      if (window.Pastille) Pastille.set("habitudes", n);
+      else if (navigator.setAppBadge) (n ? navigator.setAppBadge(n) : navigator.clearAppBadge()).catch(() => {});
+    } catch (e) {}
     if (!("serviceWorker" in navigator)) return;
     navigator.serviceWorker.getRegistration()
       .then((reg) => reg && reg.getNotifications && reg.getNotifications({ tag: "rappel" }))
@@ -128,18 +132,20 @@
   // The phone's time zone: reminders come at 9:00, 12:30 and 17:30 wherever it is (at home or travelling).
   const tz = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) { return ""; } };
   const TZ_SENT = "thomas911-fuseau";
-  // After a trip, tell the server this phone's new zone (only when it changed and the phone gets reminders).
+  // After a trip, tell the server this phone's new zone, and who uses it (so a dose noted here is announced to the other
+  // phone only). Only when one of them changed and the phone gets reminders.
   function syncTz() {
-    const zone = tz();
+    const zone = tz(), qui = (window.Famille && Famille.qui()) || "";
     if (!shared || !zone || !("serviceWorker" in navigator)) return;
     let sent = null;
     try { sent = localStorage.getItem(TZ_SENT); } catch (e) {}
-    if (sent === zone) return;
+    const mark = qui ? `${zone}|${qui}` : zone;
+    if (sent === mark) return;
     navigator.serviceWorker.ready
       .then((reg) => reg.pushManager && reg.pushManager.getSubscription())
       .then((sub) => sub && api(`abonnements?endpoint=eq.${encodeURIComponent(sub.endpoint)}`,
-        { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify({ tz: zone }) })
-        .then(() => { try { localStorage.setItem(TZ_SENT, zone); } catch (e) {} }))
+        { method: "PATCH", headers: { Prefer: "return=minimal" }, body: JSON.stringify(qui ? { tz: zone, qui } : { tz: zone }) })
+        .then(() => { try { localStorage.setItem(TZ_SENT, mark); } catch (e) {} }))
       .catch(() => {});
   }
 
