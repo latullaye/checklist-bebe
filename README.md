@@ -2,7 +2,7 @@
 
 Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 
-- **Accueil** (`index.html`) : la météo en une ligne (avec les alertes pluie / neige / vent), une carte « Thomas aujourd'hui » (âge et prochaine fête, dernier poids et gain par jour, habitudes du moment à cocher, bouton + Pesée), puis les écrans en grille : *Sortir*, *Au quotidien*, *Suivi*.
+- **Accueil** (`index.html`) : la météo en une ligne (avec les alertes pluie / neige / vent), une carte « Thomas aujourd'hui » (âge et prochaine fête, dernier poids et gain par jour, habitudes du moment à cocher, bouton + Pesée), puis les écrans en listes compactes (une ligne par écran, icône à gauche) : *Sortir*, *Au quotidien*, *Suivi*.
 - **Météo** (`meteo.html`) : pluie par 15 min sur 4 h (si de la pluie arrive), heure par heure, 10 jours.
 - **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.

@@ -115,19 +115,20 @@
 .alldone { color: var(--muted); font-size: 0.88rem; margin-top: 6px; }
 .alldone b { color: var(--accent); }
 
-/* Screens: a two-column grid, by kind of moment */
+/* Screens, by kind of moment: one card per moment, one row per screen (its icon on the left, what it says on the right),
+   rows parted by a thin line that starts after the icons */
 .group { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin: 4px 2px -6px; }
-.grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.tile { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; color: inherit; text-decoration: none; padding: 13px 13px 12px; min-height: 108px; }
-.tile .ico { width: 40px; height: 40px; flex: none; }
+.list { padding: 0; overflow: hidden; }
+.tile { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; padding: 9px 12px; position: relative; transition: background .15s; }
+.tile + .tile::before { content: ""; position: absolute; top: 0; left: 60px; right: 0; border-top: 1px solid var(--line); }
+.tile .ico { width: 36px; height: 36px; flex: none; }
+.tile > span { flex: 1; min-width: 0; }
+.tile .go { width: 20px; height: 20px; color: var(--muted); flex: none; }
 .tile strong { display: block; font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; line-height: 1.15; }
 .tile .sub { display: block; color: var(--muted); font-size: 0.8rem; line-height: 1.3; margin-top: 2px; font-variant-numeric: tabular-nums; }
 .tile .sub b { color: var(--accent); }
-.tile:active, .now a.row:active { transform: scale(0.985); }
-/* Health: a wide tile that says what's going on */
-.tile.wide { grid-column: 1 / -1; flex-direction: row; align-items: center; gap: 12px; min-height: 0; }
-.tile.wide > span { flex: 1; min-width: 0; }
-.tile.wide .go { width: 20px; height: 20px; color: var(--muted); flex: none; }
+.now a.row:active { transform: scale(0.985); }
+.tile:active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .now .sub b.late { color: #b36b12; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .now .sub b.late { color: #f0b860; } }
 </style>
@@ -183,20 +184,20 @@
   </section>
 
   <div class="group">Sortir</div>
-  <div class="grid">
-    <a class="card tile" href="checklist.html"><img class="ico" src="icon-poussette.svg" alt=""><span><strong>Checklist</strong><span class="sub" id="checkSub">Avant de partir</span></span></a>
-    <a class="card tile" href="habiller.html"><img class="ico" src="icon-habiller.svg" alt=""><span><strong>Habiller</strong><span class="sub">Dedans, dodo, dehors</span></span></a>
+  <div class="card list">
+    <a class="tile" href="checklist.html"><img class="ico" src="icon-poussette.svg" alt=""><span><strong>Checklist</strong><span class="sub" id="checkSub">Avant de partir</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="habiller.html"><img class="ico" src="icon-habiller.svg" alt=""><span><strong>Habiller</strong><span class="sub">Dedans, dodo, dehors</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
   <div class="group">Au quotidien</div>
-  <div class="grid">
-    <a class="card tile" href="habitudes.html"><img class="ico" src="icon-habitudes.svg" alt=""><span><strong>Habitudes</strong><span class="sub" id="habSub">Bouche, rééducation, bain</span></span></a>
-    <a class="card tile" href="bruit.html"><img class="ico" src="icon-bruit.svg" alt=""><span><strong>Boîte à bruit</strong><span class="sub" id="noiseSub">Bruit blanc, chut-chut…</span></span></a>
+  <div class="card list">
+    <a class="tile" href="habitudes.html"><img class="ico" src="icon-habitudes.svg" alt=""><span><strong>Habitudes</strong><span class="sub" id="habSub">Bouche, rééducation, bain</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="bruit.html"><img class="ico" src="icon-bruit.svg" alt=""><span><strong>Boîte à bruit</strong><span class="sub" id="noiseSub">Bruit blanc, chut-chut…</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
   <div class="group">Suivi</div>
-  <div class="grid">
-    <a class="card tile wide" href="sante.html"><img class="ico" src="icon-sante.svg" alt=""><span><strong>Santé</strong><span class="sub" id="santeSub">Symptômes, rendez-vous, médicaments</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
-    <a class="card tile" href="croissance.html"><img class="ico" src="icon-croissance.svg" alt=""><span><strong>Croissance</strong><span class="sub">Courbes, lait par jour</span></span></a>
-    <a class="card tile" href="age.html"><img class="ico" src="icon-age.svg" alt=""><span><strong>Âge</strong><span class="sub">Toutes les fêtes à venir</span></span></a>
+  <div class="card list">
+    <a class="tile" href="sante.html"><img class="ico" src="icon-sante.svg" alt=""><span><strong>Santé</strong><span class="sub" id="santeSub">Symptômes, rendez-vous, médicaments</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="croissance.html"><img class="ico" src="icon-croissance.svg" alt=""><span><strong>Croissance</strong><span class="sub">Courbes, lait par jour</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
+    <a class="tile" href="age.html"><img class="ico" src="icon-age.svg" alt=""><span><strong>Âge</strong><span class="sub">Toutes les fêtes à venir</span></span><svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>
   </div>
 </div>
 
