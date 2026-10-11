@@ -180,6 +180,8 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 .chip { font: inherit; font-size: 0.84rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 7px 11px; cursor: pointer; }
 .chip[aria-pressed="true"], .chip[aria-checked="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .chip.ghost { color: var(--accent); border-style: dashed; }
+/* Picked, a dashed chip ("+ Nouveau problème") reads like the others: dark text on the accent */
+.chip.ghost[aria-pressed="true"], .chip.ghost[aria-checked="true"] { color: var(--accent-ink); border-style: solid; }
 .seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 4px; padding: 4px; border-radius: 12px; background: var(--group); }
 .seg button { font: inherit; font-weight: 700; font-size: 0.86rem; color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 9px 4px; cursor: pointer; }
 .seg button[aria-checked="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
@@ -475,6 +477,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <script src="thomas.js"></script>
 <script src="sante.js"></script>
 <script src="markdown.js"></script>
+<script src="scan.js"></script>
 <script src="photos.js"></script>
 <script src="assistant.js"></script>
 <script>
@@ -1185,7 +1188,7 @@ $("rCarnet").addEventListener("change", () => {
   pickPro(v ? S.byId("pros", v) : null);
 });
 $("rRecent").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; buzz(); pickPro(b.dataset.v === rdvPro ? null : S.byId("pros", b.dataset.v)); });
-const rdvPhotos = Photos.field($("rPhotos"));
+const rdvPhotos = Photos.field($("rPhotos"), { scan: true }); // a prescription, a report: the document scanner
 $("rdvDlg").addEventListener("close", () => { Assistant.stopDictation(); if (!rdvSaved) rdvPhotos.cancel(); });
 const rdvTell = tellBox("r", {
   sorte: "rdv", label: "Mettre en forme", hasInput: () => rdvPhotos.get().length > 0,
