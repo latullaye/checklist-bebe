@@ -1,7 +1,8 @@
 // Photos of the health notes and appointments (a rash, a stool, the prescription...). Taken or picked on the phone, made
 // lighter (1600 px, JPEG), kept on the phone (Cache Storage) and sent to the private bucket "sante-photos", which only
 // opens with the family code (famille.js adds it). Offline, they wait on the phone and leave with the network, like the notes.
-//   Photos.field(el)            the photos of a sheet: thumbnails, "+ Photo", ×; .set(names) .get() .save() .cancel()
+//   Photos.field(el, { scan })  the photos of a sheet: thumbnails, ×, and "Photo" (the camera), "Galerie", "Document"
+//                               (scan: the document scanner of scan.js); .set(names) .get() .save() .cancel()
 //   Photos.hydrate(root)        fills every <img data-photo="name"> inside root
 //   Photos.show(names, i)       full screen, with "previous", "next" and "share"
 //   Photos.remove(names)        a note or an appointment is deleted: its photos go too
@@ -131,6 +132,7 @@
 .ph-add { font: inherit; font-size: 0.74rem; font-weight: 700; color: var(--accent); border: 1.5px dashed color-mix(in srgb, var(--accent) 55%, var(--line)); background: var(--bg);
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; cursor: pointer; }
 .ph-add svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ph-add.ph-alt { width: 62px; color: var(--muted); border-color: var(--line); }
 .ph-add[aria-busy="true"] { opacity: .6; }
 .ph-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .ph-row .ph-mini { width: 60px; height: 60px; border-radius: 10px; }
@@ -147,38 +149,58 @@
 .ph-view .ph-nav[hidden] { display: none; }`;
   document.head.appendChild(css);
   const CAMERA = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>`;
+  const GALLERY = `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>`;
+  const DOC = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 3h7l5 5v13H7z M14 3v5h5 M10 13h6 M10 17h6"/><path d="M3 7V3h4 M3 17v4h4"/></svg>`;
 
   // ---------- The photos of a sheet ----------
   // Picked photos stay on this phone until the sheet is saved; "Annuler" forgets them.
-  function field(el, { onChange } = {}) {
+  // "Photo" opens the camera, "Galerie" the pictures already on the phone, "Document" the camera then the scanner.
+  function field(el, { onChange, scan } = {}) {
     let start = [], list = [], busy = 0;
     el.classList.add("ph-field");
-    const input = document.createElement("input");
-    input.type = "file"; input.accept = "image/*"; input.multiple = true; input.hidden = true;
+    const picker = (camera, multiple) => {
+      const i = document.createElement("input");
+      i.type = "file"; i.accept = "image/*"; i.multiple = multiple; i.hidden = true;
+      if (camera) i.setAttribute("capture", "environment");
+      return i;
+    };
+    const cam = picker(true, false), gallery = picker(false, true), doc = picker(true, false);
+    const useScan = scan && window.Scan;
     function render() {
+      const room = list.length + busy < PER_SHEET;
       el.innerHTML = list.map((n, i) => `<span class="ph-thumb"><img data-photo="${esc(n)}" alt="Photo ${i + 1}" data-i="${i}"><button type="button" data-rm="${i}" aria-label="Enlever cette photo">×</button></span>`).join("")
-        + (list.length + busy < PER_SHEET ? `<button type="button" class="ph-add"${busy ? ' aria-busy="true"' : ""}>${CAMERA}${busy ? "…" : "Photo"}</button>` : "");
-      el.appendChild(input);
+        + (busy ? `<button type="button" class="ph-add" aria-busy="true" disabled>${CAMERA}…</button>` : "")
+        + (room && !busy ? (useScan ? `<button type="button" class="ph-add" data-src="doc">${DOC}Document</button>` : "")
+          + `<button type="button" class="ph-add${useScan ? " ph-alt" : ""}" data-src="cam">${CAMERA}Photo</button>`
+          + `<button type="button" class="ph-add ph-alt" data-src="gallery">${GALLERY}Galerie</button>` : "");
+      el.append(cam, gallery, doc);
       hydrate(el);
     }
     el.addEventListener("click", (e) => {
-      const rm = e.target.closest("[data-rm]"), add = e.target.closest(".ph-add"), img = e.target.closest("img[data-i]");
+      const rm = e.target.closest("[data-rm]"), add = e.target.closest(".ph-add[data-src]"), img = e.target.closest("img[data-i]");
       if (rm) { window.buzz && buzz(); list.splice(Number(rm.dataset.rm), 1); render(); onChange && onChange(); }
-      else if (add) { window.buzz && buzz(); input.click(); }
+      else if (add) { window.buzz && buzz(); ({ cam, gallery, doc })[add.dataset.src].click(); }
       else if (img) show(list, Number(img.dataset.i));
     });
-    input.addEventListener("change", async () => {
-      const files = [...input.files].slice(0, PER_SHEET - list.length); input.value = "";
-      busy = files.length; render();
-      for (const f of files) {
-        try {
-          const blob = await shrink(f), name = `${uuid()}.jpg`;
-          await keep(name, blob);
-          list.push(name);
-        } catch (e) { alert("Cette photo n'a pas pu être lue."); }
-        busy--; render();
-      }
+    // Each picture: made lighter (a scan is already the right size), kept on this phone, added to the sheet
+    async function add(make) {
+      busy++; render();
+      try {
+        const blob = await make();
+        if (blob) { const name = `${uuid()}.jpg`; await keep(name, blob); list.push(name); }
+      } catch (e) { alert("Cette photo n'a pas pu être lue."); }
+      busy--; render();
       onChange && onChange();
+    }
+    const fromInput = (i) => async () => {
+      const files = [...i.files].slice(0, PER_SHEET - list.length); i.value = "";
+      for (const f of files) await add(() => shrink(f));
+    };
+    cam.addEventListener("change", fromInput(cam));
+    gallery.addEventListener("change", fromInput(gallery));
+    doc.addEventListener("change", () => {
+      const f = doc.files[0]; doc.value = "";
+      if (f && list.length < PER_SHEET) add(() => window.Scan.edit(f, { retake: () => doc.click() }));
     });
     render();
     return {
