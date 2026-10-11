@@ -1,5 +1,5 @@
 // Date and time fields you can type in. Each <input type="date|time"> gets a text field beside it that opens the phone's
-// number pad: "11102026" shows as 11/10/2026, "1845" as 18 h 45 (the separators come by themselves, "9" is 09). The small
+// number pad: "20261011" shows as 2026-10-11, "1845" as 18 h 45 (the separators come by themselves, "9" is 09). The small
 // calendar or clock on the right still opens the phone's own picker. The original field stays the one the pages read and
 // set (ISO value, its "input" and "change" events, min and max, hidden): this only adds a way to fill it.
 (function () {
@@ -10,11 +10,11 @@
   };
   // [parts, their lengths, the highest first digit of each part (a higher one is padded: "4" -> "04"), separator]
   const KINDS = {
-    date: { lens: [2, 2, 4], first: ["3", "1", null], sep: "/", hint: "jj/mm/aaaa" },
+    date: { lens: [4, 2, 2], first: [null, "1", "3"], sep: "-", hint: "aaaa-mm-jj" },
     time: { lens: [2, 2], first: ["2", "5"], sep: " h ", hint: "hh h mm" }
   };
 
-  // Digits -> "11/10/2026" or "18 h 45" (with the next separator once a part is full, unless the user is deleting)
+  // Digits -> "2026-10-11" or "18 h 45" (with the next separator once a part is full, unless the user is deleting)
   function format(kind, digits, deleting) {
     const { lens, first, sep } = KINDS[kind], parts = [""];
     for (const ch of digits) {
@@ -31,12 +31,11 @@
     let d = text.replace(/\D/g, "");
     if (!d) return "";
     if (kind === "date") {
-      if (finish && d.length === 4) d += String(new Date().getFullYear()); // "11/10": this year
       if (d.length !== 8) return null;
-      const day = +d.slice(0, 2), m = +d.slice(2, 4), y = +d.slice(4);
+      const y = +d.slice(0, 4), m = +d.slice(4, 6), day = +d.slice(6);
       const t = new Date(Date.UTC(y, m - 1, day));
       if (y < 1900 || t.getUTCMonth() !== m - 1 || t.getUTCDate() !== day) return null;
-      return `${d.slice(4)}-${d.slice(2, 4)}-${d.slice(0, 2)}`;
+      return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6)}`;
     }
     if (finish && d.length === 2) d += "00"; // "18": 18 h
     if (finish && d.length === 3) d = d.slice(0, 2) + "0" + d[2];
@@ -45,7 +44,7 @@
   }
   const show = (kind, iso) => {
     if (!iso) return "";
-    if (kind === "date") { const [y, m, d] = iso.split("-"); return `${d}/${m}/${y}`; }
+    if (kind === "date") return iso;
     return iso.slice(0, 5).replace(":", " h ");
   };
 
@@ -111,7 +110,7 @@
       flag(msg);
       if (iso !== null && !msg) commit(iso);
     });
-    // Leaving the field: finish it ("11/10" this year, "18" 18 h 00); a wrong one stays shown in red and stops the form
+    // Leaving the field: finish it ("18" is 18 h 00); a wrong one stays shown in red and stops the form
     txt.finish = () => {
       const iso = parse(kind, txt.value, true);
       const msg = iso === null ? `${what} incomplète ou impossible (${KINDS[kind].hint})` : outOfRange(iso);
