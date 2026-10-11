@@ -1,6 +1,6 @@
 // Keeps a copy of the app on the phone so it opens without network.
 // Change VERSION whenever a file changes, so phones pick up the new copy.
-const VERSION = "thomas911-v43";
+const VERSION = "thomas911-v44";
 importScripts("config.js", "pastille.js"); // self.T911: where to record "C'est fait" from a reminder; the red badge
 const FILES = [
   "./",
@@ -20,6 +20,7 @@ const FILES = [
   "./markdown.js",
   "./photos.js",
   "./scan.js",
+  "./dates.js",
   "./assistant.js",
   "./habits.js",
   "./thomas.js",

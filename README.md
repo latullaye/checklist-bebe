@@ -52,5 +52,6 @@ La checklist, les habitudes, la température intérieure, les mesures de croissa
 - `app.js` : hors ligne et mises à jour (service worker `sw.js`), flèche retour, retour haptique (`data-buzz`).
 - `sync.js` : pastille « À jour / Hors ligne / en attente » en haut des écrans partagés.
 - `famille.js` : code de la famille et prénom du téléphone, ajoutés à chaque appel à la base.
+- `dates.js` : les dates et les heures se tapent au pavé numérique (« 11102026 » donne 11/10/2026, « 1845 » donne 18 h 45 : les séparateurs viennent seuls ; « 11/10 » complète avec l'année, « 18 » avec 00) ; une date impossible ou hors limites reste en rouge et bloque l'enregistrement. L'icône à droite ouvre toujours le calendrier ou l'horloge du téléphone.
 - `prefs.js` : réglages partagés (table `reglages`) ; `habits.js` + `notifs.js` : habitudes et rappels ; `growth.js` : mesures, percentiles OMS et file d'attente hors ligne ; `sante.js` : problèmes, notes, rendez-vous, carnet des pros, médicaments et prises (avec leur file d'attente hors ligne), prochaines prises et résumé pour le médecin ; `photos.js` : photos des notes et rendez-vous (allègement, copie sur le téléphone, envoi, plein écran) ; `assistant.js` : dictée et appel à l'assistant.
 - `splash/` : écrans de lancement iPhone (pris en compte quand l'app est ajoutée à l'écran d'accueil).

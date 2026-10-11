@@ -480,6 +480,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <script src="scan.js"></script>
 <script src="photos.js"></script>
 <script src="assistant.js"></script>
+<script src="dates.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const S = Sante;
@@ -1346,7 +1347,7 @@ function setLen(v) { len = v; pressGroup($("mLen"), v); $("mDays").hidden = v !=
 function renderTimes(list) {
   $("mTimes").innerHTML = list.map((t) => `<div><div class="field" style="flex:1"><input type="time" value="${t}"></div><button type="button" aria-label="Enlever cette heure">×</button></div>`).join("");
 }
-const readTimes = () => [...$("mTimes").querySelectorAll("input")].map((i) => i.value).filter((v) => /^\d\d:\d\d/.test(v)).map((v) => v.slice(0, 5)).sort();
+const readTimes = () => [...$("mTimes").querySelectorAll('input[type="time"]')].map((i) => i.value).filter((v) => /^\d\d:\d\d/.test(v)).map((v) => v.slice(0, 5)).sort();
 $("mMode").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { buzz(); setMode(b.dataset.m); } });
 $("mMode").querySelectorAll("button").forEach((b) => { b.dataset.v = b.dataset.m; });
 $("mLen").querySelectorAll("button").forEach((b) => { b.dataset.v = b.dataset.l; });
