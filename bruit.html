@@ -13,8 +13,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <!-- Added to the home screen from this page (iPhone: Safari › Partager › Sur l'écran d'accueil), it becomes its own
-     « Bruit blanc » icon that opens here and starts the sound (iPhone has no long-press shortcuts for web apps) -->
-<meta name="apple-mobile-web-app-title" content="Bruit blanc">
+     « Bruit NOW!! » icon that opens here and starts the white noise (iPhone has no long-press shortcuts for web apps) -->
+<meta name="apple-mobile-web-app-title" content="Bruit NOW!!">
 <link rel="manifest" href="manifest-bruit.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="raccourcis/bruit-apple.png">
@@ -455,10 +455,12 @@ if ("mediaSession" in navigator) {
 renderVol();
 render();
 
-// Opened from the « Bruit blanc » shortcut or icon (bruit.html?play=1): the sound starts at once.
+// Opened from « Bruit blanc NOW!! » (bruit.html?play=blanc, or ?play=1 for the last sound): it plays at once.
 // Where the phone wants a touch first (iPhone, or a browser tab), the sound waits and one touch anywhere starts it.
-if (new URLSearchParams(location.search).has("play")) {
+const launch = new URLSearchParams(location.search).get("play");
+if (launch !== null) {
   history.replaceState(null, "", location.pathname); // a reload does not start it again
+  if (SOUNDS.some((x) => x.id === launch)) { settings.sound = launch; saveSettings(); }
   play();
   const waiting = () => playing && ctx && ctx.state !== "running";
   ctx.addEventListener("statechange", () => { if (!waiting()) $("go").hidden = true; });

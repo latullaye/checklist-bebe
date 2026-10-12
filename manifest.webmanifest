@@ -31,10 +31,10 @@
   ],
   "shortcuts": [
     {
-      "name": "Bruit blanc maintenant",
-      "short_name": "Bruit blanc",
-      "description": "Lance le bruit tout de suite",
-      "url": "./bruit.html?play=1",
+      "name": "Bruit blanc NOW!!",
+      "short_name": "Bruit NOW!!",
+      "description": "Le bruit blanc démarre tout de suite",
+      "url": "./bruit.html?play=blanc",
       "icons": [
         {
           "src": "raccourcis/bruit.png",

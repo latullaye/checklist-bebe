@@ -1,10 +1,10 @@
 {
   "id": "./bruit.html",
-  "name": "Bruit blanc · THOMAS911",
-  "short_name": "Bruit blanc",
+  "name": "Bruit blanc NOW!! · THOMAS911",
+  "short_name": "Bruit NOW!!",
   "description": "Le bruit blanc de Thomas, lancé dès l'ouverture",
   "lang": "fr",
-  "start_url": "./bruit.html?play=1",
+  "start_url": "./bruit.html?play=blanc",
   "scope": "./bruit.html",
   "display": "standalone",
   "orientation": "portrait",
