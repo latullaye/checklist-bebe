@@ -67,6 +67,14 @@
   </section>
 
   <section class="card">
+    <div class="label">Checklist sortie</div>
+    <div class="set">
+      <span class="txt"><b>Pictogrammes</b><span class="hint">Une grande image par élément, pour cocher d'un coup d'œil. Réglé pour ce téléphone.</span></span>
+      <label class="switch"><input type="checkbox" id="pictos" aria-label="Checklist sortie avec pictogrammes" data-buzz><span></span></label>
+    </div>
+  </section>
+
+  <section class="card">
     <div class="label">Habiller Thomas</div>
     <div class="set">
       <span class="txt"><b>Température de la pièce</b></span>
@@ -138,6 +146,11 @@ const HOME = (window.Famille && Famille.info().ville) || "l'Est";
 const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const zone = Habits.tz();
 $("tz").textContent = zone ? `Heure de ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}) ; en voyage, les rappels suivent.` : "";
+
+// ---------- Exit checklist: pictures or text, on this phone (pictures unless turned off) ----------
+const PICTOS = "thomas911-checklist-pictos";
+try { $("pictos").checked = localStorage.getItem(PICTOS) !== "0"; } catch (e) { $("pictos").checked = true; }
+$("pictos").addEventListener("change", (e) => { try { localStorage.setItem(PICTOS, e.target.checked ? "1" : "0"); } catch (err) {} });
 
 // ---------- Room temperature ----------
 const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
