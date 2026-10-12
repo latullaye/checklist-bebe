@@ -10,8 +10,78 @@
   "background_color": "#EEF3F1",
   "theme_color": "#1F6F78",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Bruit blanc NOW!!",
+      "short_name": "Bruit NOW!!",
+      "description": "Le bruit blanc démarre tout de suite",
+      "url": "./bruit.html?play=blanc",
+      "icons": [
+        {
+          "src": "raccourcis/bruit.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ]
+    },
+    {
+      "name": "Checklist sortie",
+      "short_name": "Checklist",
+      "url": "./checklist.html",
+      "icons": [
+        {
+          "src": "raccourcis/checklist.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ]
+    },
+    {
+      "name": "Habitudes",
+      "short_name": "Habitudes",
+      "url": "./habitudes.html",
+      "icons": [
+        {
+          "src": "raccourcis/habitudes.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ]
+    },
+    {
+      "name": "Météo",
+      "short_name": "Météo",
+      "url": "./meteo.html",
+      "icons": [
+        {
+          "src": "raccourcis/meteo.png",
+          "sizes": "192x192",
+          "type": "image/png",
+          "purpose": "any"
+        }
+      ]
+    }
   ]
 }

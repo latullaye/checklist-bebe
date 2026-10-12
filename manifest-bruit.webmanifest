@@ -1,0 +1,33 @@
+{
+  "id": "./bruit.html",
+  "name": "Bruit blanc NOW!! · THOMAS911",
+  "short_name": "Bruit NOW!!",
+  "description": "Le bruit blanc de Thomas, lancé dès l'ouverture",
+  "lang": "fr",
+  "start_url": "./bruit.html?play=blanc",
+  "scope": "./bruit.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EEF3F1",
+  "theme_color": "#1F6F78",
+  "icons": [
+    {
+      "src": "raccourcis/bruit.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "raccourcis/bruit-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "raccourcis/bruit-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
