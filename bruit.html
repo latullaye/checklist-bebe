@@ -11,9 +11,13 @@
 <meta name="theme-color" content="#EEF3F1" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111A19" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
-<link rel="manifest" href="manifest.webmanifest">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<!-- Added to the home screen from this page (iPhone: Safari › Partager › Sur l'écran d'accueil), it becomes its own
+     « Bruit blanc » icon that opens here and starts the sound (iPhone has no long-press shortcuts for web apps) -->
+<meta name="apple-mobile-web-app-title" content="Bruit blanc">
+<link rel="manifest" href="manifest-bruit.webmanifest">
 <link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="apple-touch-icon" href="raccourcis/bruit-apple.png">
 <link rel="stylesheet" href="common.css">
 <script src="theme.js"></script>
 <title>Boîte à bruit · THOMAS911</title>
@@ -76,6 +80,16 @@ input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius
   padding: 12px; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; }
 .night { position: fixed; inset: 0; background: #000; z-index: 10; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 40px; }
 .night p { color: #333; font-size: 0.85rem; margin: 0; }
+/* Opened from « Bruit blanc » where the phone wants a touch before any sound (iPhone): one touch anywhere */
+.go { position: fixed; inset: 0; z-index: 20; border: 0; margin: 0; width: 100%; font: inherit; color: var(--ink); cursor: pointer;
+  background: color-mix(in srgb, var(--bg) 94%, transparent); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  -webkit-tap-highlight-color: transparent; }
+.go[hidden] { display: none; }
+.go .disc { width: 136px; height: 136px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: flex; align-items: center; justify-content: center;
+  animation: glow 2.8s ease-in-out infinite; }
+.go .disc svg { width: 64px; height: 64px; fill: currentColor; margin-left: 8px; }
+.go b { font-family: var(--font-display); font-size: 1.3rem; }
+.go span { color: var(--muted); font-size: 0.9rem; }
 details { font-size: 0.82rem; color: var(--muted); }
 details summary { cursor: pointer; font-weight: 700; color: var(--accent); }
 details p { margin: 8px 0 0; line-height: 1.4; }
@@ -131,6 +145,7 @@ details p { margin: 8px 0 0; line-height: 1.4; }
   </details>
 </div>
 <div class="night" id="night" hidden><p>Touche l'écran pour revenir</p></div>
+<button class="go" id="go" type="button" hidden><span class="disc" id="goIcon"></span><b>Touche pour lancer</b><span id="goName"></span></button>
 
 <script>
 // ---------- Sounds: generated in the browser, looped seamlessly ----------
@@ -439,6 +454,22 @@ if ("mediaSession" in navigator) {
 }
 renderVol();
 render();
+
+// Opened from the « Bruit blanc » shortcut or icon (bruit.html?play=1): the sound starts at once.
+// Where the phone wants a touch first (iPhone, or a browser tab), the sound waits and one touch anywhere starts it.
+if (new URLSearchParams(location.search).has("play")) {
+  history.replaceState(null, "", location.pathname); // a reload does not start it again
+  play();
+  const waiting = () => playing && ctx && ctx.state !== "running";
+  ctx.addEventListener("statechange", () => { if (!waiting()) $("go").hidden = true; });
+  setTimeout(() => {
+    if (!waiting()) return;
+    $("goIcon").innerHTML = PLAY;
+    $("goName").textContent = (SOUNDS.find((x) => x.id === settings.sound) || SOUNDS[0]).name;
+    $("go").hidden = false;
+  }, 300);
+}
+$("go").addEventListener("click", () => { if (ctx) ctx.resume(); keepAwake(true); $("go").hidden = true; });
 </script>
 <script src="app.js"></script>
 </body>
