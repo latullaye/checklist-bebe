@@ -4,7 +4,7 @@ Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 
 - **Accueil** (`index.html`) : la météo en une ligne (avec les alertes pluie / neige / vent), une carte « Thomas aujourd'hui » (âge et prochaine fête, dernier poids et gain par jour, habitudes du moment à cocher, bouton + Pesée), puis les écrans en listes compactes, une ligne par écran avec l'essentiel à droite (sac 0/18, habitudes 2/7, dernier bruit, problème en cours) : *Sortir*, *Au quotidien*, *Suivi*. Les médicaments y sont appelés par leur nom court (la marque entre parenthèses, sinon le nom avant le dosage).
 - **Météo** (`meteo.html`) : pluie par 15 min sur 4 h (si de la pluie arrive), heure par heure, 10 jours.
-- **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette.
+- **Checklist sortie** (`checklist.html`) : tout ce qu'il faut avant de partir en poussette. Par défaut, en tuiles à pictogrammes pour cocher d'un coup d'œil (`pictos.js`, dans le style de *Habiller Thomas*) : grandes tuiles pour l'essentiel, petites en pointillés pour le facultatif, une couleur par rubrique ; ce qui est coché se range dans « Vérifié » et les tuiles restantes remontent. Réglages permet de revenir à la liste en texte, téléphone par téléphone.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.
 - **Bonnes habitudes** (`habitudes.html`) : petites routines quotidiennes à cocher (matin, midi, soir ou une fois par jour), avec rappels.
 - **Habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
