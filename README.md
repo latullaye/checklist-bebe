@@ -8,7 +8,7 @@ Petite application web (PWA) familiale pour les sorties et les nuits de bébé.
 - **Boîte à bruit** (`bruit.html`) : bruit blanc, rose, brun, chut-chut, cœur, sèche-cheveux… avec minuteur et decrescendo.
 - **Bonnes habitudes** (`habitudes.html`) : petites routines quotidiennes à cocher (matin, midi, soir ou une fois par jour), avec rappels.
 - **Habiller Thomas** (`habiller.html`) : tenue conseillée selon la température, à l'intérieur (éveil et dodo, avec gigoteuse adaptée) et à l'extérieur (d'après la météo).
-- **Réglages** (`reglages.html`) : notifications du téléphone, température de la pièce, cible de lait, état du partage, version de l'app.
+- **Réglages** (`reglages.html`) : notifications du téléphone, affichage (thème clair, sombre ou comme le téléphone, appliqué dès l'ouverture de chaque écran par `theme.js` ; checklist en pictogrammes ou en texte, les deux réglés téléphone par téléphone), température de la pièce, cible de lait, état du partage, version de l'app.
 - **Santé** (`sante.html`) : le suivi des problèmes de santé, des rendez-vous et des médicaments, reliés entre eux.
   - *Problèmes* : on commence par noter ce qu'on voit (symptômes à cocher, nombre de selles ou de vomissements, température, couches mouillées, ce qu'on observe, ce qu'on fait) et depuis quand. Le problème se crée tout seul (« Diarrhée ») et prend son diagnostic au rendez-vous (« Gastro-entérite »). Jour par jour, et un résumé prêt à lire ou à envoyer au médecin.
   - *Rendez-vous* : passés ou à venir, avec le compte rendu, le diagnostic et la suite ; ceux de l'agenda Google « Family » qui ressemblent à de la santé sont proposés (« Pour Thomas » ou « Ignorer ») et suivent l'agenda s'ils sont déplacés ; un rendez-vous noté dans l'app s'ajoute à l'agenda en un geste.

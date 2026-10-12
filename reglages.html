@@ -15,6 +15,7 @@
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="stylesheet" href="common.css">
+<script src="theme.js"></script>
 <title>Réglages · THOMAS911</title>
 <style>
 .set { display: flex; align-items: center; gap: 12px; }
@@ -45,6 +46,7 @@
 .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .chip { font: inherit; font-size: 0.85rem; font-weight: 700; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 6px 11px; cursor: pointer; }
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.chip svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 5px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .foot { text-align: center; font-size: 0.75rem; color: var(--muted); }
 </style>
 </head>
@@ -67,11 +69,17 @@
   </section>
 
   <section class="card">
-    <div class="label">Checklist sortie</div>
+    <div class="label">Affichage</div>
+    <div class="block">
+      <b>Thème</b>
+      <div class="chips" id="theme" role="radiogroup" aria-label="Thème"></div>
+      <span class="hint">« Système » suit le réglage du téléphone.</span>
+    </div>
     <div class="set">
-      <span class="txt"><b>Pictogrammes</b><span class="hint">Une grande image par élément, pour cocher d'un coup d'œil. Réglé pour ce téléphone.</span></span>
+      <span class="txt"><b>Checklist en pictogrammes</b><span class="hint">Une grande image par élément, pour cocher d'un coup d'œil.</span></span>
       <label class="switch"><input type="checkbox" id="pictos" aria-label="Checklist sortie avec pictogrammes" data-buzz><span></span></label>
     </div>
+    <p class="msg">Ces deux réglages ne valent que pour ce téléphone.</p>
   </section>
 
   <section class="card">
@@ -146,6 +154,19 @@ const HOME = (window.Famille && Famille.info().ville) || "l'Est";
 const CITY = { "America/Toronto": HOME, "America/Montreal": HOME, "Europe/Paris": "France" };
 const zone = Habits.tz();
 $("tz").textContent = zone ? `Heure de ${CITY[zone] || zone.split("/").pop().replace(/_/g, " ")} (${zone}) ; en voyage, les rappels suivent.` : "";
+
+// ---------- Theme: like the phone, light or dark (theme.js, on this phone) ----------
+const THEMES = [
+  ["system", "Système", '<path d="M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18Z M12 3v18"/><path d="M12 3a9 9 0 0 1 0 18Z" fill="currentColor"/>'],
+  ["light", "Clair", '<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2 M12 19.5v2 M2.5 12h2 M19.5 12h2 M5.3 5.3l1.4 1.4 M17.3 17.3l1.4 1.4 M5.3 18.7l1.4-1.4 M17.3 6.7l1.4-1.4"/>'],
+  ["dark", "Sombre", '<path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5Z"/>']
+];
+function renderTheme() {
+  const t = Theme.get();
+  $("theme").innerHTML = THEMES.map(([v, l, d]) => `<button type="button" class="chip" role="radio" data-buzz data-t="${v}" aria-pressed="${v === t}" aria-checked="${v === t}"><svg viewBox="0 0 24 24" aria-hidden="true">${d}</svg>${l}</button>`).join("");
+}
+$("theme").addEventListener("click", (e) => { const b = e.target.closest(".chip"); if (b) { Theme.set(b.dataset.t); renderTheme(); } });
+renderTheme();
 
 // ---------- Exit checklist: pictures or text, on this phone (pictures unless turned off) ----------
 const PICTOS = "thomas911-checklist-pictos";

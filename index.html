@@ -38,6 +38,7 @@
 <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: light)" href="splash/splash-375x667@2-light.png">
 <link rel="apple-touch-startup-image" media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2) and (orientation: portrait) and (prefers-color-scheme: dark)" href="splash/splash-375x667@2-dark.png">
 <link rel="stylesheet" href="common.css">
+<script src="theme.js"></script>
 <title>THOMAS911</title>
 <style>
 .brand { display: flex; align-items: center; gap: 12px; padding-top: 4px; }
@@ -131,6 +132,7 @@
 .tile:active { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .now .sub b.late { color: #b36b12; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .now .sub b.late { color: #f0b860; } }
+:root[data-theme="dark"] .now .sub b.late { color: #f0b860; }
 </style>
 </head>
 <body>
