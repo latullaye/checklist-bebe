@@ -1,4 +1,5 @@
 // The MCP server (Streamable HTTP, stateless): checks the family code, then answers with the tools of outils.ts.
+// Wrong codes are counted with the phones' (interne.famille_essai): after too many, it answers 429 for a while.
 // The code comes in the address (?cle=<code>: claude.ai only sends approved header names) or in a header,
 // "x-famille: <code>" or "Authorization: Bearer <code>"; typed like on the phones (spaces, capitals and accents don't
 // matter). Also in the address: ?qui=<first name> (who writes: one of the parents in the family's settings), ?tz=Europe/Paris
@@ -8,7 +9,8 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { DEFAULT_TZ } from "../sante/logic.ts";
 import { register, instructions, type Db, type Famille } from "./outils.ts";
 
-export type Deps = { db: Db; familleSha256: () => Promise<string | null>; famille: () => Promise<Famille | null>; now?: () => number };
+export type Essai = { ok: boolean; bloque?: boolean; attente?: number };
+export type Deps = { db: Db; essai: (codes: string[], ip: string | null) => Promise<Essai>; famille: () => Promise<Famille | null>; now?: () => number };
 const CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, content-type, x-famille, mcp-protocol-version, mcp-session-id, last-event-id",
@@ -18,8 +20,6 @@ const CORS = {
 // The same as famille.js: "Galet Renard ciel-tisane 42" -> "galet-renard-ciel-tisane-42"
 export const normalize = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
   .replace(/[\s_.,;:/]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
-const sha256 = async (s: string) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))]
-  .map((b) => b.toString(16).padStart(2, "0")).join("");
 const zone = (tz: string | null) => { if (!tz) return null; try { new Intl.DateTimeFormat("en", { timeZone: tz }); return tz; } catch { return null; } };
 
 export async function handle(req: Request, deps: Deps): Promise<Response> {
@@ -29,10 +29,14 @@ export async function handle(req: Request, deps: Deps): Promise<Response> {
   const url = new URL(req.url);
   const codes = [url.searchParams.get("cle"), req.headers.get("x-famille"), (req.headers.get("authorization") || "").replace(/^Bearer\s+/i, "")]
     .map((c) => normalize(c || "")).filter(Boolean);
-  const expected = codes.length ? await deps.familleSha256() : null;
-  if (!expected || !(await Promise.all(codes.map(sha256))).includes(expected)) {
-    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message: "Code de la famille manquant ou faux (?cle= dans l'adresse, ou en-tête x-famille)." }, id: null }),
-      { status: 401, headers: { ...CORS, "Content-Type": "application/json" } });
+  // One try per request, whatever the number of places the code came from (claude.ai may add a token of its own)
+  const ip = (req.headers.get("cf-connecting-ip") || (req.headers.get("x-forwarded-for") || "").split(",")[0]).trim() || null;
+  const r: Essai = codes.length ? await deps.essai(codes, ip) : { ok: false };
+  if (!r.ok) {
+    const wait = Math.max(1, Math.ceil((r.attente || 60) / 60));
+    const message = r.bloque ? `Trop de codes faux : réessaie dans ${wait} min.` : "Code de la famille manquant ou faux (?cle= dans l'adresse, ou en-tête x-famille).";
+    return new Response(JSON.stringify({ jsonrpc: "2.0", error: { code: -32001, message }, id: null }),
+      { status: r.bloque ? 429 : 401, headers: { ...CORS, "Content-Type": "application/json", ...(r.bloque ? { "Retry-After": String(r.attente || 60) } : {}) } });
   }
   const fam = (await deps.famille()) || {}, people = Array.isArray(fam.parents) ? fam.parents : [];
   const qui = people.find((p) => p.toLowerCase() === (url.searchParams.get("qui") || "").toLowerCase()) || null;

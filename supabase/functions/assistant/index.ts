@@ -1,7 +1,7 @@
 // THOMAS911 assistant: what the parents tell in a few sentences (dictated or typed) becomes the fields of a health note,
 // or the report of an appointment (with the prescription read from its photo). Claude writes; nothing is saved here:
 // the phone fills its sheet and the parents check it before saving.
-// Called by the phones with the family code (header x-famille). The Anthropic key is the function's secret ANTHROPIC_API_KEY,
+// Called by the phones with their token (header x-famille, given for the family code: see famille.js). The Anthropic key is the function's secret ANTHROPIC_API_KEY,
 // or else the row "anthropic_api_key" of the table prive (server only, like the notification keys). The family's first names
 // and date of birth come from its settings (table reglages, key "famille"), not from this public code.
 // Body: { sorte: "note" | "rdv", texte, ...context } (see prompt.ts); with "dry": true it returns the request without sending it.
@@ -20,12 +20,11 @@ const MESSAGES: Record<string, string> = {
   long: "Le récit est trop long pour une seule fois : coupe-le en deux."
 };
 
-const sha256 = async (s: string) => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s)))]
-  .map((b) => b.toString(16).padStart(2, "0")).join("");
-async function familyOk(code: string) {
-  if (!code) return false;
-  const [row] = await sql`select valeur from prive where cle = 'famille_sha256'`;
-  return !!row && (await sha256(code)) === row.valeur;
+// What the phone sends in x-famille (its token, see famille.js) is checked like the tables do
+async function familyOk(entete: string) {
+  if (!entete) return false;
+  const [row] = await sql`select interne.famille_entete_ok(${entete}) as ok`;
+  return !!row?.ok;
 }
 async function log(entry: { par?: string; sorte: string; modele?: string; entree?: number; sortie?: number; ms: number; refus?: boolean }) {
   try {
