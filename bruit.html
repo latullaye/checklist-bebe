@@ -311,12 +311,20 @@ let playing = false, remaining = null, endAt = 0, uiTimer = null, lock = null;
 const $ = (id) => document.getElementById(id);
 
 function fadeValue(r) { return settings.fade && r < FADE ? Math.pow(Math.max(r, 0) / FADE, 2) : 1; }
-// Schedule the fade in the audio clock, so it still happens if the page is throttled.
+// Drop what is scheduled but keep the value where it is now (cancelScheduledValues alone puts back the value from before
+// a curve in progress: a jump)
+function hold(p, t) {
+  if (p.cancelAndHoldAtTime) { p.cancelAndHoldAtTime(t); return; }
+  const v = p.value; p.cancelScheduledValues(t); p.setValueAtTime(v, t);
+}
+// Schedule the fade in the audio clock, so it still happens if the page is throttled. Only while playing: play() sets it
+// for the sound it starts, and a pause leaves it as it is while the sound fades out. Never back up to full volume at the
+// end of a decrescendo (that woke Thomas: the stop used to reset it to 100 % during the last quarter second).
 function scheduleFade() {
-  if (!ctx) return;
+  if (!ctx || !playing) return;
   const t = ctx.currentTime, g = fadeG.gain;
-  g.cancelScheduledValues(t);
-  if (!playing || !settings.timer) { g.setValueAtTime(1, t); return; }
+  hold(g, t);
+  if (!settings.timer) { g.setValueAtTime(1, t); return; }
   const r = Math.max((endAt - Date.now()) / 1000, 0);
   g.setValueAtTime(fadeValue(r), t);
   if (settings.fade) {
@@ -353,9 +361,10 @@ function play() {
 function pause(finished) {
   if (!playing) return;
   playing = false;
+  // The timer is over: the decrescendo brought it to silence, and it stays silent while the sound stops
+  if (finished && ctx) { hold(fadeG.gain, ctx.currentTime); fadeG.gain.setValueAtTime(0, ctx.currentTime); }
   stopSource();
   remaining = finished || !settings.timer ? null : Math.max(endAt - Date.now(), 0);
-  scheduleFade();
   keepAwake(false);
   clearInterval(uiTimer);
   render();
