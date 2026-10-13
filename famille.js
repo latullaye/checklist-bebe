@@ -1,6 +1,8 @@
 // Family code: the shared data (habits, measures, health...) only opens with it. Typed once on each phone,
-// then who uses the phone. Every call to the database carries it (header x-famille);
-// without it, the calls fail like when offline, so each screen keeps its copy and what waits to be sent.
+// then who uses the phone. The base checks it and gives back a token for this phone (rpc connexion, which counts the
+// wrong codes: after too many, it waits); every call to the database then carries that token (header x-famille), not
+// the code, which is not kept on the phone. Without it, the calls fail like when offline, so each screen keeps its copy
+// and what waits to be sent. A phone that still holds the code (earlier versions) swaps it for a token by itself.
 // Load it right after config.js, before sync.js.
 // The parents' first names are not in this public code: they come with the shared settings (table reglages, key
 // "famille", behind the code), so "who uses this phone" is asked once the code is right.
@@ -8,7 +10,7 @@
 (function () {
   const cfg = self.T911 || {};
   if (!cfg.SUPABASE_URL) { window.Famille = { ok: () => true, qui: () => "", ask() {}, setQui() {}, PEOPLE: [] }; return; }
-  const KEY = "thomas911-famille", WHO = "thomas911-qui", CHECKED = "thomas911-famille-verifie";
+  const KEY = "thomas911-famille", TOKEN = "thomas911-jeton", WHO = "thomas911-qui", CHECKED = "thomas911-famille-verifie";
   const VALS = "thomas911-reglages"; // prefs.js's copy of the settings
   const info = () => { try { return (JSON.parse(localStorage.getItem(VALS)) || {}).famille || {}; } catch (e) { return {}; } };
   const people = () => (Array.isArray(info().parents) ? info().parents.filter((p) => typeof p === "string" && p) : []);
@@ -18,12 +20,14 @@
   const normalize = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()
     .replace(/[\s_.,;:/]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
 
-  const code = () => get(KEY);
+  const code = () => get(KEY);    // the code itself: only until it has been swapped for a token
+  const jeton = () => get(TOKEN);
+  const cred = () => jeton() || code(); // what x-famille carries
   const qui = () => get(WHO);
   // The service worker can't read localStorage: it finds the code and the name here (for "C'est fait" / "Donné")
   function share() {
     if (!("caches" in self)) return;
-    caches.open("thomas911-famille").then((c) => c.put("famille.json", new Response(JSON.stringify({ code: code(), qui: qui() }),
+    caches.open("thomas911-famille").then((c) => c.put("famille.json", new Response(JSON.stringify({ code: cred(), qui: qui() }),
       { headers: { "Content-Type": "application/json" } }))).catch(() => {});
   }
 
@@ -33,13 +37,19 @@
   window.fetch = function (input, init) {
     const url = typeof input === "string" ? input : input && input.url;
     if (!url || !url.startsWith(`${cfg.SUPABASE_URL}/`)) return realFetch(input, init);
-    if (!code()) return Promise.reject(new TypeError("Code de la famille manquant"));
+    if (!cred()) return Promise.reject(new TypeError("Code de la famille manquant"));
     const headers = new Headers((init && init.headers) || (typeof input !== "string" && input.headers) || {});
-    headers.set("x-famille", code());
+    headers.set("x-famille", cred());
     return realFetch(input, { ...(init || {}), headers });
   };
+  // Does this token (or code) still open the data?
   const check = (c) => realFetch(`${rest}rpc/famille_ok`, { method: "POST",
     headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", "x-famille": c }, body: "{}" }).then((r) => r.json());
+  // The typed code → {ok, jeton} or {ok: false, bloque, attente}; {absent} while the base does not know connexion yet
+  const connect = (c, who) => realFetch(`${rest}rpc/connexion`, { method: "POST",
+    headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json" }, body: JSON.stringify({ code: c, qui: who || null }) })
+    .then((r) => (r.status === 404 ? { absent: true } : r.json()));
+  const wait = (s) => { const m = Math.ceil((s || 60) / 60); return m >= 60 ? "1 h" : `${m} min`; };
   // The family's settings (first names, date of birth...), kept with prefs.js's copy
   const loadInfo = (c) => realFetch(`${rest}reglages?select=valeur&cle=eq.famille`, { headers: { apikey: cfg.SUPABASE_KEY, "x-famille": c } })
     .then((r) => (r.ok ? r.json() : [])).then((rows) => {
@@ -81,7 +91,7 @@
       <div class="acts"><button type="button" id="famLater">Plus tard</button><button type="submit" class="go" id="famGo">Valider</button></div>
     </form>`;
     document.body.appendChild(dlg);
-    let who = qui(), verified = ""; // verified: the code already checked in this sheet
+    let who = qui(), verified = "", token = ""; // the code already checked in this sheet, and the token it gave
     const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
     const pick = (p) => { who = p; dlg.querySelectorAll(".who button").forEach((b) => b.setAttribute("aria-checked", b.dataset.p === p)); };
     const showWho = () => {
@@ -100,14 +110,23 @@
       let good = verified === c ? true : undefined;
       if (good === undefined) {
         err.textContent = "Vérification…";
-        try { good = await check(c); } catch (x) { good = null; } // offline: kept, checked later
+        token = "";
+        try {
+          const r = await connect(c, who);
+          if (r.absent) good = await check(c); // the base does not hand out tokens yet: the code itself, as before
+          else if (r.ok) { good = true; token = r.jeton; }
+          else if (r.bloque) { err.textContent = `Trop de codes faux tapés : réessaie dans ${wait(r.attente)}.`; return; }
+          else good = false;
+        } catch (x) { good = null; } // offline: kept, checked later
         if (good === false) { err.textContent = "Ce n'est pas le bon code. Vérifie l'orthographe (les tirets peuvent être des espaces)."; return; }
-        if (good) { verified = c; await loadInfo(c); showWho(); }
+        if (good) { verified = c; await loadInfo(token || c); showWho(); }
         // The right code: then who uses this phone (the first names came with it)
         if (good && people().length > 1 && !people().includes(who)) { err.textContent = "Code bon ! Choisis qui utilise ce téléphone."; return; }
       }
       if (good && people().length > 1 && !people().includes(who)) { err.textContent = "Choisis qui utilise ce téléphone."; return; }
-      put(KEY, c); put(WHO, people().includes(who) ? who : ""); put(CHECKED, good ? new Date().toISOString().slice(0, 10) : "");
+      // The token if there is one (the code is then not kept); else the code, swapped for a token later
+      put(TOKEN, token); put(KEY, token ? "" : c);
+      put(WHO, people().includes(who) ? who : ""); put(CHECKED, good ? new Date().toISOString().slice(0, 10) : "");
       share();
       dlg.close();
       location.reload(); // every screen reloads its data with the code
@@ -116,25 +135,33 @@
   }
   function ask() {
     const d = sheet();
-    d.querySelector("#famCode").value = code();
+    d.querySelector("#famCode").value = code(); // empty once the phone has its token
     d.querySelector("#famErr").textContent = "";
     d.showWho();
     if (!d.open) d.showModal();
   }
 
-  // Once a day, make sure the code still opens the data (it may have been changed)
+  // A phone that still holds the code: swap it for a token (then the code is no longer kept)
+  function swap() {
+    connect(code(), qui()).then((r) => {
+      if (r.ok && r.jeton) { put(TOKEN, r.jeton); put(KEY, ""); put(CHECKED, new Date().toISOString().slice(0, 10)); share(); return; }
+      if (r.ok === false && !r.bloque) { put(KEY, ""); share(); ask(); } // the family code was changed
+      // blocked for a while, or a base without tokens yet: the code keeps working, try again next time
+    }).catch(() => {});
+  }
+  // Once a day, make sure the token still opens the data (a new family code closes the old tokens)
   function verify() {
-    if (!code() || get(CHECKED) === new Date().toISOString().slice(0, 10)) return;
-    check(code()).then((good) => {
+    if (get(CHECKED) === new Date().toISOString().slice(0, 10)) return;
+    check(jeton()).then((good) => {
       if (good) { put(CHECKED, new Date().toISOString().slice(0, 10)); return; }
-      put(KEY, ""); share(); ask();
+      put(TOKEN, ""); share(); ask();
     }).catch(() => {});
   }
   function start() {
-    if (!code()) ask(); else { share(); verify(); }
+    if (!cred()) ask(); else { share(); if (jeton()) verify(); else swap(); }
   }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", start); else start();
 
-  window.Famille = { ok: () => !!code(), qui, ask, normalize, info, get PEOPLE() { return people(); },
+  window.Famille = { ok: () => !!cred(), qui, ask, normalize, info, get PEOPLE() { return people(); },
     setQui(p) { put(WHO, people().includes(p) ? p : ""); share(); } };
 })();

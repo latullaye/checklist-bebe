@@ -241,3 +241,98 @@ begin
 end $$;
 revoke execute on function public.prise_notee() from public, anon, authenticated;
 create trigger prise_notee after insert on sante_prises for each row execute function public.prise_notee();
+
+-- ---------- Limit on wrong family codes ----------
+-- A wrong code can only be tried where it is counted: the code is typed once on a phone, which gets back a token
+-- (32 random bytes, unguessable), and every call then carries that token in x-famille instead of the code itself.
+-- Wrong codes: at most 5 in 15 minutes from one address, 20 in an hour in all; then the door stays shut until they age out.
+-- The phones already in use keep working (their token is not a code), and the MCP connector (?cle=) counts the same way.
+-- Changing the family code (new famille_sha256 in prive) closes every token made with the old one.
+-- The checks live in a schema of their own, which the API does not publish and the app cannot use: no way to call
+-- them directly to try codes for free.
+create schema if not exists interne;
+
+create table if not exists public.sessions (
+  jeton_sha256 text primary key,      -- only the token's fingerprint: the token itself stays on the phone
+  code_sha256 text not null,          -- the code's fingerprint when it was made: a new code closes it
+  qui text,
+  cree timestamptz not null default now()
+);
+create table if not exists public.tentatives (
+  id bigint generated always as identity primary key,
+  le timestamptz not null default now(),
+  ip text,
+  ou text                             -- 'app' or 'mcp'
+);
+create index if not exists tentatives_le on public.tentatives (le);
+alter table public.sessions enable row level security;   -- no policy: unreadable and unwritable from the app
+alter table public.tentatives enable row level security;
+
+-- One try with one or more candidate codes (the MCP may get the code from the address, a header and a foreign token):
+-- {ok}, or {ok: false, bloque, attente: seconds}. A wrong try is recorded; a blocked one is not even checked.
+create or replace function interne.famille_essai(codes text[], ip text, ou text) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as $$
+declare
+  ref text := (select valeur from prive where cle = 'famille_sha256');
+  par_ip int; en_tout int; fin timestamptz;
+begin
+  select count(*) filter (where t.ip is not distinct from famille_essai.ip and t.le > now() - interval '15 minutes'), count(*)
+    into par_ip, en_tout from tentatives t where t.le > now() - interval '1 hour';
+  if par_ip >= 5 or en_tout >= 20 then
+    select greatest(
+      case when par_ip >= 5 then (select le + interval '15 minutes' from tentatives t where t.ip is not distinct from famille_essai.ip
+        and t.le > now() - interval '15 minutes' order by le desc offset 4 limit 1) end,
+      case when en_tout >= 20 then (select le + interval '1 hour' from tentatives t where t.le > now() - interval '1 hour'
+        order by le desc offset 19 limit 1) end) into fin;
+    return jsonb_build_object('ok', false, 'bloque', true, 'attente', greatest(ceil(extract(epoch from fin - now())), 1));
+  end if;
+  if ref is not null and exists (select 1 from unnest(codes) c where c <> '' and encode(digest(c, 'sha256'), 'hex') = ref) then
+    return jsonb_build_object('ok', true);
+  end if;
+  insert into tentatives (ip, ou) values (famille_essai.ip, famille_essai.ou);
+  return jsonb_build_object('ok', false, 'bloque', false);
+end $$;
+
+-- The phones: the typed code → a token (or why not)
+create or replace function public.connexion(code text, qui text default null) returns jsonb
+language plpgsql volatile security definer set search_path = public, extensions as $$
+declare
+  h json := coalesce(current_setting('request.headers', true), '{}')::json;
+  ip text := nullif(trim(coalesce(h ->> 'cf-connecting-ip', split_part(h ->> 'x-forwarded-for', ',', 1), h ->> 'x-real-ip', '')), '');
+  r jsonb := interne.famille_essai(array[coalesce(code, '')], ip, 'app');
+  jeton text;
+begin
+  if not (r ->> 'ok')::boolean then return r; end if;
+  jeton := encode(gen_random_bytes(32), 'hex');
+  insert into sessions (jeton_sha256, code_sha256, qui)
+    values (encode(digest(jeton, 'sha256'), 'hex'), (select valeur from prive where cle = 'famille_sha256'), left(qui, 40));
+  return jsonb_build_object('ok', true, 'jeton', jeton);
+end $$;
+grant execute on function public.connexion(text, text) to anon, authenticated;
+
+-- What x-famille carries opens the data: a token made with the current code
+-- (TRANSITION: or the code itself, the time the phones take to swap it for a token; removed afterwards)
+create or replace function interne.famille_entete_ok(entete text) returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  with e as (select encode(digest(coalesce(entete, ''), 'sha256'), 'hex') as h),
+       c as (select valeur as h from prive where cle = 'famille_sha256')
+  select coalesce(entete, '') <> '' and (
+    exists (select 1 from sessions s, e, c where s.jeton_sha256 = e.h and s.code_sha256 = c.h)
+    or exists (select 1 from e, c where e.h = c.h))  -- TRANSITION
+$$;
+
+create or replace function public.famille_ok() returns boolean
+language sql stable security definer set search_path = public, extensions as $$
+  select interne.famille_entete_ok(current_setting('request.headers', true)::json ->> 'x-famille')
+$$;
+grant execute on function public.famille_ok() to anon, authenticated;
+
+-- Then, once both phones carry a token (rows in sessions for each parent), the switch:
+-- The switch, once the phones carry a token: the family code itself no longer opens the data
+-- create or replace function interne.famille_entete_ok(entete text) returns boolean
+-- language sql stable security definer set search_path = public, extensions as $$
+--   select coalesce(entete, '') <> '' and exists (
+--     select 1 from sessions s
+--     where s.jeton_sha256 = encode(digest(entete, 'sha256'), 'hex')
+--       and s.code_sha256 = (select valeur from prive where cle = 'famille_sha256'))
+-- $$;
