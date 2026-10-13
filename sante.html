@@ -496,6 +496,7 @@ const IC = {
   note: svg('<path d="M4 20h4L19 9a2.8 2.8 0 0 0-4-4L4 16v4Z"/><path d="M13.5 6.5l4 4"/>'),
   heart: svg('<path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10Z"/>'),
   stop: svg('<path d="M5 12h14"/>'), check: svg('<path d="M5 12l5 5L20 7"/>'),
+  again: svg('<path d="M4 12a8 8 0 1 0 2.4-5.7"/><path d="M4 4v4.5h4.5"/>'),
   copy: svg('<rect x="8" y="8" width="12" height="12" rx="2.5"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>'),
   share: svg('<path d="M12 3v12M7 8l5-5 5 5M5 14v5a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-5"/>'),
   mic: svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>'),
@@ -800,7 +801,8 @@ function viewMed(m) {
     ${p || r ? `<div class="tags">${p ? `<a class="tag" href="#p/${p.id}" style="text-decoration:none">${esc(S.nameOf(p))}</a>` : ""}${r ? `<a class="tag" href="#r/${r.id}" style="text-decoration:none">Prescrit le ${S.fmtDay(S.dayOf(r.le, r.fuseau))}</a>` : ""}</div>` : ""}
     ${act ? `<p class="next${st.late ? " late" : ""}" style="margin:12px 0 0">${st.text}</p>
     <div class="btnrow"><button class="btn primary grow" type="button" data-give="${m.id}">${IC.check}Donné</button><button class="btn" type="button" data-other="${m.id}">Autre heure…</button></div>` : ""}
-    <div class="btnrow" style="margin-top:8px"><button class="btn" type="button" data-edit-m>Modifier</button>${act ? `<button class="btn" type="button" data-stop-m>Arrêter</button>` : ""}</div>
+    <div class="btnrow" style="margin-top:8px"><button class="btn" type="button" data-edit-m>Modifier</button>${act ? `<button class="btn" type="button" data-stop-m>Arrêter</button>`
+      : `<button class="btn primary grow" type="button" data-resume-m>${IC.again}Reprendre</button>`}</div>
   </section>
   <section class="card"><div class="label">Prises (${ds.length})</div>
     ${ds.length ? [...byDay].map(([day, list]) => `<div class="day"><div class="day-head"><b>${S.fmtDay(day, { weekday: "long" })}</b><span>${list.length} prise${list.length > 1 ? "s" : ""}</span></div>
@@ -890,6 +892,7 @@ function renderDetail() {
   on("[data-new-pro]", () => openPro(null));
   on("[data-edit-pro]", () => openPro(rec()));
   on("[data-rdv-pro]", () => openRdv(null, S.fromPro(rec())));
+  on("[data-resume-m]", () => openMed(rec(), {}, null, true));
   on("[data-stop-m]", () => { const m = rec(); if (confirm(`Arrêter ${m.nom} maintenant ? Les rappels s'arrêtent aussi.`)) S.save("medicaments", { ...strip(m), arrete: new Date().toISOString() }); });
   on("[data-edit-note]", (e) => { if (!e.target.closest("input, a, .ph-row")) openNote({ note: S.byId("notes", e.currentTarget.dataset.editNote) }); });
   Photos.hydrate($("detail"));
@@ -1307,25 +1310,29 @@ $("cDel").addEventListener("click", () => {
 });
 
 // A medication
-let medEdit = null, mode = "intervalle", len = "ouvert";
+let medEdit = null, medResume = false, mode = "intervalle", len = "ouvert";
 // From an appointment's report: the medications the assistant read, one sheet after the other
 let medQueue = [], medFrom = null;
 function nextMed() { const n = medQueue.shift(); if (n) setTimeout(() => openMed(null, n.preset, n.step), 300); }
 $("medDlg").addEventListener("close", () => { if (medFrom) { medFrom = null; nextMed(); } });
-function openMed(m, preset = {}, from = null) {
-  medEdit = m; medFrom = from; const base = m || preset;
-  $("mTitle").textContent = m ? "Modifier le médicament" : from ? `Médicament ${from}` : "Nouveau médicament";
-  $("mFrom").hidden = !from;
-  $("mFrom").textContent = from ? "Lu par l'assistant dans le compte rendu : vérifie le nom, la dose et le rythme avec l'ordonnance, puis le début." : "";
+// resume: a medication stopped or finished, given again from now on (same sheet, same history)
+function openMed(m, preset = {}, from = null, resume = false) {
+  medEdit = m; medFrom = from; medResume = !!(m && resume); const base = m || preset;
+  $("mTitle").textContent = medResume ? `Reprendre ${S.shortName(m.nom)}` : m ? "Modifier le médicament" : from ? `Médicament ${from}` : "Nouveau médicament";
+  $("mFrom").hidden = !from && !medResume;
+  $("mFrom").textContent = medResume ? "Il reprend maintenant : le rythme repart de là, les prises d'avant restent dans l'historique. Vérifie la dose, le rythme et la durée."
+    : from ? "Lu par l'assistant dans le compte rendu : vérifie le nom, la dose et le rythme avec l'ordonnance, puis le début." : "";
   $("mNoms").innerHTML = [...new Set(S.meds().map((x) => x.nom))].map((n) => `<option value="${esc(n)}">`).join("");
   $("mNom").value = base.nom || ""; $("mDose").value = base.dose || "";
   mode = base.mode || "intervalle"; setMode(mode);
   $("mEvery").value = base.toutes_h && mode === "intervalle" ? String(base.toutes_h).replace(".", ",") : "";
   $("mGap").value = base.toutes_h && mode === "besoin" ? String(base.toutes_h).replace(".", ",") : ""; $("mMax").value = base.max_jour || "";
   renderTimes(base.heures && base.heures.length ? base.heures : ["08:00", "20:00"]);
-  const at = m ? S.partsIn(Date.parse(m.debut), m.fuseau) : nowParts();
+  const at = m && !medResume ? S.partsIn(Date.parse(m.debut), m.fuseau) : nowParts();
   $("mDate").value = at.day; $("mTime").value = at.time;
-  len = base.fin ? "date" : base.jours ? "jours" : "ouvert"; $("mFin").value = base.fin || ""; $("mDays").value = base.jours || "";
+  // Taken up again: no end until said otherwise (the old one has passed)
+  len = medResume ? "ouvert" : base.fin ? "date" : base.jours ? "jours" : "ouvert";
+  $("mFin").value = medResume ? "" : base.fin || ""; $("mDays").value = medResume ? "" : base.jours || "";
   setLen(len);
   const probs = S.problems().filter((p) => S.isOpen(p) || p.id === base.probleme);
   $("mFor").innerHTML = probs.map((p) => `<button type="button" class="chip" role="radio" data-v="${p.id}">${esc(S.nameOf(p))}</button>`).join("") + `<button type="button" class="chip" role="radio" data-v="">Aucun</button>`;
@@ -1334,7 +1341,7 @@ function openMed(m, preset = {}, from = null) {
   $("mRdv").innerHTML = rdvs.map((r) => `<button type="button" class="chip" role="radio" data-v="${r.id}">${esc(S.rdvTitle(r))}, ${S.fmtDay(S.dayOf(r.le, r.fuseau), { weekday: undefined })}</button>`).join("") + `<button type="button" class="chip" role="radio" data-v="">Aucun</button>`;
   pressGroup($("mRdv"), base.rdv || "");
   $("mConsignes").value = base.consignes || ""; $("mRemind").checked = base.rappels !== false;
-  $("mDel").hidden = !m; $("mErr").textContent = "";
+  $("mDel").hidden = !m || medResume; $("mErr").textContent = "";
   show($("medDlg"));
 }
 function setMode(v) {
@@ -1368,7 +1375,8 @@ $("medForm").addEventListener("submit", (e) => {
   if (mode === "besoin" && gap != null && !(gap > 0 && gap <= 168)) return bad("Écart entre deux prises à vérifier.");
   if (mode === "besoin" && max != null && !(max >= 1 && max <= 24)) return bad("Nombre de prises par 24 h à vérifier.");
   if (!$("mDate").value || !/^\d\d:\d\d/.test($("mTime").value)) return bad("Indique quand il commence.");
-  const tz = medEdit && medEdit.fuseau || S.HERE, debut = S.instant($("mDate").value, $("mTime").value.slice(0, 5), tz);
+  // Taken up again: on the clock of this phone, where the family is now (the date and time were typed on it)
+  const tz = medEdit && !medResume && medEdit.fuseau || S.HERE, debut = S.instant($("mDate").value, $("mTime").value.slice(0, 5), tz);
   let fin = null;
   if (len === "jours") { const n = num($("mDays").value); if (!(n >= 1 && n <= 365)) return bad("Indique le nombre de jours."); fin = S.addDays($("mDate").value, Math.round(n) - 1); }
   if (len === "date") { fin = $("mFin").value || null; if (!fin) return bad("Choisis le dernier jour."); if (fin < $("mDate").value) return bad("Le dernier jour est avant le début."); }
@@ -1376,7 +1384,9 @@ $("medForm").addEventListener("submit", (e) => {
   const id = S.save("medicaments", { ...(medEdit ? strip(medEdit) : {}), nom, dose: $("mDose").value.trim() || null, mode,
     toutes_h: mode === "intervalle" ? every : mode === "besoin" ? gap : null, heures: mode === "heures" ? heures : null, max_jour: mode === "besoin" ? max : null,
     debut: new Date(debut).toISOString(), fuseau: tz, fin, probleme: pick($("mFor")), rdv: pick($("mRdv")),
-    consignes: $("mConsignes").value.trim() || null, rappels: mode === "besoin" ? false : $("mRemind").checked });
+    consignes: $("mConsignes").value.trim() || null, rappels: mode === "besoin" ? false : $("mRemind").checked,
+    ...(medResume ? { arrete: null } : {}) });
+  if (medResume) toast(`${S.shortName(nom)} : repris.`);
   const queued = !!medFrom;
   $("medDlg").close();
   if (!medEdit && !queued) go(`#m/${id}`);

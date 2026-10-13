@@ -37,9 +37,11 @@ export function nextDue(m: Med, doses: Dose[], now: number): number | null {
   if (m.arrete && Date.parse(m.arrete) <= now) return null;
   const end = m.fin ? instant(addDays(m.fin, 1), "00:00", m.fuseau || DEFAULT_TZ) : Infinity;
   if (now >= end) return null;
-  const ds = doses.map((d) => Date.parse(d.le)).sort((a, b) => a - b), last = ds.length ? ds[ds.length - 1] : null, start = Date.parse(m.debut);
+  const ds = doses.map((d) => Date.parse(d.le)).sort((a, b) => a - b), start = Date.parse(m.debut);
   let at: number | null = null;
-  if (m.mode === "intervalle") at = last != null ? last + Number(m.toutes_h || 24) * H : start;
+  // Every N hours: from the last dose since the start (one up to 2 h before counts), so a medication taken up again starts afresh
+  const lastSince = ds.filter((t) => t >= start - 2 * H).at(-1) ?? null;
+  if (m.mode === "intervalle") at = lastSince != null ? lastSince + Number(m.toutes_h || 24) * H : start;
   else if (m.mode === "heures") {
     const ss = slots(m, Math.max(start - 60e3, now - 36 * H), now + 72 * H);
     for (let i = 0; i < ss.length; i++) {

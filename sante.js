@@ -311,7 +311,10 @@
     if (!isActive(m, now)) return null;
     const ds = dosesOf(m.id), last = ds.length ? Date.parse(ds.at(-1).le) : null, start = Date.parse(m.debut);
     let at, kind = "due";
-    if (m.mode === "intervalle") at = last != null ? last + (m.toutes_h || 24) * H : start;
+    // Every N hours: from the last dose since the start (one given up to 2 h before counts). A medication taken up
+    // again (Reprendre) starts afresh: the doses of before do not make it late.
+    const since = ds.filter((d) => Date.parse(d.le) >= start - 2 * H), lastSince = since.length ? Date.parse(since.at(-1).le) : null;
+    if (m.mode === "intervalle") at = lastSince != null ? lastSince + (m.toutes_h || 24) * H : start;
     else if (m.mode === "heures") {
       // The first set time not given yet (a dose up to 2 h early counts), skipping those missed long ago
       const ss = slots(m, Math.max(start - 60e3, now - 36 * H), now + 72 * H);
