@@ -84,7 +84,7 @@
   // Weighings come at any hour and any interval (every day at home, every few weeks at the CLSC). Over each period
   // ending at the last weighing, the trend is the slope of the straight line closest to all its weighings (least squares,
   // times to the minute): a weighing a bit high or low (feed, diaper) weighs less than in a plain difference of two.
-  const WINDOWS = [3, 5, 7, 10, 14, 30];
+  const WINDOWS = [3, 5, 7, 10, 14, 30, 45, 60];
   const TOL = 0.25; // never the same hour: up to 6 h more still counts as "N days ago"
   function slope(pts) { // grams per day
     const n = pts.length, tm = pts.reduce((a, p) => a + p.t, 0) / n, vm = pts.reduce((a, p) => a + p.v, 0) / n;

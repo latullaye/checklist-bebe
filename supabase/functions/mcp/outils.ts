@@ -696,7 +696,7 @@ export function register(server: McpServer, c: Ctx) {
   // ---------- Growth ----------
   server.registerTool("croissance", {
     title: "Pesées et mesures",
-    description: "Les dernières pesées et mesures de Thomas (poids, taille, périmètre crânien, lieu), le gain par 24 h depuis la pesée d'avant et la tendance sur 3, 7, 14 et 30 jours.",
+    description: "Les dernières pesées et mesures de Thomas (poids, taille, périmètre crânien, lieu), le gain par 24 h depuis la pesée d'avant et la tendance sur 3, 7, 14, 30, 45 et 60 jours.",
     inputSchema: { limite: z.number().int().min(1).max(60).optional() },
     annotations: read
   }, async ({ limite = 10 }) => {
@@ -707,7 +707,7 @@ export function register(server: McpServer, c: Ctx) {
       return `- ${when(c, w.pese_le, w.fuseau)}${w.lieu ? ` (${LIEUX[w.lieu] || w.lieu})` : ""} : ${[w.poids_g != null && `${kg(w.poids_g)}${g ? ` (${sign(g.g)}/24 h)` : ""}`,
         w.taille_cm != null && `taille ${nf(Number(w.taille_cm), 1)} cm`, w.pc_cm != null && `PC ${nf(Number(w.pc_cm), 1)} cm`, w.note].filter(Boolean).join(", ")} [${w.id}]`;
     });
-    const tr = [3, 7, 14, 30].map((d) => [d, trend(pts, d)] as const).filter(([, t]) => t);
+    const tr = [3, 7, 14, 30, 45, 60].map((d) => [d, trend(pts, d)] as const).filter(([, t]) => t);
     if (tr.length) out.push("", `Tendance du gain : ${tr.map(([d, t]) => `${d} j : ${sign(t!.g)}/24 h (${t!.n} pesées)`).join(" ; ")}.`);
     return text(out.join("\n"));
   });

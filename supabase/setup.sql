@@ -310,15 +310,14 @@ begin
 end $$;
 grant execute on function public.connexion(text, text) to anon, authenticated;
 
--- What x-famille carries opens the data: a token made with the current code
--- (TRANSITION: or the code itself, the time the phones take to swap it for a token; removed afterwards)
+-- What x-famille carries opens the data: a token made with the current code (the code itself no longer does:
+-- it only goes through connexion, where it is counted)
 create or replace function interne.famille_entete_ok(entete text) returns boolean
 language sql stable security definer set search_path = public, extensions as $$
-  with e as (select encode(digest(coalesce(entete, ''), 'sha256'), 'hex') as h),
-       c as (select valeur as h from prive where cle = 'famille_sha256')
-  select coalesce(entete, '') <> '' and (
-    exists (select 1 from sessions s, e, c where s.jeton_sha256 = e.h and s.code_sha256 = c.h)
-    or exists (select 1 from e, c where e.h = c.h))  -- TRANSITION
+  select coalesce(entete, '') <> '' and exists (
+    select 1 from sessions s
+    where s.jeton_sha256 = encode(digest(entete, 'sha256'), 'hex')
+      and s.code_sha256 = (select valeur from prive where cle = 'famille_sha256'))
 $$;
 
 create or replace function public.famille_ok() returns boolean
@@ -326,13 +325,3 @@ language sql stable security definer set search_path = public, extensions as $$
   select interne.famille_entete_ok(current_setting('request.headers', true)::json ->> 'x-famille')
 $$;
 grant execute on function public.famille_ok() to anon, authenticated;
-
--- Then, once both phones carry a token (rows in sessions for each parent), the switch:
--- The switch, once the phones carry a token: the family code itself no longer opens the data
--- create or replace function interne.famille_entete_ok(entete text) returns boolean
--- language sql stable security definer set search_path = public, extensions as $$
---   select coalesce(entete, '') <> '' and exists (
---     select 1 from sessions s
---     where s.jeton_sha256 = encode(digest(entete, 'sha256'), 'hex')
---       and s.code_sha256 = (select valeur from prive where cle = 'famille_sha256'))
--- $$;
