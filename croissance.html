@@ -72,6 +72,9 @@
 .chart .sel, .fs-chart .sel { fill: none; stroke: var(--ink); stroke-width: 1.5; opacity: .8; }
 .chart .pt.on, .fs-chart .pt.on { fill: var(--ink); stroke: var(--ink); }
 .chart .guide, .fs-chart .guide { stroke: var(--ink); stroke-width: 1; stroke-dasharray: 3 3; opacity: .45; }
+.ahead { display: flex; gap: 2px; padding: 3px; margin-top: 8px; border-radius: 12px; background: var(--group); }
+.ahead button { flex: 1 1 auto; font: inherit; font-weight: 700; font-size: 0.8rem; color: var(--muted); background: none; border: 0; border-radius: 9px; padding: 6px 4px; cursor: pointer; white-space: nowrap; -webkit-tap-highlight-color: transparent; }
+.ahead button[aria-pressed="true"] { background: var(--surface); color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,.1); }
 .chart-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .expand { font: inherit; font-size: 0.8rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); border: 0; border-radius: 999px;
   padding: 6px 11px 6px 9px; display: inline-flex; align-items: center; gap: 5px; cursor: pointer; }
@@ -205,6 +208,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
         <button class="expand" id="exportBtn" type="button" aria-label="Exporter en image"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7 10l5 5 5-5M5 21h14"/></svg>Image</button>
         <button class="expand" id="fsOpen" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg>Plein écran</button>
       </span></div>
+    <div class="ahead" id="aheadChips" role="group" aria-label="Courbes jusqu'à quel âge" hidden></div>
     <div class="chart" id="chart"></div>
     <div class="tip" id="tip"></div>
     <p class="src">OMS 2006, garçons · bande grise : P15 à P85.</p>
@@ -234,13 +238,13 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   <div class="fs-in" id="fsIn">
     <div class="fs-top">
       <div class="seg" role="tablist"><button type="button" data-k="poids">Poids</button><button type="button" data-k="taille">Taille</button><button type="button" data-k="pc">Tête</button></div>
-      <button class="fs-btn" id="fsAll" type="button" title="Tout voir" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span class="lbl">Tout voir</span></button>
+      <button class="fs-btn" id="fsAll" type="button" hidden><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg><span class="lbl" id="fsAllLbl">Tout voir</span></button>
       <button class="fs-btn" id="fsRot" type="button"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="11" rx="2"/><path d="M8 3.5a7 7 0 0 1 8 0M14.5 2l1.6 1.6-1.6 1.6"/></svg><span class="lbl" id="fsRotLbl">Paysage</span></button>
       <button class="fs-btn x" id="fsClose" type="button" aria-label="Fermer le plein écran"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
     </div>
     <div class="fs-chart" id="fsChart"></div>
     <div class="fs-tip" id="fsTip"></div>
-    <div class="fs-hint">Pince pour zoomer sur le temps · glisse pour te déplacer · touche un point · double-tape pour tout voir</div>
+    <div class="fs-hint">Pince pour zoomer ou dézoomer sur le temps (jusqu'à 5 ans) · glisse pour te déplacer · touche un point · double-tape pour revenir</div>
   </div>
 </div>
 
@@ -443,7 +447,16 @@ function niceStep(range, target) {
   const raw = range / target, p = Math.pow(10, Math.floor(Math.log10(raw)));
   return [1, 2, 2.5, 5, 10].map((m) => m * p).find((s) => s >= raw) || 10 * p;
 }
-const fullSpan = (pts) => { const a = pts.at(-1).ageF; return Math.max(14, Math.ceil(a + Math.max(4, a * 0.05))); };
+// Time window by default: from birth to his age today (or the last measure, if later), plus a little room on the right
+// so the last point isn't against the edge. Further ahead (the choice above the chart, or zooming out in full screen):
+// the curves of when he is older, up to 5 years, where the WHO tables end.
+const MAX_AGE = 1826;
+const ageNow = () => (Thomas.known ? (Date.now() - Thomas.BIRTH) / DAY_MS : 0);
+const homeEnd = (pts) => { const a = Math.max(pts.at(-1).ageF, ageNow()); return Math.min(MAX_AGE, Math.max(14, Math.ceil(a + Math.max(4, a * 0.08)))); };
+const AHEAD = [[6, "6 mois"], [12, "1 an"], [24, "2 ans"], [60, "5 ans"]];
+const monthsDays = (n) => Math.min(MAX_AGE, Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.addMonths(Thomas.BIRTH_DAY, n)));
+let ahead = 0; // months shown ahead, chosen above the chart; 0: up to his age (each time the page opens)
+const viewEnd = (pts) => (ahead && monthsDays(ahead) > homeEnd(pts) ? monthsDays(ahead) : homeEnd(pts));
 const ZS = CURVES.map(([, z]) => z);
 // The measure line at a given age (between two measures), or null outside them
 function lineAt(pts, a) {
@@ -487,7 +500,7 @@ function drawChart({ pts, K, W, H, x0, x1, fit, id, big, plain }) { // plain: no
   // y grid
   const dec = [0, 1, 2].find((d) => Math.abs(Math.round(yStep * 10 ** d) - yStep * 10 ** d) < 1e-6) ?? 2;
   for (let v = Math.ceil(y0 / yStep - 1e-9) * yStep; v <= y1 + 1e-9; v += yStep)
-    s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text class="axis" x="${m.l - 6}" y="${f1(Y(v) + 4)}" text-anchor="end"><tspan>${nf(v, dec)}</tspan></text>`;
+    s += `<line class="grid" x1="${m.l}" x2="${W - m.r}" y1="${f1(Y(v))}" y2="${f1(Y(v))}"/><text class="axis" x="${m.l - 6}" y="${f1(Y(v) + 4)}" text-anchor="end"><tspan>${nf(Math.abs(v) < 1e-9 ? 0 : v, dec)}</tspan></text>`;
   // x grid: days when zoomed in close, then weeks, then months
   const span = x1 - x0, maxTicks = Math.max(3, Math.floor(pw / 40));
   let unit, ticks = [];
@@ -497,9 +510,12 @@ function drawChart({ pts, K, W, H, x0, x1, fit, id, big, plain }) { // plain: no
   } else if (span <= 182) {
     unit = "semaines"; const st = [1, 2, 4, 8, 13].find((e) => span / 7 / e <= maxTicks) || 13;
     for (let n = Math.ceil(x0 / 7 / st) * st; n * 7 <= x1; n += st) ticks.push([n * 7, n]);
-  } else {
+  } else if (span <= 900) {
     unit = "mois"; const st = [1, 2, 3, 6, 12, 24].find((e) => span / 30.44 / e <= maxTicks) || 24;
     for (let n = 0; n <= 240; n += st) { const a = Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.addMonths(Thomas.BIRTH_DAY, n)); if (a > x1) break; if (a >= x0) ticks.push([a, n]); }
+  } else {
+    unit = "ans"; const st = span / 365.25 <= maxTicks ? 1 : 2;
+    for (let n = 0; n <= 5; n += st) { const a = Thomas.daysBetween(Thomas.BIRTH_DAY, Thomas.addMonths(Thomas.BIRTH_DAY, n * 12)); if (a > x1 + 1.5) break; if (a >= x0) ticks.push([Math.min(a, x1), n]); }
   }
   ticks.forEach(([a, n]) => {
     const atCorner = X(a) - m.l < 6; // the label at the corner sits to the right so it doesn't touch the lowest y label
@@ -543,8 +559,13 @@ function renderChart() {
   $("fsOpen").hidden = !pts.length;
   if (!pts.length) { box.innerHTML = ""; $("tip").textContent = ""; return; }
   if (selected == null || selected >= pts.length) selected = pts.length - 1;
+  // Up to when: his age, or further ahead (only the ages still well ahead of him)
+  const opts = [[0, "Aujourd'hui"], ...AHEAD.filter(([n]) => monthsDays(n) > homeEnd(pts) * 1.15)];
+  if (!opts.some(([n]) => n === ahead)) ahead = 0;
+  $("aheadChips").hidden = opts.length < 2;
+  $("aheadChips").innerHTML = opts.map(([n, name]) => `<button type="button" data-buzz data-a="${n}" aria-pressed="${n === ahead}">${name}</button>`).join("");
   const W = Math.max(280, box.clientWidth), H = Math.round(Math.min(380, Math.max(260, W * 0.8)));
-  const c = drawChart({ pts, K, W, H, x0: 0, x1: fullSpan(pts), fit: "curves", id: "card" });
+  const c = drawChart({ pts, K, W, H, x0: 0, x1: viewEnd(pts), fit: "curves", id: "card" });
   box.innerHTML = c.svg;
   box.querySelector("svg").style.height = "auto";
   // Tap anywhere on the chart: the nearest measure in time
@@ -556,17 +577,20 @@ function renderChart() {
   $("tip").innerHTML = tipText(pts, selected);
   if (!$("fs").hidden) renderFS();
 }
+$("aheadChips").addEventListener("click", (e) => {
+  const c = e.target.closest("button"); if (!c) return;
+  ahead = Number(c.dataset.a); fs.views = {}; // full screen then opens on the same window
+  renderChart();
+});
 
 // ---------- Full screen ----------
 const fs = { views: {}, rot: false, pointers: new Map(), gesture: null, lastTap: 0, frame: 0, chart: null };
 const fsBox = $("fsChart");
-function fsView(pts) { // the time window for this tab, kept while the page is open
-  const full = fullSpan(pts), v = fs.views[kind] || (fs.views[kind] = { x0: 0, x1: full });
-  return clampView(v, full);
+function fsView(pts) { // the time window for this tab, kept while the page is open; at first the card's
+  return clampView(fs.views[kind] || (fs.views[kind] = { x0: 0, x1: viewEnd(pts) }));
 }
-function clampView(v, full) {
-  const minSpan = Math.min(3, full);
-  let span = Math.max(minSpan, Math.min(full, v.x1 - v.x0)), x0 = Math.max(0, Math.min(full - span, v.x0));
+function clampView(v) { // from 3 days to 5 years, between birth and 5 years
+  const span = Math.max(3, Math.min(MAX_AGE, v.x1 - v.x0)), x0 = Math.max(0, Math.min(MAX_AGE - span, v.x0));
   v.x0 = x0; v.x1 = x0 + span; return v;
 }
 function renderFS() {
@@ -574,16 +598,18 @@ function renderFS() {
   document.querySelectorAll("#fs .seg button").forEach((b) => b.setAttribute("aria-selected", b.dataset.k === kind));
   if (!pts.length) { fsBox.innerHTML = ""; $("fsTip").textContent = ""; return; }
   if (selected == null || selected >= pts.length) selected = pts.length - 1;
-  const v = fsView(pts), full = fullSpan(pts);
+  const v = fsView(pts), end = viewEnd(pts);
   // Texts first: they set how much room is left for the chart
-  $("fsAll").hidden = v.x1 - v.x0 >= full - 0.01 && v.x0 <= 0.01;
+  $("fsAll").hidden = Math.abs(v.x1 - end) < 0.01 && v.x0 <= 0.01;
+  $("fsAllLbl").textContent = v.x1 - v.x0 > end ? "Revenir" : "Tout voir";
   $("fsTip").innerHTML = tipText(pts, selected, true);
   $("fsRotLbl").textContent = landscape() ? "Portrait" : "Paysage";
   // Back to portrait: our own quarter turn can be undone, a real landscape only where the page can be locked (Android)
   $("fsRot").hidden = landscape() && !fs.rot && !document.fullscreenElement;
   const W = fsBox.clientWidth, H = fsBox.clientHeight;
   if (W < 50 || H < 50) return;
-  fs.chart = drawChart({ pts, K, W, H, x0: v.x0, x1: v.x1, fit: "data", id: "fs", big: true });
+  // Looking ahead of him: all the curves; else the measures and the curves just around them
+  fs.chart = drawChart({ pts, K, W, H, x0: v.x0, x1: v.x1, fit: v.x1 > homeEnd(pts) * 1.15 + 1 ? "curves" : "data", id: "fs", big: true });
   fsBox.innerHTML = fs.chart.svg;
   fs.size = W + "x" + H;
 }
@@ -673,7 +699,7 @@ fsBox.addEventListener("pointerdown", (e) => {
 fsBox.addEventListener("pointermove", (e) => {
   if (!fs.pointers.has(e.pointerId) || !fs.gesture) return;
   fs.pointers.set(e.pointerId, local(e));
-  const pts = points(), full = fullSpan(pts), v = fsView(pts), pw = fs.chart.pw, ml = fs.chart.m.l, g = fs.gesture;
+  const pts = points(), v = fsView(pts), pw = fs.chart.pw, ml = fs.chart.m.l, g = fs.gesture;
   if (g.kind === "pinch" && fs.pointers.size >= 2) {
     const [a, b] = [...fs.pointers.values()];
     const s1 = a[0], s2 = b[0];
@@ -681,14 +707,14 @@ fsBox.addEventListener("pointermove", (e) => {
     const k = (g.d[1] - g.d[0]) / (s2 - s1); // days per pixel that keep both days under both fingers
     if (k <= 0) return;
     v.x0 = g.d[0] - (s1 - ml) * k; v.x1 = v.x0 + k * pw;
-    clampView(v, full);
+    clampView(v);
   } else if (g.kind === "pan") {
     const [x, y] = [...fs.pointers.values()][0];
     if (Math.hypot(x - g.sx, y - g.sy) > 8) g.moved = true;
     if (!g.moved) return;
     const span = g.v0.x1 - g.v0.x0;
     v.x0 = g.v0.x0 - (x - g.sx) / pw * span; v.x1 = v.x0 + span;
-    clampView(v, full);
+    clampView(v);
   }
   redrawFS();
 });
@@ -714,10 +740,10 @@ fsBox.addEventListener("pointercancel", endPointer);
 fsBox.addEventListener("wheel", (e) => {
   if (!fs.chart) return;
   e.preventDefault();
-  const pts = points(), full = fullSpan(pts), v = fsView(pts), [x] = local(e), d = fs.chart.invX(x);
+  const pts = points(), v = fsView(pts), [x] = local(e), d = fs.chart.invX(x);
   const k = Math.exp(e.deltaY * 0.0025);
   v.x0 = d - (d - v.x0) * k; v.x1 = d + (v.x1 - d) * k;
-  clampView(v, full); redrawFS();
+  clampView(v); redrawFS();
 }, { passive: false });
 
 // ---------- Table ----------
@@ -1039,7 +1065,7 @@ async function buildExport() {
     c.fillStyle = ACC; c.font = `700 16px ${BODY}`; c.textAlign = "right";
     c.fillText(`${fmtV(last.v, k)}${last.z == null ? "" : ` · ${pctText(last.z)}`} le ${fmtDate(last.day, true)}`, pad + CW, y + 20);
     c.textAlign = "left";
-    const g = drawChart({ pts, K, W: CW, H: ch, x0: 0, x1: fullSpan(pts), fit: "curves", id: "x" + k, big: true, plain: true });
+    const g = drawChart({ pts, K, W: CW, H: ch, x0: 0, x1: viewEnd(pts), fit: "curves", id: "x" + k, big: true, plain: true });
     c.drawImage(await svgImage(g.svg), pad, y + 32, CW, ch);
     y += ch + 56;
   }
