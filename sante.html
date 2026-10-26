@@ -533,7 +533,7 @@ function toast(text, undo) {
 $("toastUndo").addEventListener("click", () => { if (toastUndo) toastUndo(); toastUndo = null; $("toast").hidden = true; });
 
 // ---------- Views: the main screen, or one problem / appointment / medication ----------
-// "#p/<id>", "#r/<id>", "#m/<id>", "#chrono", the address book "#c" and one entry "#c/<id>"; from a reminder or the home page also "#noter", "#noter/<problem>", "#donne/<medication>"
+// "#p/<id>", "#r/<id>", "#m/<id>", "#chrono", the address book "#c" and one entry "#c/<id>"; from a reminder or the home page also "#noter", "#noter/<problem>", "#donne/<medication>", "#cr/<appointment>" (its report)
 let depth = 0; // views opened from here: the back arrow steps back instead of leaving the screen
 function go(hash) { history.pushState(null, "", hash); depth++; route(); window.scrollTo(0, 0); }
 function back() { if (depth > 0) history.back(); else { history.replaceState(null, "", location.pathname); route(); window.scrollTo(0, 0); } }
@@ -553,6 +553,7 @@ function actionFromHash() { // what a reminder or the home page asked for
   const [kind, id] = decodeURIComponent(location.hash.slice(1)).split("/");
   if (kind === "noter") { history.replaceState(null, "", id ? `#p/${id}` : location.pathname); route(); openNote({ probleme: id || null }); }
   else if (kind === "donne" && id) { history.replaceState(null, "", `#m/${id}`); route(); const m = S.byId("medicaments", id); if (m) setTimeout(() => giveNow(m), 300); }
+  else if (kind === "cr" && id) { history.replaceState(null, "", `#r/${id}`); route(); const r = S.byId("rdv", id); if (r) setTimeout(() => openReport(r), 300); }
   else route();
 }
 
@@ -783,7 +784,8 @@ function viewRdv(r) {
   <section class="card"><div class="label">Compte rendu</div>
     ${done ? `<dl class="kv">${r.compte_rendu ? `<dt>Ce qui a été dit et fait</dt><dd>${md(r.compte_rendu, "rdv", r.id, "compte_rendu")}</dd>` : ""}${r.diagnostic ? `<dt>Diagnostic</dt><dd class="md"><p><strong>${esc(r.diagnostic)}</strong></p></dd>` : ""}${r.suivi ? `<dt>Et ensuite</dt><dd>${md(r.suivi, "rdv", r.id, "suivi")}</dd>` : ""}${r.photos && r.photos.length ? `<dt>Photos</dt><dd>${photoRow(r.photos)}</dd>` : ""}</dl>`
       : `<p class="prose muted">${future ? "À remplir après le rendez-vous : ce qui a été dit, le diagnostic, la suite." : "Rien de noté. Ce qui a été dit, le diagnostic, la suite ?"}</p>`}
-    <button class="addline" type="button" data-edit-r>${IC.note}${done ? "Compléter" : "Écrire le compte rendu"}</button></section>
+    <button class="addline" type="button" data-edit-r>${IC.note}${done ? "Compléter" : "Écrire le compte rendu"}</button>
+    ${!done && !future && !r.annule ? `<button class="addline" type="button" data-no-cr>${IC.check}Compte rendu pas nécessaire</button>` : ""}</section>
   <section class="card"><div class="label">Médicaments prescrits</div>
     ${meds.length ? `<div class="inlist">${meds.map((m) => `<a class="li" href="#m/${m.id}"><span class="txt"><b>${esc(m.nom)}</b><span class="sub">${esc([m.dose, S.posologie(m)].filter(Boolean).join(" · "))}</span></span>${IC.go.replace('class="i"', 'class="i go"')}</a>`).join("")}</div>` : ""}
     <button class="addline" type="button" data-new-med>${IC.plus}Médicament prescrit</button></section>`;
@@ -888,6 +890,7 @@ function renderDetail() {
   on("[data-new-rdv]", () => openRdv(null, { problemes: [view.id], motif: S.nameOf(rec()) }));
   on("[data-new-med]", () => view.kind === "p" ? openMed(null, { probleme: view.id }) : openMed(null, { rdv: view.id, probleme: (rec().problemes || [])[0] || null }));
   on("[data-edit-r]", () => openRdv(rec()));
+  on("[data-no-cr]", () => { if (confirm("Pas de compte rendu pour ce rendez-vous ? Ton prénom sera noté à sa place.")) { buzz(); S.noReport(rec()); } });
   on("[data-edit-m]", () => openMed(rec()));
   on("[data-new-pro]", () => openPro(null));
   on("[data-edit-pro]", () => openPro(rec()));
@@ -1151,6 +1154,13 @@ function openRdv(r, preset = {}) {
   $("rCancel").checked = !!(r && r.annule); $("rCancelWrap").hidden = !r; $("rDel").hidden = !r; $("rErr").textContent = "";
   rdvPhotos.set(r ? r.photos : []); rdvTell.reset(); rdvSaved = false; found = []; renderFound();
   show($("rdvDlg"));
+}
+// The report, from the home page: the appointment sheet, at "Raconter"
+function openReport(r) {
+  openRdv(r);
+  $("rTell").closest(".tell").scrollIntoView({ block: "start" });
+  $("rTellMsg").textContent = Assistant.canDictate ? "Touche « Dicter » et raconte le rendez-vous, puis « Mettre en forme »."
+    : "Raconte le rendez-vous (le micro du clavier marche aussi), puis « Mettre en forme ».";
 }
 let rdvSaved = false, found = []; // found: the medications the assistant read, { med, on }
 // Who it is with: an entry of the address book (in a list, or one of the usual ones a tap away). Picking one fills
