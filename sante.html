@@ -314,7 +314,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 <div class="toast" id="toast" role="status" hidden><span id="toastTxt"></span><button type="button" id="toastUndo">Annuler</button></div>
 
 <!-- What is seen -->
-<dialog id="noteDlg">
+<dialog id="noteDlg" autofocus>
   <form class="sheet" id="noteForm" method="dialog">
     <h2 id="noteTitle">Noter ce que je vois</h2>
     <div class="field"><span class="lab">Pour</span><div class="chips" id="nFor" role="radiogroup"></div></div>
@@ -348,7 +348,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 </dialog>
 
 <!-- A problem -->
-<dialog id="probDlg">
+<dialog id="probDlg" autofocus>
   <form class="sheet" id="probForm" method="dialog">
     <h2>Le problème</h2>
     <div class="field"><label for="pTitre">Ce qu'on a vu d'abord</label><input id="pTitre" autocomplete="off" placeholder="Diarrhée"></div>
@@ -365,7 +365,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 </dialog>
 
 <!-- An appointment -->
-<dialog id="rdvDlg">
+<dialog id="rdvDlg" autofocus>
   <form class="sheet" id="rdvForm" method="dialog">
     <h2 id="rTitle">Rendez-vous</h2>
     <div class="two">
@@ -400,7 +400,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 </dialog>
 
 <!-- An entry of the address book: a person or a place -->
-<dialog id="proDlg">
+<dialog id="proDlg" autofocus>
   <form class="sheet" id="proForm" method="dialog">
     <h2 id="cTitle">Carnet</h2>
     <div class="field"><span class="lab">C'est</span><div class="seg" id="cKind" role="radiogroup">
@@ -423,7 +423,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 </dialog>
 
 <!-- A medication -->
-<dialog id="medDlg">
+<dialog id="medDlg" autofocus>
   <form class="sheet" id="medForm" method="dialog">
     <h2 id="mTitle">Médicament</h2>
     <p class="from" id="mFrom" hidden></p>
@@ -457,7 +457,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
 </dialog>
 
 <!-- A dose given -->
-<dialog id="doseDlg">
+<dialog id="doseDlg" autofocus>
   <form class="sheet" id="doseForm" method="dialog">
     <h2 id="dTitle">Prise</h2>
     <div class="two">
@@ -933,7 +933,10 @@ setInterval(() => { if (document.visibilityState === "visible" && !document.quer
 // ---------- Sheets ----------
 document.querySelectorAll("dialog [data-close]").forEach((b) => b.addEventListener("click", () => b.closest("dialog").close()));
 document.querySelectorAll("dialog textarea:not(.plain)").forEach((ta) => Markdown.editor(ta));
-const show = (dlg) => { dlg.showModal(); Markdown.reset(dlg); };
+// A sheet opens on itself (autofocus on the dialog), never on its first field: no keyboard popping up. Where the browser
+// still focuses a field, it lets go of it.
+const noField = (dlg) => { const a = document.activeElement; if (a && dlg.contains(a) && a.matches("input, textarea, select")) a.blur(); };
+const show = (dlg) => { dlg.showModal(); noField(dlg); Markdown.reset(dlg); };
 const flash = (...els) => els.forEach((el) => { const box = el.closest(".mde") || el; box.classList.remove("filled"); void box.offsetWidth; box.classList.add("filled"); });
 
 // "Raconter": dictate (or type) a few sentences, then the assistant fills the sheet (assistant.js). The parents check, then save.
@@ -1415,7 +1418,7 @@ function openDose(m, d) {
   $("dDate").value = at.day; $("dTime").value = at.time; $("dDate").max = nowParts().day;
   $("dDose").value = d ? d.dose || "" : m.dose || ""; $("dNote").value = d ? d.note || "" : "";
   $("dDel").hidden = !d; $("dErr").textContent = "";
-  $("doseDlg").showModal();
+  $("doseDlg").showModal(); noField($("doseDlg"));
 }
 $("doseForm").addEventListener("submit", (e) => {
   e.preventDefault();

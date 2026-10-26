@@ -248,7 +248,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   </div>
 </div>
 
-<dialog id="exp" class="exp">
+<dialog id="exp" autofocus class="exp">
   <div class="sheet">
     <h2>Image des courbes</h2>
     <p class="msg" id="expMsg"></p>
@@ -261,7 +261,7 @@ dialog::backdrop { background: rgba(0,0,0,.35); }
   </div>
 </dialog>
 
-<dialog id="dlg">
+<dialog id="dlg" autofocus>
   <form class="sheet" id="form" method="dialog">
     <h2 id="dlgTitle">Nouvelle mesure</h2>
     <div class="two">
@@ -899,8 +899,10 @@ function openSheet(row) {
   $("del").hidden = !row;
   $("err").textContent = "";
   readWeight();
+  // A new measure opens on the weight (what comes first); a measure to change, on nothing (no keyboard popping up)
   $("dlg").showModal();
   if (!row) setTimeout(() => $("fPoids").focus(), 50);
+  else if (document.activeElement && document.activeElement.matches("#dlg input")) document.activeElement.blur();
 }
 $("add").addEventListener("click", () => openSheet(null));
 $("table").addEventListener("click", (e) => { const tr = e.target.closest("tr[data-id]"); if (tr) openSheet(rows.find((r) => r.id === tr.dataset.id)); });

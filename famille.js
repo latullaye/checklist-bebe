@@ -81,6 +81,7 @@
 .fam .acts .go { flex: 1; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }`;
     document.head.appendChild(css);
     dlg = document.createElement("dialog");
+    dlg.autofocus = true; // opens on itself, not on the code field: no keyboard until it's touched
     dlg.className = "fam";
     dlg.innerHTML = `<form method="dialog">
       <h2>Code de la famille</h2>
@@ -138,7 +139,7 @@
     d.querySelector("#famCode").value = code(); // empty once the phone has its token
     d.querySelector("#famErr").textContent = "";
     d.showWho();
-    if (!d.open) d.showModal();
+    if (!d.open) { d.showModal(); if (document.activeElement === d.querySelector("#famCode")) document.activeElement.blur(); }
   }
 
   // A phone that still holds the code: swap it for a token (then the code is no longer kept)
