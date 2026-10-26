@@ -82,6 +82,14 @@
     <p class="msg">Ces deux réglages ne valent que pour ce téléphone.</p>
   </section>
 
+  <section class="card" id="habitudes">
+    <div class="label">Habitudes</div>
+    <div class="set">
+      <span class="txt"><b>Couper les ongles</b><span class="hint">Tous les combien de jours, à partir de 6 semaines. Pour vos deux téléphones.</span></span>
+      <span class="step"><button type="button" id="nMinus" data-buzz aria-label="Un jour de moins">−</button><output id="nVal"></output><button type="button" id="nPlus" data-buzz aria-label="Un jour de plus">+</button></span>
+    </div>
+  </section>
+
   <section class="card">
     <div class="label">Habiller Thomas</div>
     <div class="set">
@@ -173,6 +181,13 @@ const PICTOS = "thomas911-checklist-pictos";
 try { $("pictos").checked = localStorage.getItem(PICTOS) !== "0"; } catch (e) { $("pictos").checked = true; }
 $("pictos").addEventListener("change", (e) => { try { localStorage.setItem(PICTOS, e.target.checked ? "1" : "0"); } catch (err) {} });
 
+// ---------- Nails: every N days (habits.js), shared ----------
+const nails = () => { const n = Math.round(Number(Prefs.get("ongles_jours", 10))); return n >= 3 && n <= 30 ? n : 10; };
+function renderNails() { const n = nails(); $("nVal").textContent = `${n} j`; $("nMinus").disabled = n <= 3; $("nPlus").disabled = n >= 30; }
+$("nMinus").addEventListener("click", () => Prefs.set("ongles_jours", nails() - 1));
+$("nPlus").addEventListener("click", () => Prefs.set("ongles_jours", nails() + 1));
+Prefs.on("ongles_jours", renderNails);
+
 // ---------- Room temperature ----------
 const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
 function renderTemp() { const t = temp(); $("tVal").textContent = `${String(t).replace(".", ",")} °C`; $("tMinus").disabled = t <= 14; $("tPlus").disabled = t >= 30; }
@@ -242,7 +257,7 @@ $("update").addEventListener("click", async () => {
   } catch (e) { $("updateMsg").textContent = "Pas de réseau : réessaie plus tard."; }
 });
 
-renderTemp(); renderLait(); renderShare(); renderVersion(); renderFamille();
+renderNails(); renderTemp(); renderLait(); renderShare(); renderVersion(); renderFamille();
 </script>
 <script src="app.js"></script>
 </body>

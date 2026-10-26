@@ -325,3 +325,7 @@ language sql stable security definer set search_path = public, extensions as $$
   select interne.famille_entete_ok(current_setting('request.headers', true)::json ->> 'x-famille')
 $$;
 grant execute on function public.famille_ok() to anon, authenticated;
+
+-- Who ticked a habit box (a parent's first name, sent by the phone, the reminder's "C'est fait" or the MCP); null for the
+-- older ticks. The full history in habitudes.html shows it as an initial.
+alter table habitudes add column if not exists par text;

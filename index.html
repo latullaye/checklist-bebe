@@ -238,6 +238,7 @@
 <script src="sync.js"></script>
 <script src="weather.js"></script>
 <script src="habits.js"></script>
+<script src="prefs.js"></script>
 <script src="thomas.js"></script>
 <script src="who-boys.js"></script>
 <script src="growth.js"></script>
@@ -271,13 +272,13 @@ function renderWeight() {
 Growth.onChange(renderWeight);
 
 // Habits of the moment (this slot) and the vitamin D, checkable right here
-const NAMES = { bouche: "Bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain" };
+const NAMES = { bouche: "Bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain", ongles: "Ongles" };
 const MOMENT = { matin: "ce matin", midi: "ce midi", soir: "ce soir" };
+// The bath shows on bath night, the nails on their day: how long since the last time only when it's late (in orange)
+const late = (k) => (k === "bain" ? Habits.bathAgo() >= 3 : k === "ongles" ? Habits.nailsAgo() > Habits.nailsEvery() : false);
 function todoLabel(k) {
-  if (k !== "bain") return NAMES[k.split("-")[0]];
-  // It only shows on bath night: how long since the last one only when it's late (3 days and more, in orange)
-  const d = Habits.bathAgo();
-  return d >= 3 ? `Bain<small>${d} j</small>` : "Bain";
+  if (!late(k)) return NAMES[k.split("-")[0]];
+  return `${NAMES[k]}<small>${k === "bain" ? Habits.bathAgo() : Habits.nailsAgo()} j</small>`;
 }
 function renderTodo() {
   const day = Habits.today(), slot = Habits.slotNow(), { done, total } = Habits.progress();
@@ -285,7 +286,7 @@ function renderTodo() {
   $("todoTitle").textContent = `À faire ${MOMENT[slot]}`;
   $("todoCount").textContent = `${done}/${total} aujourd'hui ›`;
   $("habSub").innerHTML = done >= total ? "<b>Fait</b>" : `<b>${done}/${total}</b>`;
-  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${k === "bain" && Habits.bathAgo() >= 3 ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
+  $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${late(k) ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
   $("allDone").hidden = !!left.length;
   $("allDone").innerHTML = `<b>Tout est fait ${MOMENT[slot]}.</b> Bravo !`;
 }
@@ -297,6 +298,8 @@ $("todo").addEventListener("click", (e) => {
   setTimeout(() => Habits.set(Habits.today(), b.dataset.k, true), 650); // re-renders without it
 });
 Habits.onChange(renderTodo);
+// The nails' rhythm and the date of birth come with the shared settings (prefs.js)
+Prefs.on("ongles_jours", renderTodo); Prefs.on("famille", renderTodo);
 
 // ---------- Appointments at the top ----------
 // Today's next one, from midnight until 10 min after it starts: its time, how long until it, the way there by car, a call.
