@@ -754,20 +754,25 @@ export function register(server: McpServer, c: Ctx) {
   // ---------- Habits ----------
   server.registerTool("habitudes", {
     title: "Bonnes habitudes",
-    description: "Ce qui a été coché ces derniers jours : exercices de bouche et rééducation périnéenne (matin, midi, soir), vitamine D, bain, ongles.",
+    description: "Ce qui a été coché ces derniers jours, et par qui : exercices de bouche et rééducation périnéenne (matin, midi, soir), vitamine D, bain, ongles.",
     inputSchema: { jours: z.number().int().min(1).max(30).optional().describe("7 par défaut") },
     annotations: read
   }, async ({ jours = 7 }) => {
     const day = today(c), from = addDays(day, -(jours - 1));
-    const rows = await c.db.all(`select jour, cle from habitudes where fait and jour >= $1::date`, [addDays(day, -45)]);
-    const has = (d: string, k: string) => rows.some((r) => r.jour === d && r.cle === k);
+    const rows = await c.db.all(`select jour, cle, par from habitudes where fait and jour >= $1::date`, [addDays(day, -45)]);
+    const row = (d: string, k: string) => rows.find((r) => r.jour === d && r.cle === k);
+    const has = (d: string, k: string) => !!row(d, k);
+    // A done box: the initial of who ticked it, ✓ when not known
+    const mark = (d: string, k: string) => { const r = row(d, k); return !r ? "·" : r.par ? String(r.par).trim()[0].toUpperCase() : "✓"; };
+    const once = (d: string, k: string, l: string) => (has(d, k) ? ` ; ${l}${row(d, k)!.par ? ` (${row(d, k)!.par})` : ""}` : "");
     const out: string[] = [];
     for (let d = day; d >= from; d = addDays(d, -1)) {
-      const parts = HABITS.map(([h, l]) => `${l} : ${SLOTS.map(([s]) => (has(d, `${h}-${s}`) ? "✓" : "·")).join("")}`);
-      out.push(`- ${fmtDay(d)} : ${parts.join(" ; ")} ; vitamine D ${has(d, "vitd") ? "✓" : "·"}${has(d, "bain") ? " ; bain" : ""}${has(d, "ongles") ? " ; ongles" : ""}`);
+      const parts = HABITS.map(([h, l]) => `${l} : ${SLOTS.map(([s]) => mark(d, `${h}-${s}`)).join("")}`);
+      out.push(`- ${fmtDay(d)} : ${parts.join(" ; ")} ; vitamine D ${mark(d, "vitd")}${once(d, "bain", "bain")}${once(d, "ongles", "ongles")}`);
     }
     const lastBath = rows.filter((r) => r.cle === "bain").map((r) => r.jour).sort().at(-1), nails = await nailsOf(c, day);
-    out.push(`(✓ fait, · pas fait ; ordre matin, midi, soir.) Dernier bain : ${lastBath ? fmtDay(lastBath) : "aucun dans les 45 derniers jours"}.`
+    const who = (c.famille.parents || []).map((p) => `${p[0].toUpperCase()} ${p}`).join(", ");
+    out.push(`(Une lettre : fait, par qui${who ? ` (${who})` : ""} ; ✓ fait, sans savoir par qui ; · pas fait ; ordre matin, midi, soir.) Dernier bain : ${lastBath ? fmtDay(lastBath) : "aucun dans les 45 derniers jours"}.`
       + (nails.start ? ` Ongles, tous les ${nails.every} jours à partir du ${fmtDay(nails.start)} : ${nails.last ? `coupés le ${fmtDay(nails.last)}` : "jamais notés"}${nails.due ? ", à faire" : ""}.` : ""));
     return text(out.join("\n"));
   });
@@ -780,8 +785,9 @@ export function register(server: McpServer, c: Ctx) {
   }, async ({ cles, jour, fait = true }) => {
     const d = jour || today(c);
     if (!isDay(d) || d > today(c)) return fail("« jour » : AAAA-MM-JJ, pas dans le futur.");
-    for (const k of cles) await c.db.exec(`insert into habitudes (jour, cle, fait, maj) values ($1::date, $2, $3, now()) on conflict (jour, cle) do update set fait = excluded.fait, maj = now()`, [d, k, fait]);
-    return text(`${fait ? "Coché" : "Décoché"} ${relDay(c, d)} : ${cles.map(habitLabel).join(", ")}.`);
+    for (const k of cles) await c.db.exec(`insert into habitudes (jour, cle, fait, par, maj) values ($1::date, $2, $3, $4, now())
+      on conflict (jour, cle) do update set fait = excluded.fait, par = coalesce(excluded.par, habitudes.par), maj = now()`, [d, k, fait, c.par]);
+    return text(`${fait ? "Coché" : "Décoché"} ${relDay(c, d)}${by(c.par)} : ${cles.map(habitLabel).join(", ")}.`);
   });
 
   // ---------- Outing checklist ----------

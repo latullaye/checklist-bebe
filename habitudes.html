@@ -62,6 +62,49 @@
 .hist .tub { width: 20px; height: 20px; color: var(--accent); }
 .hist .h svg { width: 16px; height: 16px; color: var(--muted); vertical-align: -3px; }
 
+/* "Voir tout l'historique" */
+.more { display: flex; align-items: center; justify-content: center; gap: 4px; width: 100%; margin-top: 12px; padding: 10px 0 0; border: 0;
+  border-top: 1px solid var(--line); background: none; color: var(--accent); font: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+  -webkit-tap-highlight-color: transparent; }
+.more svg { width: 18px; height: 18px; }
+
+/* Full history: one row per day, who ticked each box (the first parent in the accent color, the second in orange) */
+:root { --warn: #b36b12; --warn-ink: #ffffff; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --warn: #f0b860; --warn-ink: #1d1406; } }
+:root[data-theme="dark"] { --warn: #f0b860; --warn-ink: #1d1406; }
+.fs { position: fixed; inset: 0; z-index: 50; background: var(--bg); overflow-y: auto; overscroll-behavior: contain; }
+.fs-in { max-width: 560px; margin: 0 auto; padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
+.fs-top { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: calc(12px + env(safe-area-inset-top)) 0 8px; }
+.fs-top .row { display: flex; align-items: center; gap: 10px; }
+.fs-top h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.2rem; margin: 0; }
+.fs-top .back { cursor: pointer; font: inherit; }
+.legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin-top: 10px; font-size: 0.82rem; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend b { color: var(--ink); }
+.fr { display: grid; grid-template-columns: 50px 1fr 1fr 36px 22px 22px; gap: 6px; align-items: center; }
+.fr > .p, .fr > svg { justify-self: center; }
+.fr.head { margin-top: 10px; padding: 6px 13px; border-bottom: 1px solid var(--line); font-size: 0.68rem; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .05em; }
+.fr.head svg { width: 16px; height: 16px; justify-self: center; }
+.fs .card { padding: 4px 12px; margin-top: 10px; }
+.fs .month { font-family: var(--font-display); font-weight: 500; font-size: 0.95rem; margin: 18px 2px 0; }
+.fs .month::first-letter { text-transform: uppercase; }
+.fr.day { padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fs .card .fr.day:first-child { border-top: 0; }
+.fr.day .d { font-size: 0.85rem; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.fr.day.sel .d { color: var(--accent); font-weight: 700; }
+.fr.day.far { cursor: default; }
+.ps { display: flex; gap: 4px; }
+.p { width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--line); flex: none; display: inline-flex; align-items: center;
+  justify-content: center; font-style: normal; font-size: 0.66rem; font-weight: 800; line-height: 1; }
+.p.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.p.on.e { background: var(--warn); border-color: var(--warn); color: var(--warn-ink); }
+.p.on.x { background: var(--muted); border-color: var(--muted); }
+.fs-more { display: block; width: 100%; margin-top: 14px; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface);
+  color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+.fs-more:disabled { color: var(--muted); cursor: default; }
+.fs-end { margin: 16px 0 0; text-align: center; color: var(--muted); font-size: 0.85rem; }
+
 /* Reminders: one line, the switch lives in Settings */
 .remind { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
 .remind svg.bell { width: 22px; height: 22px; color: var(--accent); }
@@ -105,6 +148,7 @@
   <section class="card">
     <div class="label">7 derniers jours</div>
     <div class="hist" id="hist"></div>
+    <button class="more" id="histAll" type="button">Voir tout l'historique<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></button>
   </section>
 
   <a class="card remind" href="reglages.html#rappels">
@@ -112,6 +156,22 @@
     <span class="txt"><b id="remindTitle">Rappels</b><span id="remindSub">9 h, 12 h 30, 17 h 30 s'il reste à faire</span></span>
     <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
   </a>
+</div>
+
+<div class="fs" id="fs" hidden role="dialog" aria-modal="true" aria-labelledby="fsTitle">
+  <div class="fs-in">
+    <div class="fs-top">
+      <div class="row">
+        <button class="back" id="fsClose" type="button" aria-label="Fermer l'historique"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg></button>
+        <h2 id="fsTitle">Historique des habitudes</h2>
+      </div>
+      <div class="legend" id="fsWho"></div>
+      <div class="fr head" id="fsHead"></div>
+    </div>
+    <div id="fsList"></div>
+    <button class="fs-more" id="fsMore" type="button">30 jours de plus</button>
+    <p class="fs-end" id="fsEnd" hidden></p>
+  </div>
 </div>
 
 <script src="config.js"></script>
@@ -181,9 +241,90 @@ function render() {
     const name = i === 0 ? "Auj." : i === 1 ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "short", day: "numeric" });
     rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span class="dots"><i class="dot${Habits.get(d, "vitd") ? " on" : ""}"></i></span><span>${Habits.get(d, "bain") ? TUB : ""}</span><span>${Habits.get(d, "ongles") ? SCISSORS : ""}</span>`);
   }
+  if (full.open) renderFS();
   $("hist").innerHTML = `<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h">Vit. D</span><span class="h" title="Bain">${TUB.replace('class="i tub"', 'class="i"')}</span>`
     + `<span class="h" title="Ongles">${start ? SCISSORS.replace('class="i tub"', 'class="i"') : ""}</span>` + rows.join("");
 }
+
+// ---------- Full history: every day back to the first tick (or the birth), and who ticked each box ----------
+const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const icon = (svg) => svg.replace('class="i tub"', 'class="i"');
+const full = { open: false, shown: 30, old: {}, loadedTo: null, first: null, loading: false, failed: false };
+// What the phone keeps (the last weeks, with the ticks not sent yet): those days come from it and can be changed from here
+const recentFrom = () => Habits.addDays(Habits.today(), -(Habits.DAYS - 1));
+const birth = () => { const j = (Prefs.get("famille") || {}).jour; return /^\d{4}-\d\d-\d\d$/.test(j || "") ? j : null; };
+// The oldest day worth showing: the first tick, else the birth, else a year ago
+const lower = () => [full.first, birth()].filter(Boolean).sort().pop() || Habits.addDays(Habits.today(), -365);
+const tickOf = (d, k) => (d >= recentFrom() ? (Habits.get(d, k) ? Habits.who(d, k) || true : null) : (full.old[d] || {})[k] || null);
+const people = () => (window.Famille && Famille.PEOPLE) || [];
+// A box: the initial of who ticked it (the second parent in orange), grey when not known, an empty ring when not done
+function pastille(v, daily) {
+  if (!v) return daily ? '<i class="p"></i>' : "<span></span>";
+  if (v === true) return '<i class="p on x" title="Fait"></i>';
+  const name = String(v).trim();
+  return `<i class="p on${people().indexOf(name) === 1 ? " e" : ""}" title="${esc(name)}">${esc((name[0] || "?").toUpperCase())}</i>`;
+}
+
+function renderFS() {
+  const t = Habits.today(), low = lower(), from = [Habits.addDays(t, -(full.shown - 1)), low].sort().pop();
+  let html = "", month = "", unknown = false;
+  for (let d = t; d >= from; d = Habits.addDays(d, -1)) {
+    const m = d.slice(0, 7);
+    if (m !== month) {
+      html += `${month ? "</div>" : ""}<h3 class="month">${new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { month: "long", year: "numeric" })}</h3><div class="card">`;
+      month = m;
+    }
+    const v = (k) => { const x = tickOf(d, k); if (x === true) unknown = true; return x; };
+    const slots = (h) => `<span class="ps">${SLOTS.map(([s]) => pastille(v(`${h}-${s}`), true)).join("")}</span>`;
+    const name = d === t ? "Auj." : d === Habits.addDays(t, -1) ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "short", day: "numeric" });
+    html += `<div class="fr day${d === day ? " sel" : ""}${d < recentFrom() ? " far" : ""}" data-day="${d}"><span class="d">${name}</span>${slots("bouche")}${slots("perinee")}`
+      + `${pastille(v("vitd"), true)}${pastille(v("bain"))}${pastille(v("ongles"))}</div>`;
+  }
+  $("fsList").innerHTML = html + (month ? "</div>" : "");
+  $("fsWho").innerHTML = people().map((p, i) => `<span><i class="p on${i === 1 ? " e" : ""}">${esc(p[0].toUpperCase())}</i><b>${esc(p)}</b></span>`).join("")
+    + (unknown ? '<span><i class="p on x"></i>pas noté qui</span>' : "") + "<span>Bouche, périnée : matin, midi, soir</span>";
+  $("fsHead").innerHTML = `<span></span><span>Bouche</span><span>Périnée</span><span style="justify-self:center">Vit. D</span>${icon(TUB)}${icon(SCISSORS)}`;
+  const end = from <= low;
+  $("fsMore").hidden = end;
+  $("fsMore").disabled = full.loading;
+  $("fsMore").textContent = full.loading ? "Chargement…" : full.failed ? "Pas de réseau : réessayer" : "30 jours de plus";
+  $("fsEnd").hidden = !end;
+  $("fsEnd").textContent = low === birth() ? "Jusqu'à la naissance." : `Rien de noté avant le ${longDate(low)}.`;
+}
+// The older days come from the server, 30 at a time
+async function more() {
+  const want = full.shown + 30, from = [Habits.addDays(Habits.today(), -(want - 1)), lower()].sort().pop(), top = full.loadedTo || recentFrom();
+  if (from < top) {
+    full.loading = true; full.failed = false; renderFS();
+    try { Object.assign(full.old, await Habits.history(from, Habits.addDays(top, -1))); full.loadedTo = from; }
+    catch (e) { full.failed = true; }
+    full.loading = false;
+    if (full.failed) return renderFS();
+  }
+  full.shown = want; renderFS();
+}
+function openFS() {
+  full.open = true; full.failed = false;
+  $("fs").hidden = false; $("fs").scrollTop = 0;
+  document.body.style.overflow = "hidden";
+  history.pushState({ hist: 1 }, "");
+  renderFS();
+  // Where the history starts: the first tick ever
+  if (!full.first && Habits.shared) Habits.api("habitudes?select=jour&fait=is.true&order=jour.asc&limit=1").then((r) => r.json())
+    .then((rows) => { full.first = (rows[0] && rows[0].jour) || Habits.today(); if (full.open) renderFS(); }).catch(() => {});
+}
+function teardownFS() { if (!full.open) return; full.open = false; $("fs").hidden = true; document.body.style.overflow = ""; }
+const closeFS = () => { if (history.state && history.state.hist) history.back(); else teardownFS(); };
+window.addEventListener("popstate", teardownFS);
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && full.open) closeFS(); });
+$("histAll").addEventListener("click", openFS);
+$("fsClose").addEventListener("click", closeFS);
+$("fsMore").addEventListener("click", more);
+// A recent day: back to the page, on that day
+$("fsList").addEventListener("click", (e) => {
+  const r = e.target.closest(".fr.day"); if (!r || r.classList.contains("far")) return;
+  day = r.dataset.day; closeFS(); render(); window.scrollTo(0, 0);
+});
 
 $("grid").addEventListener("click", (e) => {
   const b = e.target.closest(".tick"); if (!b) return;

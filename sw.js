@@ -196,7 +196,8 @@ self.addEventListener("notificationclick", (e) => {
   if (e.action === "fait" && jour && slot) {
     // Tick the boxes the reminder was about; if the network fails, the page does it.
     const keys = cles || ["bouche", "perinee"].map((h) => `${h}-${slot}`).concat(slot === "matin" ? ["vitd"] : []);
-    e.waitUntil(post("habitudes", keys.map((cle) => ({ jour, cle, fait: true })))
+    const maj = new Date().toISOString();
+    e.waitUntil(famille().then(({ qui }) => post("habitudes", keys.map((cle) => ({ jour, cle, fait: true, par: qui || null, maj }))))
       .catch(() => openPage(`habitudes.html?fait=${encodeURIComponent(jour + "|" + slot)}`)));
     return;
   }

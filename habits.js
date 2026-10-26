@@ -1,6 +1,6 @@
 // Good-habits tracking, shared between both phones through Supabase.
 // Works offline: the phone keeps a copy and sends unsent ticks when the network is back.
-// One row per day and box: { jour: "2026-10-07", cle: "bouche-matin", fait: true }.
+// One row per day and box: { jour: "2026-10-07", cle: "bouche-matin", fait: true, par: "<who ticked it>" }.
 (function () {
   const CACHE = "thomas911-habitudes";
   const PENDING = "thomas911-habitudes-attente";
@@ -25,8 +25,8 @@
 
   const read = (k) => { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } };
   const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} };
-  let data = read(CACHE);      // { "2026-10-07": { "bouche-matin": true, ... } }
-  let pending = read(PENDING); // { "2026-10-07|bouche-matin": true }
+  let data = read(CACHE);      // { "2026-10-07": { "bouche-matin": "<who>" or true (not known), ... } }
+  let pending = read(PENDING); // { "2026-10-07|bouche-matin": { fait: true, par: "<who>", maj: "<when>" } } (older copies: true)
   let status = shared ? "sync" : "local"; // sync | ok | offline | local
 
   const listeners = [];
@@ -38,23 +38,31 @@
     headers: { apikey: cfg.SUPABASE_KEY, "Content-Type": "application/json", ...(opts.headers || {}) }
   }).then((r) => { if (!r.ok) throw new Error(r.status); return r; });
 
+  const me = () => (window.Famille && Famille.qui()) || null;
+  const unsent = (v) => (v && typeof v === "object" ? v : { fait: !!v, par: null, maj: null });
   function get(day, key) { return !!(data[day] && data[day][key]); }
-  function put(day, key, val) {
+  // Who ticked it (a first name), or null when it isn't known (ticked before this was noted, or by an older app)
+  function who(day, key) { const v = data[day] && data[day][key]; return typeof v === "string" ? v : null; }
+  function put(day, key, val, par) {
     data[day] = data[day] || {};
-    if (val) data[day][key] = true; else delete data[day][key];
+    if (val) data[day][key] = par || true; else delete data[day][key];
   }
 
   function set(day, key, val) {
-    put(day, key, val);
+    const par = me();
+    put(day, key, val, par);
     write(CACHE, data);
-    if (shared) { pending[`${day}|${key}`] = !!val; write(PENDING, pending); flush(); }
+    if (shared) { pending[`${day}|${key}`] = { fait: !!val, par, maj: new Date().toISOString() }; write(PENDING, pending); flush(); }
     emit();
   }
 
   let flushing = null;
   function flush() {
     if (!shared || flushing) return flushing;
-    const rows = Object.entries(pending).map(([k, fait]) => { const [jour, cle] = k.split("|"); return { jour, cle, fait }; });
+    const rows = Object.entries(pending).map(([k, v]) => {
+      const [jour, cle] = k.split("|"), p = unsent(v);
+      return { jour, cle, fait: p.fait, par: p.par || null, maj: p.maj || new Date().toISOString() };
+    });
     if (!rows.length) return Promise.resolve();
     const sent = { ...pending };
     flushing = api("habitudes", { method: "POST", headers: { Prefer: "resolution=merge-duplicates,return=minimal" }, body: JSON.stringify(rows) })
@@ -71,16 +79,16 @@
 
   function refresh() {
     if (!shared) return Promise.resolve();
-    return flush().then(() => api(`habitudes?select=jour,cle,fait&jour=gte.${addDays(today(), -DAYS)}`))
+    return flush().then(() => api(`habitudes?select=jour,cle,fait,par&jour=gte.${addDays(today(), -DAYS)}`))
       .then((r) => r.json())
       .then((rows) => {
         const next = {};
-        for (const { jour, cle, fait } of rows) if (fait) (next[jour] = next[jour] || {})[cle] = true;
+        for (const { jour, cle, fait, par } of rows) if (fait) (next[jour] = next[jour] || {})[cle] = par || true;
         // Ticks not sent yet win over what the server has
         for (const [k, v] of Object.entries(pending)) {
-          const [jour, cle] = k.split("|");
+          const [jour, cle] = k.split("|"), p = unsent(v);
           next[jour] = next[jour] || {};
-          if (v) next[jour][cle] = true; else delete next[jour][cle];
+          if (p.fait) next[jour][cle] = p.par || true; else delete next[jour][cle];
         }
         data = next;
         write(CACHE, data);
@@ -88,6 +96,13 @@
         emit();
       })
       .catch(() => setStatus("offline"));
+  }
+
+  // The ticks of older days, for the full history: { "2026-08-01": { "bouche-matin": "<who>" or true } }, from day `from` to `to`
+  function history(from, to) {
+    return api(`habitudes?select=jour,cle,par&fait=is.true&jour=gte.${from}&jour=lte.${to}&order=jour.desc&limit=2000`)
+      .then((r) => r.json())
+      .then((rows) => { const out = {}; for (const { jour, cle, par } of rows) (out[jour] = out[jour] || {})[cle] = par || true; return out; });
   }
 
   // Ticks done today on the reminder boxes, e.g. 4 of 6.
@@ -169,7 +184,7 @@
   syncTz();
   badge();
 
-  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, bathAgo, bathDue,
+  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, DAYS, today, addDays, slotNow, get, who, set, refresh, history, progress, lastBath, bathAgo, bathDue,
     nailsEvery, nailsStart, nailsAgo, nailsDue, todo, left,
     onChange, api, tz,
     get status() { return status; } };
