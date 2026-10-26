@@ -53,7 +53,9 @@
   color: var(--accent); background: var(--surface); border: 1px solid var(--line); }
 .gear svg { width: 22px; height: 22px; }
 
-/* An appointment today: the first thing on the screen, with how long until it and the way there */
+/* An appointment today: the first thing on the screen, with how long until it and the way there; then its report */
+.rdv-top { display: flex; flex-direction: column; gap: 12px; }
+.rdv-top[hidden] { display: none; }
 .rdv-now { padding: 0; overflow: hidden; border: 2px solid var(--accent); }
 .rdv-now .main { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; padding: 12px 14px 10px; }
 .rdv-now .clock { flex: none; min-width: 74px; text-align: center; padding: 7px 8px; border-radius: 12px; background: var(--accent); color: var(--accent-ink); }
@@ -69,6 +71,9 @@
 .rdv-now .acts a { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-weight: 800; font-size: 0.9rem;
   border-radius: 12px; padding: 10px 12px; text-decoration: none; background: var(--accent); color: var(--accent-ink); }
 .rdv-now .acts a.call { flex: 0 0 auto; background: var(--accent-soft); color: var(--accent); }
+.rdv-now .acts button { font: inherit; font-weight: 800; font-size: 0.85rem; border: 0; border-radius: 12px; padding: 10px 12px; cursor: pointer;
+  background: var(--accent-soft); color: var(--accent); flex: 0 0 auto; }
+.rdv-now .clock.past { background: var(--accent-soft); color: var(--accent); }
 .rdv-now .acts svg { width: 19px; height: 19px; }
 .rdv-now .more { border-top: 1px solid var(--line); padding: 8px 14px; font-size: 0.82rem; color: var(--muted); }
 .rdv-now .more a { color: var(--accent); font-weight: 700; text-decoration: none; }
@@ -169,7 +174,7 @@
     <a class="gear" href="reglages.html" aria-label="Réglages"><svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M12.2 2h-.4a2 2 0 0 0-2 2v.2a2 2 0 0 1-1 1.7l-.4.3a2 2 0 0 1-2 0l-.2-.1a2 2 0 0 0-2.7.7l-.2.4a2 2 0 0 0 .7 2.7l.2.1a2 2 0 0 1 1 1.7v.5a2 2 0 0 1-1 1.8l-.2.1a2 2 0 0 0-.7 2.7l.2.4a2 2 0 0 0 2.7.7l.2-.1a2 2 0 0 1 2 0l.4.3a2 2 0 0 1 1 1.7v.2a2 2 0 0 0 2 2h.4a2 2 0 0 0 2-2v-.2a2 2 0 0 1 1-1.7l.4-.3a2 2 0 0 1 2 0l.2.1a2 2 0 0 0 2.7-.7l.2-.4a2 2 0 0 0-.7-2.7l-.2-.1a2 2 0 0 1-1-1.8v-.5a2 2 0 0 1 1-1.7l.2-.1a2 2 0 0 0 .7-2.7l-.2-.4a2 2 0 0 0-2.7-.7l-.2.1a2 2 0 0 1-2 0l-.4-.3a2 2 0 0 1-1-1.7V4a2 2 0 0 0-2-2Z M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg></a>
   </header>
 
-  <section class="card rdv-now" id="rdvNow" aria-label="Rendez-vous aujourd'hui" hidden></section>
+  <div class="rdv-top" id="rdvTop" hidden></div>
 
   <a class="card fete" id="fete" href="age.html#fete" hidden></a>
 
@@ -293,44 +298,62 @@ $("todo").addEventListener("click", (e) => {
 });
 Habits.onChange(renderTodo);
 
-// ---------- An appointment today: at the top, its time, how long until it, the way there by car, a call ----------
-// Shown from midnight until an hour and a half after it starts; the next one of the day after that.
+// ---------- Appointments at the top ----------
+// Today's next one, from midnight until 10 min after it starts: its time, how long until it, the way there by car, a call.
+// Then its report is due: dictate it, or say none is needed (who said so goes into the report). Until it's done, 48 h at most.
 const CAR = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 16.5V13l2-5.2A2 2 0 0 1 7.4 6.5h9.2a2 2 0 0 1 1.9 1.3l2 5.2v3.5a1 1 0 0 1-1 1h-1.5a1 1 0 0 1-1-1v-1h-10v1a1 1 0 0 1-1 1H4.5a1 1 0 0 1-1-1Z"/><path d="M3.5 13h17M7 10.5h10"/></svg>';
 const PHONE = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 3.5h3l1.5 4-2 1.5a11 11 0 0 0 6 6l1.5-2 4 1.5v3a2 2 0 0 1-2 2A16.5 16.5 0 0 1 4.5 5.5a2 2 0 0 1 2-2Z"/></svg>';
-const todays = (now) => Sante.upcoming(now).filter((r) => Sante.dayOf(Date.parse(r.le), Sante.HERE) === Sante.today() && Date.parse(r.le) > now - 90 * 6e4);
-function untilText(ms) {
-  if (ms > 5 * 6e4) return `dans ${Sante.ago(ms)}`;
-  if (ms > -10 * 6e4) return "maintenant";
-  return `depuis ${Sante.ago(ms)}`;
-}
-function renderRdvNow() {
-  const now = Date.now(), list = todays(now), r = list[0], box = $("rdvNow");
-  box.hidden = !r;
-  if (!r) return;
-  const t = Date.parse(r.le), p = Sante.proOf(r), left = t - now;
-  const who = p && !Sante.isPlace(p) ? Sante.proLabel(p) : r.pro || Sante.rdvTitle(r);
-  // What for: the reason, unless it only repeats who (a calendar title like "Julie Tremblay, Ostéopathe"); else the kind
-  const bare = (x) => String(x || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+const MIC = '<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>';
+const GO = '<svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>';
+const todays = (now) => Sante.upcoming(now).filter((r) => Sante.dayOf(Date.parse(r.le), Sante.HERE) === Sante.today() && Date.parse(r.le) > now - 10 * 6e4);
+const untilText = (ms) => (ms > 5 * 6e4 ? `dans ${Sante.ago(ms)}` : "maintenant");
+const bare = (x) => String(x || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+// With whom; what for: the reason, unless it only repeats who (a calendar title like "Julie Tremblay, Ostéopathe"), else the
+// kind; where
+function about(r) {
+  const p = Sante.proOf(r), who = p && !Sante.isPlace(p) ? Sante.proLabel(p) : r.pro || Sante.rdvTitle(r);
   const what = r.motif && r.motif !== who && !(p && bare(r.motif).includes(bare(p.nom))) ? r.motif : Sante.rdvType(r.type, true);
-  const place = (r.lieu || (p ? Sante.proPlace(p) : "")).replace(/\s*\n\s*/g, ", ");
+  return { p, who, what, place: (r.lieu || (p ? Sante.proPlace(p) : "")).replace(/\s*\n\s*/g, ", ") };
+}
+function nextCard(list, now) {
+  const r = list[0], t = Date.parse(r.le), left = t - now, { p, who, what, place } = about(r);
   // The way there: the address in the address book if there is one (more exact), else the appointment's place
   const dest = r.type === "telephone" ? "" : ((p && p.adresse) || place);
   const tel = p ? Sante.telLink(p.telephone) : "";
   const others = list.slice(1).map((x) => `${esc(Sante.rdvTitle(x))} à ${Sante.fmtTime(Date.parse(x.le), x.fuseau)}`);
-  box.innerHTML = `<a class="main" href="sante.html#r/${r.id}">
+  return `<section class="card rdv-now" aria-label="Rendez-vous aujourd'hui"><a class="main" href="sante.html#r/${r.id}">
       <span class="clock${left < 60 * 6e4 ? " soon" : ""}"><b>${Sante.fmtTime(t, r.fuseau)}</b><span>${untilText(left)}</span></span>
       <span class="txt"><span class="kick">Rendez-vous aujourd'hui</span><span class="ttl">${esc(who)}</span>
-        <span class="sub">${esc([what, place].filter(Boolean).join(" · "))}</span></span>
-      <svg class="i go" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></a>`
+        <span class="sub">${esc([what, place].filter(Boolean).join(" · "))}</span></span>${GO}</a>`
     + (dest || tel ? `<div class="acts">${dest ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(dest)}&travelmode=driving" target="_blank" rel="noopener">${CAR}Itinéraire en voiture</a>` : ""}`
       + `${tel ? `<a class="call" href="${tel}" aria-label="Appeler ${esc(who)}">${PHONE}Appeler</a>` : ""}</div>` : "")
-    + (others.length ? `<div class="more">Aussi aujourd'hui : ${others.join(", ")}</div>` : "");
+    + (others.length ? `<div class="more">Aussi aujourd'hui : ${others.join(", ")}</div>` : "") + `</section>`;
 }
-setInterval(() => { if (document.visibilityState === "visible") renderRdvNow(); }, 30e3);
+function reportCard(r) {
+  const t = Date.parse(r.le), rel = Sante.relDay(Sante.dayOf(t, Sante.HERE)), { who, what } = about(r);
+  return `<section class="card rdv-now" aria-label="Compte rendu attendu"><a class="main" href="sante.html#r/${r.id}">
+      <span class="clock past"><b>${Sante.fmtTime(t, r.fuseau)}</b><span>${esc(rel)}</span></span>
+      <span class="txt"><span class="kick">Compte rendu attendu</span><span class="ttl">${esc(who)}</span>
+        <span class="sub">${esc(what)}</span></span>${GO}</a>
+    <div class="acts"><a href="sante.html#cr/${r.id}" data-buzz>${MIC}Dicter le compte rendu</a><button type="button" data-none="${r.id}" data-buzz>Pas nécessaire</button></div></section>`;
+}
+function renderRdvTop() {
+  const now = Date.now(), list = todays(now), due = Sante.reportDue(now).slice(0, 3), box = $("rdvTop");
+  box.hidden = !list.length && !due.length;
+  // The most pressing first: the next one if it is within the hour, else the reports waiting
+  const next = list.length ? nextCard(list, now) : "", reports = due.map(reportCard).join("");
+  box.innerHTML = list.length && Date.parse(list[0].le) - now < 60 * 6e4 ? next + reports : reports + next;
+}
+$("rdvTop").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-none]"); if (!b) return;
+  const r = Sante.byId("rdv", b.dataset.none);
+  if (r && confirm("Pas de compte rendu pour ce rendez-vous ? Ton prénom sera noté à sa place.")) Sante.noReport(r);
+});
+setInterval(() => { if (document.visibilityState === "visible") renderRdvTop(); }, 30e3);
 
 // Health (sante.js): what's going on, the next doses, an appointment soon (today's is in the card at the top)
 function renderHealth() {
-  renderRdvNow();
+  renderRdvTop();
   const now = Date.now(), open = Sante.openProblems(), meds = Sante.meds().filter((m) => Sante.isActive(m)), shown = todays(now)[0];
   const soon = Sante.upcoming(now).filter((r) => Date.parse(r.le) < now + 2 * Sante.DAY && r !== shown);
   const at = (t, tz) => { const day = Sante.dayOf(t, tz), rel = Sante.relDay(day); return `${rel === "aujourd'hui" ? "" : `${rel} `}${Sante.fmtTime(t, tz)}`; };

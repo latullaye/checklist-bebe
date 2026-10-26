@@ -225,6 +225,16 @@
   const rdvTitle = (r) => r.motif || r.pro || r.lieu || rdvType(r.type);
   const appointments = () => rows("rdv").sort((a, b) => Date.parse(a.le) - Date.parse(b.le));
   const upcoming = (now = Date.now()) => appointments().filter((r) => !r.annule && Date.parse(r.le) >= now - 2 * H);
+  // The report: written (what was said, the diagnosis, what next, a photo), or said not needed (in the report itself, with who)
+  const hasReport = (r) => !!(r.compte_rendu || r.diagnostic || r.suivi || (r.photos && r.photos.length));
+  // Waiting for its report: from 10 min after it starts, for 48 h
+  const reportDue = (now = Date.now()) => appointments().filter((r) => {
+    const t = Date.parse(r.le); return !r.annule && t <= now - 10 * 6e4 && t > now - 48 * H && !hasReport(r);
+  }).reverse();
+  function noReport(r) {
+    const { _pending, ...row } = r, who = (window.Famille && Famille.qui()) || "un parent";
+    return save("rdv", { ...row, compte_rendu: `Pas de compte rendu nécessaire : indiqué par ${who} le ${fmtDay(today(), { weekday: undefined })} à ${fmtTime(Date.now())}.` });
+  }
   // A calendar event becomes an appointment: who it is with (the address book), else its kind guessed from its words
   function fromAgenda(ev) {
     const t = `${ev.titre} ${ev.lieu || ""}`.toLowerCase();
@@ -388,7 +398,7 @@
     HERE, H, DAY, partsIn, instant, today, dayOf, addDays, daysBetween, fmtDay, fmtTime, relDay, ago, nf,
     SYMPTOMES, SYM, symLabel, symText, customWords,
     nameOf, isOpen, problems, openProblems, dayNumber, notesOf, medsOf, rdvOf, journal, resume,
-    RDV_TYPES, rdvType, shortPlace, rdvWord, rdvTitle, appointments, upcoming, fromAgenda, agendaLink,
+    RDV_TYPES, rdvType, shortPlace, rdvWord, rdvTitle, appointments, upcoming, hasReport, reportDue, noReport, fromAgenda, agendaLink,
     pros, proOf, rdvsWith, proLabel, proPlace, fromPro, proFor, isPlace, telLink,
     meds, dosesOf, posologie, isActive, nextDose, tooSoon, course, give, dueNow, shortName, clock, hours
   };
