@@ -49,9 +49,10 @@
 .bath .txt { flex: 1; min-width: 0; }
 .bath b { display: block; }
 .bath .txt > span { color: var(--muted); font-size: 0.85rem; }
+.bath .txt > span a { color: var(--accent); font-weight: 700; text-decoration: none; }
 
 /* Last days */
-.hist { display: grid; grid-template-columns: auto 1fr 1fr 48px 24px; gap: 6px 12px; align-items: center; margin-top: 10px; font-size: 0.85rem; }
+.hist { display: grid; grid-template-columns: auto 1fr 1fr 48px 24px 24px; gap: 6px 10px; align-items: center; margin-top: 10px; font-size: 0.85rem; }
 .hist .h { white-space: nowrap; font-size: 0.7rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; }
 .hist .d { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; }
 .hist .d.sel { color: var(--accent); font-weight: 700; }
@@ -59,6 +60,7 @@
 .dot { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--line); }
 .dot.on { background: var(--accent); border-color: var(--accent); }
 .hist .tub { width: 20px; height: 20px; color: var(--accent); }
+.hist .h svg { width: 16px; height: 16px; color: var(--muted); vertical-align: -3px; }
 
 /* Reminders: one line, the switch lives in Settings */
 .remind { display: flex; align-items: center; gap: 12px; color: inherit; text-decoration: none; }
@@ -94,6 +96,10 @@
       <span class="txt"><b>Bain</b><span id="bathLast"></span></span>
       <button class="tick" id="bath" type="button" aria-label="Bain donné ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
     </div>
+    <div class="bath" id="nailsRow" hidden>
+      <span class="txt"><b>Ongles</b><span id="nailsLast"></span></span>
+      <button class="tick" id="nails" type="button" aria-label="Ongles coupés ce jour-là"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></button>
+    </div>
   </section>
 
   <section class="card">
@@ -113,11 +119,13 @@
 <script src="pastille.js"></script>
 <script src="sync.js"></script>
 <script src="habits.js"></script>
+<script src="prefs.js"></script>
 <script src="notifs.js"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 const CHECK = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 const TUB = '<svg class="i tub" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h18v2a5 5 0 0 1-5 5H8a5 5 0 0 1-5-5v-2Z M6 12V6a2 2 0 0 1 3.7-1 M7 19l-1 2 M17 19l1 2"/></svg>';
+const SCISSORS = '<svg class="i tub" viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M8.6 7.6 20 18M8.6 16.4 20 6"/></svg>';
 const { SLOTS, HABITS } = Habits;
 const SHORT = { bouche: "Bouche", perinee: "Rééducation" }; // one line each, as on the home page
 let day = Habits.today();
@@ -158,15 +166,23 @@ function render() {
   const ago = Habits.bathAgo();
   $("bathLast").textContent = (ago === null ? "Pas noté" : ago === 0 ? "Aujourd'hui" : ago === 1 ? "Hier" : `Il y a ${ago} jours`)
     + (Habits.bathDue() ? " · ce soir" : "");
+  // Every N days (Settings), from 6 weeks of age: due from the Nth day
+  const start = Habits.nailsStart(), every = Habits.nailsEvery(), nAgo = Habits.nailsAgo();
+  $("nailsRow").hidden = !start || day < start;
+  $("nails").setAttribute("aria-pressed", Habits.get(day, "ongles"));
+  $("nailsLast").innerHTML = (nAgo === null ? "Pas noté" : nAgo === 0 ? "Coupés aujourd'hui" : nAgo === 1 ? "Coupés hier" : `Coupés il y a ${nAgo} jours`)
+    + (Habits.nailsDue() ? " · <b>à faire aujourd'hui</b>" : ` · dans ${every - nAgo} jour${every - nAgo > 1 ? "s" : ""}`)
+    + `<br><a href="reglages.html#habitudes">Tous les ${every} jours</a>`;
 
   const rows = [];
   for (let i = 0; i < 7; i++) {
     const d = Habits.addDays(t, -i);
     const dots = (h) => `<span class="dots">${SLOTS.map(([s]) => `<i class="dot${Habits.get(d, `${h}-${s}`) ? " on" : ""}"></i>`).join("")}</span>`;
     const name = i === 0 ? "Auj." : i === 1 ? "Hier" : new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { weekday: "short", day: "numeric" });
-    rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span class="dots"><i class="dot${Habits.get(d, "vitd") ? " on" : ""}"></i></span><span>${Habits.get(d, "bain") ? TUB : ""}</span>`);
+    rows.push(`<span class="d${d === day ? " sel" : ""}" data-day="${d}">${name}</span>${dots("bouche")}${dots("perinee")}<span class="dots"><i class="dot${Habits.get(d, "vitd") ? " on" : ""}"></i></span><span>${Habits.get(d, "bain") ? TUB : ""}</span><span>${Habits.get(d, "ongles") ? SCISSORS : ""}</span>`);
   }
-  $("hist").innerHTML = '<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h">Vit. D</span><span class="h" title="Bain"></span>' + rows.join("");
+  $("hist").innerHTML = `<span></span><span class="h">Bouche</span><span class="h">Périnée</span><span class="h">Vit. D</span><span class="h" title="Bain">${TUB.replace('class="i tub"', 'class="i"')}</span>`
+    + `<span class="h" title="Ongles">${start ? SCISSORS.replace('class="i tub"', 'class="i"') : ""}</span>` + rows.join("");
 }
 
 $("grid").addEventListener("click", (e) => {
@@ -175,6 +191,7 @@ $("grid").addEventListener("click", (e) => {
 });
 $("vitd").addEventListener("click", () => { buzz(); Habits.set(day, "vitd", !Habits.get(day, "vitd")); });
 $("bath").addEventListener("click", () => { buzz(); Habits.set(day, "bain", !Habits.get(day, "bain")); });
+$("nails").addEventListener("click", () => { buzz(); Habits.set(day, "ongles", !Habits.get(day, "ongles")); });
 $("prev").addEventListener("click", () => { day = Habits.addDays(day, -1); render(); });
 $("next").addEventListener("click", () => { day = Habits.addDays(day, 1); render(); });
 $("hist").addEventListener("click", (e) => { const d = e.target.closest("[data-day]"); if (d) { day = d.dataset.day; render(); } });
@@ -189,6 +206,7 @@ renderRemind(Notifs.state());
 Notifs.sync().then(renderRemind);
 
 Habits.onChange(render);
+Prefs.on("ongles_jours", render); Prefs.on("famille", render); // the rhythm and the date of birth come with the shared settings
 Habits.refresh();
 </script>
 <script src="app.js"></script>

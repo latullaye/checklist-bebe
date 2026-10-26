@@ -1,7 +1,8 @@
 // THOMAS911 habit reminders (Web Push).
 // - GET  ?cle-publique      -> the VAPID public key (created on first call; the private half never leaves the database)
 // - POST (x-cron-key header) -> called by pg_cron every half hour; each phone gets its reminder at 9:00, 12:30 and 17:30
-//   in its own time zone (abonnements.tz); the 17:30 one also says when it's bath night (every 2 or 3 days), and each one sets
+//   in its own time zone (abonnements.tz); the 17:30 one also says when it's bath night (every 2 or 3 days) and nail day (every
+//   N days, the family's setting, from 6 weeks of age), and each one sets
 //   the red badge on the app icon to what's left for that moment. Body {"slot": "matin"} forces a moment, {"dry": true} sends nothing.
 import webpush from "npm:web-push@3.6.7";
 import postgres from "npm:postgres@3.4.5";
@@ -47,7 +48,19 @@ async function bathDue(jour: string) {
   return ago === null || ago >= BATH_EVERY ? { ago } : null;
 }
 
-// What's left for this moment of that day, in this order. Vitamin D only in the morning, the bath only in the evening.
+// The nails: every N days (the family's setting "ongles_jours", 10 by default), from 6 weeks of age (the date of birth is in
+// the family's settings). Due from the Nth day after the last cut (the app says the same).
+async function nailsDue(jour: string) {
+  const v = Object.fromEntries((await sql`select cle, valeur from reglages where cle in ('ongles_jours', 'famille')`).map((r) => [r.cle, r.valeur]));
+  const n = Math.round(Number(v.ongles_jours)), every = n >= 3 && n <= 30 ? n : 10, birth = v.famille?.jour as string | undefined;
+  if (!birth || !/^\d{4}-\d\d-\d\d$/.test(birth) || Date.parse(jour) - Date.parse(birth) < 42 * 864e5) return null;
+  const last = (await sql`select max(jour)::text as j from habitudes where cle = 'ongles' and fait and jour <= ${jour}`)[0]?.j as string | null;
+  const ago = last ? Math.round((Date.parse(jour) - Date.parse(last)) / 864e5) : null;
+  return ago === null || ago >= every ? { ago } : null;
+}
+
+// What's left for this moment of that day, in this order. Vitamin D only in the morning, the bath and the nails only in the
+// evening.
 async function message(jour: string, slot: string) {
   const rows = await sql`select cle from habitudes where jour = ${jour} and fait`;
   const done = new Set(rows.map((r) => r.cle));
@@ -57,19 +70,21 @@ async function message(jour: string, slot: string) {
     ...(slot === "matin" ? [["vitd", ""]] : [])
   ].filter(([cle]) => !done.has(cle));
   const bath = slot === "soir" && !done.has("bain") ? await bathDue(jour) : null;
-  if (!todo.length && !bath) return null;
+  const nails = slot === "soir" && !done.has("ongles") ? await nailsDue(jour) : null;
+  if (!todo.length && !bath && !nails) return null;
   // "Il faut faire les exercices de bouche et la rééducation périnéenne. Thomas doit prendre sa vitamine D."
   const faire = todo.filter(([cle]) => cle !== "vitd").map(([, t]) => t);
   const body = [
     faire.length ? `Il faut faire ${faire.join(" et ")}.` : "",
     todo.some(([cle]) => cle === "vitd") ? "Thomas doit prendre sa vitamine D." : "",
-    bath ? `Et c'est le soir du bain${bath.ago ? ` (le dernier remonte à ${bath.ago} jours)` : ""}.` : ""
+    bath ? `Et c'est le soir du bain${bath.ago ? ` (le dernier remonte à ${bath.ago} jours)` : ""}.` : "",
+    nails ? `${bath ? "C'est aussi" : "Et c'est"} le jour des ongles${nails.ago ? ` (coupés il y a ${nails.ago} jours)` : ""}.` : ""
   ].filter(Boolean).join(" ");
-  // "C'est fait" ticks the exercises; it ticks the bath only when the bath is all the reminder is about
+  // "C'est fait" ticks the exercises; it ticks the bath (else the nails) only when that is all the reminder is about
   // (the bath usually comes later in the evening than the exercises).
-  const cles = todo.length ? todo.map(([c]) => c) : ["bain"];
+  const cles = todo.length ? todo.map(([c]) => c) : [bath ? "bain" : "ongles"];
   // The red badge on the app icon: what's left for this moment, like the home page's "À faire" (the vitamin D counts all day)
-  const reste = [`bouche-${slot}`, `perinee-${slot}`, "vitd"].filter((c) => !done.has(c)).length + (bath ? 1 : 0);
+  const reste = [`bouche-${slot}`, `perinee-${slot}`, "vitd"].filter((c) => !done.has(c)).length + (bath ? 1 : 0) + (nails ? 1 : 0);
   return { title: `Rappel du ${slot}`, body: todo.length ? body : body.replace("Et c'est", "C'est"), jour, slot, cles, reste };
 }
 

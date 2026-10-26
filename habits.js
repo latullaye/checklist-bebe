@@ -4,7 +4,7 @@
 (function () {
   const CACHE = "thomas911-habitudes";
   const PENDING = "thomas911-habitudes-attente";
-  const DAYS = 14; // how far back we load
+  const DAYS = 40; // how far back we load (the last nail cut can be a few weeks old)
   const cfg = self.T911 || {};
   const shared = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
 
@@ -105,8 +105,22 @@
     return last ? Math.round((new Date(today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
   }
   const bathDue = () => { const d = bathAgo(); return d === null || d >= BATH_EVERY; };
-  // What this moment is about (the home page's "À faire"): the slot's habits, the vitamin D, the bath on its evening
-  const todo = (slot = slotNow()) => [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : [])];
+  // The nails: every N days (the family's setting "ongles_jours", 10 by default), from 6 weeks of age. Due from the Nth day
+  // after the last cut, all day long (the evening reminder says it too).
+  const NAILS_FROM = 42, NAILS_EVERY = 10;
+  const settings = () => { try { return JSON.parse(localStorage.getItem("thomas911-reglages")) || {}; } catch (e) { return {}; } }; // prefs.js's copy
+  const nailsEvery = () => { const n = Math.round(Number(settings().ongles_jours)); return n >= 3 && n <= 30 ? n : NAILS_EVERY; };
+  const nailsStart = () => { const j = (settings().famille || {}).jour; return /^\d{4}-\d\d-\d\d$/.test(j || "") ? addDays(j, NAILS_FROM) : null; };
+  const lastNails = () => Object.keys(data).filter((d) => data[d].ongles).sort().pop() || null;
+  function nailsAgo() {
+    const last = lastNails();
+    return last ? Math.round((new Date(today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
+  }
+  const nailsDue = () => { const s = nailsStart(), d = nailsAgo(); return !!s && today() >= s && (d === null || d >= nailsEvery()); };
+  // What this moment is about (the home page's "À faire"): the slot's habits, the vitamin D, the bath on its evening, the nails
+  // on their day
+  const todo = (slot = slotNow()) => [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : []),
+    ...(nailsDue() ? ["ongles"] : [])];
   const left = () => todo().filter((k) => !get(today(), k));
 
   // The app icon follows what's left. iPhone: the red badge with the number (the reminder sets it, every tick updates it;
@@ -155,7 +169,8 @@
   syncTz();
   badge();
 
-  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, bathAgo, bathDue, todo, left,
+  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, today, addDays, slotNow, get, set, refresh, progress, lastBath, bathAgo, bathDue,
+    nailsEvery, nailsStart, nailsAgo, nailsDue, todo, left,
     onChange, api, tz,
     get status() { return status; } };
 })();
