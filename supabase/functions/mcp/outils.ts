@@ -4,6 +4,8 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { H, partsIn, instant, addDays, fmtTime } from "../sante/logic.ts";
+import { habits as habitList, boxes, byKey, todo as habitTodo, due as habitDue, started, start as habitStart, label as habitName, KEYS as HABIT_KEYS,
+  SLOTS as MOMENTS, type Habit } from "../_shared/habitudes.ts";
 
 type Row = Record<string, any>;
 export type Db = {
@@ -27,13 +29,7 @@ const SYM = Object.fromEntries(SYMPTOMES.map(([k, label, unit]) => [k, { label, 
 const RDV_TYPES: [string, string][] = [["medecin", "Médecin"], ["clsc", "CLSC"], ["hopital", "Hôpital"], ["urgences", "Urgences"],
   ["telephone", "811, téléphone"], ["soin", "Soin (ostéo, lactation…)"], ["autre", "Autre"]];
 const LIEUX: Record<string, string> = { clsc: "CLSC", medecin: "médecin", maison: "maison" };
-// Habits (habits.js): mouth exercises and pelvic floor three times a day, vitamin D once, the bath every 2 or 3 days,
-// the nails every N days (the family's setting) from 6 weeks of age
-const HABITS: [string, string][] = [["bouche", "Exercices de bouche"], ["perinee", "Rééducation périnéenne"]];
-const SLOTS: [string, string][] = [["matin", "matin"], ["midi", "midi"], ["soir", "soir"]];
-const HABIT_KEYS = [...HABITS.flatMap(([h]) => SLOTS.map(([s]) => `${h}-${s}`)), "vitd", "bain", "ongles"];
-const habitLabel = (k: string) => k === "vitd" ? "Vitamine D" : k === "bain" ? "Bain" : k === "ongles" ? "Ongles"
-  : `${(HABITS.find(([h]) => k.startsWith(h)) || ["", k])[1]} (${k.split("-")[1]})`;
+// Habits: the ones the family follows and their rhythm are in its settings (rules in ../_shared/habitudes.ts, as on the phones)
 // The outing checklist (checklist.html, same labels; true: optional)
 const CHECKLIST: [string, [string, boolean][]][] = [
   ["Repas", [["Biberons de lait maternel", false], ["Nourrette de formule", false], ["Bavoir", false], ["Bloc réfrigérant", true], ["Tire-lait", true], ["Linge à rot", true]]],
@@ -91,16 +87,14 @@ function parseQuand(c: Ctx, s?: string | null): number | string {
 const past = (c: Ctx, t: number) => (t > c.now() + 10 * 6e4 ? "C'est dans le futur : vérifie le jour et l'heure." : "");
 const isDay = (s?: string | null) => !!s && /^\d{4}-\d\d-\d\d$/.test(s);
 
-// The nails (habits.js): every N days (setting "ongles_jours", 10 by default), from 6 weeks of age. Due from the Nth day
-// after the last cut.
-async function nailsOf(c: Ctx, day: string) {
-  const [s, l] = await Promise.all([c.db.all(`select valeur from reglages where cle = 'ongles_jours'`),
-    c.db.all(`select max(jour)::text as j from habitudes where cle = 'ongles' and fait and jour <= $1::date`, [day])]);
-  const n = Math.round(Number(s[0]?.valeur)), every = n >= 3 && n <= 30 ? n : 10;
-  const start = isDay(c.famille.jour) ? addDays(c.famille.jour!, 42) : null;
-  const last = (l[0]?.j as string | null) ?? null, ago = last ? daysBetween(last, day) : null;
-  return { every, start, last, ago, due: !!start && day >= start && (ago == null || ago >= every) };
+// The habits as the family set them, and the last time of each one (for those done every N days)
+async function habitsOf(c: Ctx, day: string) {
+  const [v, l] = await Promise.all([c.db.all(`select cle, valeur from reglages where cle in ('habitudes', 'ongles_jours')`),
+    c.db.all(`select cle, max(jour)::text as j from habitudes where fait and jour <= $1::date group by cle`, [day])]);
+  const set = Object.fromEntries(v.map((r) => [r.cle, r.valeur])), last: Record<string, string> = Object.fromEntries(l.map((r) => [r.cle, r.j]));
+  return { list: habitList(set.habitudes, set.ongles_jours), last, ago: (id: string) => (last[id] ? daysBetween(last[id], day) : null) };
 }
+const days = (n: number) => `${n} jour${n > 1 ? "s" : ""}`;
 // "le 7 oct.." -> "le 7 oct." (short month names end with a dot)
 const tidy = (t: string) => t.replace(/\.\./g, ".");
 const text = (t: string) => ({ content: [{ type: "text" as const, text: tidy(t) }] });
@@ -292,9 +286,9 @@ export function register(server: McpServer, c: Ctx) {
     annotations: read
   }, async () => {
     const now = c.now(), day = today(c), out: string[] = [`**Thomas** : ${age(c, day)}. Nous sommes ${fmtDay(day, { weekday: "long", month: "long" })}, ${fmtTime(now, c.tz)}.`];
-    const [ws, habs, probs, ms, rdvs, checks, cands, nails] = await Promise.all([
+    const [ws, habs, probs, ms, rdvs, checks, cands, hb] = await Promise.all([
       weighings(c), c.db.all(`select jour, cle, fait from habitudes where jour >= $1::date`, [addDays(day, -30)]), problems(c), meds(c), appointments(c),
-      c.db.all(`select cle, fait from checklist`), c.db.all(`select uid from agenda where decision is null and debut > now()`), nailsOf(c, day)]);
+      c.db.all(`select cle, fait from checklist`), c.db.all(`select uid from agenda where decision is null and debut > now()`), habitsOf(c, day)]);
     const pts = ws.filter((w) => w.poids_g != null);
     if (pts.length) {
       const last = pts[pts.length - 1], g = gainOf(pts, pts.length - 1), t7 = trend(pts, 7);
@@ -302,15 +296,19 @@ export function register(server: McpServer, c: Ctx) {
         + `${g ? ` ; ${sign(g.g)}/24 h depuis la pesée d'avant` : ""}${t7 ? ` ; tendance 7 jours : ${sign(t7.g)}/24 h` : ""}.`);
     }
     const done = (d: string, k: string) => habs.some((h) => h.jour === d && h.cle === k && h.fait);
-    const slot = slotNow(c), lastBath = habs.filter((h) => h.cle === "bain" && h.fait).map((h) => h.jour).sort().at(-1);
-    const bathAgo = lastBath ? daysBetween(lastBath, day) : null, bathDue = bathAgo == null || bathAgo >= 2;
-    const todo = [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue ? ["bain"] : []), ...(nails.due || nails.ago === 0 ? ["ongles"] : [])];
-    const left = todo.filter((k) => !done(day, k)), ok = todo.filter((k) => done(day, k));
-    const nailsLine = !nails.start ? "" : day < nails.start ? ` Ongles : à partir du ${fmtDay(nails.start)} (6 semaines).`
-      : ` Ongles (tous les ${nails.every} jours) : ${nails.ago == null ? "jamais notés" : nails.ago === 0 ? "coupés aujourd'hui" : `coupés il y a ${nails.ago} jour${nails.ago > 1 ? "s" : ""}`}`
-        + `${nails.due ? " (à faire aujourd'hui)" : nails.ago ? ` (dans ${nails.every - nails.ago} jour${nails.every - nails.ago > 1 ? "s" : ""})` : ""}.`;
-    out.push(`**Habitudes** (moment : ${slot}) : ${left.length ? `à faire : ${left.map(habitLabel).join(", ")}` : "tout est fait"}${ok.length ? ` ; fait : ${ok.map(habitLabel).join(", ")}` : ""}.`
-      + ` Bain : ${bathAgo == null ? "aucun noté" : bathAgo === 0 ? "aujourd'hui" : `il y a ${bathAgo} jour${bathAgo > 1 ? "s" : ""}`}${bathDue && bathAgo !== 0 ? " (à donner ce soir)" : ""}.${nailsLine}`);
+    // The habits followed: what this moment is about (as the app's "À faire"), those done every N days, those not followed
+    const slot = slotNow(c), birth = c.famille.jour, followed = hb.list.filter((h) => h.actif), name = (k: string) => habitName(hb.list, k);
+    const todo = habitTodo(hb.list, slot, day, hb.ago, birth);
+    const left = todo.filter((k) => !done(day, k)), ok = [...todo, ...followed.filter((h) => h.rythme === "jours" && !todo.includes(h.id)).map((h) => h.id)].filter((k) => done(day, k));
+    const some = followed.filter((h) => h.rythme === "jours" && (started(h, day, birth) || isDay(birth))).map((h) => {
+      if (!started(h, day, birth)) return `${h.court} : à partir du ${fmtDay(habitStart(h, birth)!)}`;
+      const a = hb.ago(h.id), due = habitDue(h, day, a, birth);
+      return `${h.court} (tous les ${h.tous} jours) : ${a == null ? "jamais noté" : a === 0 ? "fait aujourd'hui" : `il y a ${days(a)}`}`
+        + `${due ? ` (à faire${h.moment === "soir" ? " ce soir" : " aujourd'hui"})` : a ? ` (dans ${days(h.tous - a)})` : ""}`;
+    });
+    const off = hb.list.filter((h) => !h.actif).map((h) => h.nom);
+    out.push(`**Habitudes** (moment : ${slot}) : ${!followed.length ? "aucune suivie" : left.length ? `à faire : ${left.map(name).join(", ")}` : "tout est fait"}${ok.length ? ` ; fait : ${ok.map(name).join(", ")}` : ""}.`
+      + (some.length ? ` ${some.join(". ")}.` : "") + (off.length ? ` Pas suivies (Réglages) : ${off.join(", ")}.` : ""));
     const open = probs.filter((p) => !p.fin);
     if (open.length) {
       const notes = await c.db.all(`select probleme, le, fuseau from sante_notes where probleme = any (array(select jsonb_array_elements_text($1::text::jsonb))::uuid[]) order by le`, [JSON.stringify(open.map((p) => p.id))]);
@@ -754,7 +752,7 @@ export function register(server: McpServer, c: Ctx) {
   // ---------- Habits ----------
   server.registerTool("habitudes", {
     title: "Bonnes habitudes",
-    description: "Ce qui a été coché ces derniers jours, et par qui : exercices de bouche et rééducation périnéenne (matin, midi, soir), vitamine D, bain, ongles.",
+    description: "Ce qui a été coché ces derniers jours, et par qui, pour les habitudes suivies (exercices de bouche, rééducation périnéenne, vitamine D, bain, ongles, selon les réglages de la famille) : chaque jour à ses moments, ou tous les N jours.",
     inputSchema: { jours: z.number().int().min(1).max(30).optional().describe("7 par défaut") },
     annotations: read
   }, async ({ jours = 7 }) => {
@@ -764,30 +762,49 @@ export function register(server: McpServer, c: Ctx) {
     const has = (d: string, k: string) => !!row(d, k);
     // A done box: the initial of who ticked it, ✓ when not known
     const mark = (d: string, k: string) => { const r = row(d, k); return !r ? "·" : r.par ? String(r.par).trim()[0].toUpperCase() : "✓"; };
-    const once = (d: string, k: string, l: string) => (has(d, k) ? ` ; ${l}${row(d, k)!.par ? ` (${row(d, k)!.par})` : ""}` : "");
+    const once = (d: string, h: Habit) => (has(d, h.id) ? `${h.nom}${row(d, h.id)!.par ? ` (${row(d, h.id)!.par})` : ""}` : "");
+    const hb = await habitsOf(c, day), birth = c.famille.jour, all: string[] = [];
+    for (let d = day; d >= from; d = addDays(d, -1)) all.push(d);
+    // The habits followed, and those no longer followed that were ticked in these days
+    const ticked = (h: Habit) => all.some((d) => [h.id, ...MOMENTS.map((m) => `${h.id}-${m}`)].some((k) => has(d, k)));
+    const cols = hb.list.filter((h) => h.actif || ticked(h));
     const out: string[] = [];
-    for (let d = day; d >= from; d = addDays(d, -1)) {
-      const parts = HABITS.map(([h, l]) => `${l} : ${SLOTS.map(([s]) => mark(d, `${h}-${s}`)).join("")}`);
-      out.push(`- ${fmtDay(d)} : ${parts.join(" ; ")} ; vitamine D ${mark(d, "vitd")}${once(d, "bain", "bain")}${once(d, "ongles", "ongles")}`);
+    for (const d of all) {
+      const parts = cols.map((h) => (h.rythme === "jours" ? once(d, h)
+        : h.moments.length > 1 ? `${h.nom} : ${boxes(h).map((k) => mark(d, k)).join("")}` : `${h.nom} ${mark(d, h.id)}`)).filter(Boolean);
+      out.push(`- ${fmtDay(d)} : ${parts.join(" ; ") || "rien"}`);
     }
-    const lastBath = rows.filter((r) => r.cle === "bain").map((r) => r.jour).sort().at(-1), nails = await nailsOf(c, day);
     const who = (c.famille.parents || []).map((p) => `${p[0].toUpperCase()} ${p}`).join(", ");
-    out.push(`(Une lettre : fait, par qui${who ? ` (${who})` : ""} ; ✓ fait, sans savoir par qui ; · pas fait ; ordre matin, midi, soir.) Dernier bain : ${lastBath ? fmtDay(lastBath) : "aucun dans les 45 derniers jours"}.`
-      + (nails.start ? ` Ongles, tous les ${nails.every} jours à partir du ${fmtDay(nails.start)} : ${nails.last ? `coupés le ${fmtDay(nails.last)}` : "jamais notés"}${nails.due ? ", à faire" : ""}.` : ""));
+    const order = cols.filter((h) => h.rythme === "jour" && h.moments.length > 1).map((h) => `${h.nom.toLowerCase()} : ${h.moments.join(", ")}`).join(" ; ");
+    out.push(`(Une lettre : fait, par qui${who ? ` (${who})` : ""} ; ✓ fait, sans savoir par qui ; · pas fait${order ? ` ; dans l'ordre des moments (${order})` : ""}.)`);
+    for (const h of hb.list.filter((x) => x.actif && x.rythme === "jours")) {
+      const last = hb.last[h.id], a = hb.ago(h.id);
+      out.push(`${h.court} : tous les ${h.tous} jours${h.depuis && isDay(birth) ? ` à partir du ${fmtDay(habitStart(h, birth)!)}` : ""}, ${last ? `fait le ${fmtDay(last)}` : "jamais noté"}${habitDue(h, day, a, birth) ? ", à faire" : ""}.`);
+    }
+    const off = hb.list.filter((h) => !h.actif).map((h) => h.nom);
+    if (off.length) out.push(`Pas suivies (Réglages de l'app) : ${off.join(", ")}.`);
     return text(out.join("\n"));
   });
 
   server.registerTool("habitude_cocher", {
     title: "Cocher une habitude",
-    description: `Coche (ou décoche) des habitudes pour un jour. Clés : ${HABIT_KEYS.map((k) => `${k} (${habitLabel(k)})`).join(", ")}.`,
+    description: "Coche (ou décoche) des habitudes pour un jour. Clé : l'id de l'habitude (bouche, perinee, vitd, bain, ongles), suivi du moment (-matin, -midi, -soir) pour celles faites plusieurs fois par jour (ex. bouche-matin) ; voir habitudes pour le rythme de chacune.",
     inputSchema: { cles: z.array(z.enum(HABIT_KEYS as [string, ...string[]])).min(1), jour: z.string().optional().describe("AAAA-MM-JJ ; aujourd'hui par défaut"), fait: z.boolean().optional().describe("false pour décocher") },
     annotations: { ...write, idempotentHint: true }
   }, async ({ cles, jour, fait = true }) => {
     const d = jour || today(c);
     if (!isDay(d) || d > today(c)) return fail("« jour » : AAAA-MM-JJ, pas dans le futur.");
-    for (const k of cles) await c.db.exec(`insert into habitudes (jour, cle, fait, par, maj) values ($1::date, $2, $3, $4, now())
+    // The key as the habit's rhythm has it: "vitd-matin" -> "vitd" (once a day); "bouche" alone when it has several moments: ask
+    const { list } = await habitsOf(c, d), keys: string[] = [];
+    for (const k of cles) {
+      const h = byKey(list, k), bx = h ? boxes(h) : [k];
+      if (bx.includes(k)) keys.push(k);
+      else if (bx.length === 1) keys.push(bx[0]);
+      else return fail(`« ${k} » : précise le moment (${bx.join(", ")}).`);
+    }
+    for (const k of keys) await c.db.exec(`insert into habitudes (jour, cle, fait, par, maj) values ($1::date, $2, $3, $4, now())
       on conflict (jour, cle) do update set fait = excluded.fait, par = coalesce(excluded.par, habitudes.par), maj = now()`, [d, k, fait, c.par]);
-    return text(`${fait ? "Coché" : "Décoché"} ${relDay(c, d)}${by(c.par)} : ${cles.map(habitLabel).join(", ")}.`);
+    return text(`${fait ? "Coché" : "Décoché"} ${relDay(c, d)}${by(c.par)} : ${keys.map((k) => habitName(list, k)).join(", ")}.`);
   });
 
   // ---------- Outing checklist ----------

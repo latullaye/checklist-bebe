@@ -4,17 +4,55 @@
 (function () {
   const CACHE = "thomas911-habitudes";
   const PENDING = "thomas911-habitudes-attente";
-  const DAYS = 40; // how far back we load (the last nail cut can be a few weeks old)
+  const DAYS = 40; // how far back we load (a habit done every 30 days at most: its last time is in there)
   const cfg = self.T911 || {};
   const shared = !!(cfg.SUPABASE_URL && cfg.SUPABASE_KEY);
 
   const SLOTS = [["matin", "Matin"], ["midi", "Midi"], ["soir", "Soir"]];
-  const HABITS = [["bouche", "Exercices de bouche", ""], ["perinee", "Rééducation périnéenne", ""]];
-  // Tight follow-up: these boxes count in the daily progress and the reminders. The bath doesn't.
-  // Vitamin D is once a day, in the morning reminder.
-  const DAILY = HABITS.flatMap(([h]) => SLOTS.map(([s]) => `${h}-${s}`)).concat("vitd");
+  const ORDER = { matin: 0, midi: 1, soir: 2 };
+  // The habits the app knows. The family turns each one on or off and sets its rhythm in Settings (shared setting "habitudes"):
+  // - "jour": every day, at the chosen moments: one box per moment ("bouche-matin"), or a single box when there is only one
+  //   ("vitd"); they make the day's progress (2/7) and go in the grid of the Habits screen;
+  // - "jours": every N days from the last time ("bain", "ongles"), on its own line, due from the Nth day, reminded at its moment;
+  //   depuis: not before that many days of age (the date of birth is in the family's settings).
+  // The reminders (function "rappels") and Claude (function "mcp") follow the same rules.
+  const CATALOG = [
+    { id: "bouche", nom: "Exercices de bouche", court: "Bouche", col: "Bouche", rythme: "jour", moments: ["matin", "midi", "soir"] },
+    { id: "perinee", nom: "Rééducation périnéenne", court: "Rééducation", col: "Périnée", rythme: "jour", moments: ["matin", "midi", "soir"] },
+    { id: "vitd", nom: "Vitamine D", court: "Vitamine D", col: "Vit. D", rythme: "jour", moments: ["matin"] },
+    { id: "bain", nom: "Bain", court: "Bain", col: "Bain", rythme: "jours", tous: 2, moment: "soir" },
+    { id: "ongles", nom: "Couper les ongles", court: "Ongles", col: "Ongles", rythme: "jours", tous: 10, moment: "soir", depuis: 42 }
+  ];
+  const EVERY_MIN = 2, EVERY_MAX = 30;
+  const settings = () => { try { return JSON.parse(localStorage.getItem("thomas911-reglages")) || {}; } catch (e) { return {}; } }; // prefs.js's copy
+  // A habit as the family set it (anything missing or odd falls back to the catalog)
+  function resolve(base, saved, legacy) {
+    const v = saved && typeof saved === "object" ? saved : {};
+    const rythme = v.rythme === "jour" || v.rythme === "jours" ? v.rythme : base.rythme;
+    const moments = Array.isArray(v.moments) ? SLOTS.map(([s]) => s).filter((s) => v.moments.includes(s)) : [];
+    const n = Math.round(Number(v.tous ?? legacy));
+    return { ...base, actif: v.actif !== false, rythme,
+      moments: moments.length ? moments : base.moments || [base.moment || "matin"],
+      tous: n >= EVERY_MIN && n <= EVERY_MAX ? n : base.tous || 7,
+      moment: ORDER[v.moment] != null ? v.moment : base.moment || (base.moments || ["matin"]).at(-1) };
+  }
+  // All of them, on or off (the nails' rhythm used to be its own setting, "ongles_jours")
+  function habits() {
+    const s = settings(), saved = s.habitudes || {};
+    return CATALOG.map((h) => resolve(h, saved[h.id], h.id === "ongles" ? s.ongles_jours : undefined));
+  }
+  const active = () => habits().filter((h) => h.actif);
+  const byId = (id) => habits().find((h) => h.id === String(id).split("-")[0]) || null;
+  // Its boxes for a day, and the one for a moment of the day (null: none then)
+  const boxes = (h) => (h.rythme === "jour" && h.moments.length > 1 ? h.moments.map((m) => `${h.id}-${m}`) : [h.id]);
+  const boxAt = (h, slot) => (h.rythme !== "jour" ? null : h.moments.length > 1 ? (h.moments.includes(slot) ? `${h.id}-${slot}` : null)
+    : h.moments[0] === slot ? h.id : null);
+  // The once-a-day box and the every-N-days ones: the moment they come at
+  const momentOf = (h) => (h.rythme === "jour" ? h.moments[0] : h.moment);
+  const daily = () => active().filter((h) => h.rythme === "jour");
+  const DAILY = () => daily().flatMap(boxes);
   // Boxes a reminder covers, for "C'est fait"
-  const REMIND = (slot) => HABITS.map(([h]) => `${h}-${slot}`).concat(slot === "matin" ? ["vitd"] : []);
+  const REMIND = (slot) => daily().map((h) => boxAt(h, slot)).filter(Boolean);
 
   const pad = (n) => String(n).padStart(2, "0");
   const dayOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -105,37 +143,33 @@
       .then((rows) => { const out = {}; for (const { jour, cle, par } of rows) (out[jour] = out[jour] || {})[cle] = par || true; return out; });
   }
 
-  // Ticks done today on the reminder boxes, e.g. 4 of 6.
+  // Ticks done today on the daily boxes, e.g. 4 of 7.
   function progress(day = today()) {
-    return { done: DAILY.filter((k) => get(day, k)).length, total: DAILY.length };
+    const all = DAILY();
+    return { done: all.filter((k) => get(day, k)).length, total: all.length };
   }
-  // Last bath day in what we have, or null.
-  function lastBath() {
-    return Object.keys(data).filter((d) => data[d].bain).sort().pop() || null;
+  // The every-N-days ones: the last time (in what we have), how long ago, from when (age), due, late
+  const lastTime = (id) => Object.keys(data).filter((d) => data[d][id]).sort().pop() || null;
+  const daysSince = (day) => Math.round((new Date(today() + "T12:00:00") - new Date(day + "T12:00:00")) / 864e5);
+  function ago(h) { const last = lastTime(typeof h === "string" ? h : h.id); return last ? daysSince(last) : null; }
+  function start(h) {
+    if (!h.depuis) return null;
+    const j = (settings().famille || {}).jour;
+    return /^\d{4}-\d\d-\d\d$/.test(j || "") ? addDays(j, h.depuis) : "9999-12-31"; // no date of birth: not yet
   }
-  // The bath: every 2 or 3 days, in the evening. Due from the 2nd day after the last one (the reminders say the same).
-  const BATH_EVERY = 2;
-  function bathAgo() {
-    const last = lastBath();
-    return last ? Math.round((new Date(today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
+  const started = (h, day = today()) => !h.depuis || day >= start(h);
+  const due = (h) => { if (h.rythme !== "jours" || !started(h)) return false; const d = ago(h); return d === null || d >= h.tous; };
+  const late = (h) => { if (h.rythme !== "jours" || !started(h)) return false; const d = ago(h); return d !== null && d > h.tous; };
+  // What this moment is about (the home page's "À faire"): the slot's boxes; the once-a-day box and the every-N-days ones on
+  // their day, from their moment on (the vitamin D all day, the bath in the evening)
+  function todo(slot = slotNow()) {
+    const now = ORDER[slot];
+    return active().flatMap((h) => {
+      if (h.rythme === "jour" && h.moments.length > 1) return h.moments.includes(slot) ? [`${h.id}-${slot}`] : [];
+      if (now < ORDER[momentOf(h)]) return [];
+      return h.rythme === "jour" || due(h) ? [h.id] : [];
+    });
   }
-  const bathDue = () => { const d = bathAgo(); return d === null || d >= BATH_EVERY; };
-  // The nails: every N days (the family's setting "ongles_jours", 10 by default), from 6 weeks of age. Due from the Nth day
-  // after the last cut, all day long (the evening reminder says it too).
-  const NAILS_FROM = 42, NAILS_EVERY = 10;
-  const settings = () => { try { return JSON.parse(localStorage.getItem("thomas911-reglages")) || {}; } catch (e) { return {}; } }; // prefs.js's copy
-  const nailsEvery = () => { const n = Math.round(Number(settings().ongles_jours)); return n >= 3 && n <= 30 ? n : NAILS_EVERY; };
-  const nailsStart = () => { const j = (settings().famille || {}).jour; return /^\d{4}-\d\d-\d\d$/.test(j || "") ? addDays(j, NAILS_FROM) : null; };
-  const lastNails = () => Object.keys(data).filter((d) => data[d].ongles).sort().pop() || null;
-  function nailsAgo() {
-    const last = lastNails();
-    return last ? Math.round((new Date(today() + "T12:00:00") - new Date(last + "T12:00:00")) / 864e5) : null;
-  }
-  const nailsDue = () => { const s = nailsStart(), d = nailsAgo(); return !!s && today() >= s && (d === null || d >= nailsEvery()); };
-  // What this moment is about (the home page's "À faire"): the slot's habits, the vitamin D, the bath on its evening, the nails
-  // on their day
-  const todo = (slot = slotNow()) => [...HABITS.map(([h]) => `${h}-${slot}`), "vitd", ...(slot === "soir" && bathDue() ? ["bain"] : []),
-    ...(nailsDue() ? ["ongles"] : [])];
   const left = () => todo().filter((k) => !get(today(), k));
 
   // The app icon follows what's left. iPhone: the red badge with the number (the reminder sets it, every tick updates it;
@@ -184,8 +218,8 @@
   syncTz();
   badge();
 
-  window.Habits = { SLOTS, HABITS, DAILY, REMIND, shared, DAYS, today, addDays, slotNow, get, who, set, refresh, history, progress, lastBath, bathAgo, bathDue,
-    nailsEvery, nailsStart, nailsAgo, nailsDue, todo, left,
+  window.Habits = { SLOTS, ORDER, CATALOG, EVERY_MIN, EVERY_MAX, shared, DAYS, today, addDays, slotNow, get, who, set, refresh, history,
+    habits, active, byId, boxes, boxAt, momentOf, daily, DAILY, REMIND, progress, ago, start, started, due, late, todo, left,
     onChange, api, tz,
     get status() { return status; } };
 })();

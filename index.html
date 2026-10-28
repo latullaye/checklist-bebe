@@ -271,21 +271,20 @@ function renderWeight() {
 }
 Growth.onChange(renderWeight);
 
-// Habits of the moment (this slot) and the vitamin D, checkable right here
-const NAMES = { bouche: "Bouche", perinee: "Rééducation", vitd: "Vitamine D", bain: "Bain", ongles: "Ongles" };
+// Habits of the moment (this slot), the once-a-day ones, those due every N days: checkable right here (the settings say which)
 const MOMENT = { matin: "ce matin", midi: "ce midi", soir: "ce soir" };
-// The bath shows on bath night, the nails on their day: how long since the last time only when it's late (in orange)
-const late = (k) => (k === "bain" ? Habits.bathAgo() >= 3 : k === "ongles" ? Habits.nailsAgo() > Habits.nailsEvery() : false);
+// An every-N-days one (the bath, the nails) shows on its day: how long since the last time only when it's late (in orange)
+const late = (k) => { const h = Habits.byId(k); return !!h && Habits.late(h); };
 function todoLabel(k) {
-  if (!late(k)) return NAMES[k.split("-")[0]];
-  return `${NAMES[k]}<small>${k === "bain" ? Habits.bathAgo() : Habits.nailsAgo()} j</small>`;
+  const h = Habits.byId(k), name = h ? h.court : k;
+  return late(k) ? `${name}<small>${Habits.ago(h)} j</small>` : name;
 }
 function renderTodo() {
   const day = Habits.today(), slot = Habits.slotNow(), { done, total } = Habits.progress();
   const left = Habits.left();
   $("todoTitle").textContent = `À faire ${MOMENT[slot]}`;
-  $("todoCount").textContent = `${done}/${total} aujourd'hui ›`;
-  $("habSub").innerHTML = done >= total ? "<b>Fait</b>" : `<b>${done}/${total}</b>`;
+  $("todoCount").textContent = total ? `${done}/${total} aujourd'hui ›` : "Habitudes ›";
+  $("habSub").innerHTML = !total ? "" : done >= total ? "<b>Fait</b>" : `<b>${done}/${total}</b>`;
   $("todo").innerHTML = left.map((k) => `<button type="button" data-k="${k}"${late(k) ? ' class="late"' : ""}>${todoLabel(k)}</button>`).join("");
   $("allDone").hidden = !!left.length;
   $("allDone").innerHTML = `<b>Tout est fait ${MOMENT[slot]}.</b> Bravo !`;
@@ -298,8 +297,8 @@ $("todo").addEventListener("click", (e) => {
   setTimeout(() => Habits.set(Habits.today(), b.dataset.k, true), 650); // re-renders without it
 });
 Habits.onChange(renderTodo);
-// The nails' rhythm and the date of birth come with the shared settings (prefs.js)
-Prefs.on("ongles_jours", renderTodo); Prefs.on("famille", renderTodo);
+// Which habits and their rhythm, and the date of birth, come with the shared settings (prefs.js)
+["habitudes", "ongles_jours", "famille"].forEach((k) => Prefs.on(k, renderTodo));
 
 // ---------- Appointments at the top ----------
 // Today's next one, from midnight until 10 min after it starts: its time, how long until it, the way there by car, a call.
