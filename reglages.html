@@ -48,6 +48,15 @@
 .chip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 .chip svg { width: 16px; height: 16px; vertical-align: -3px; margin-right: 5px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .foot { text-align: center; font-size: 0.75rem; color: var(--muted); }
+/* Habits: on or off, every day (at which moments) or every N days (and when to remind) */
+.hb + .hb { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.hb-opts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.hb-opts .chips { margin-top: 0; }
+.hb-row { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 10px; }
+.hb-row > .k { font-size: 0.8rem; color: var(--muted); min-width: 52px; }
+.hb .chip.sm { padding: 5px 10px; font-size: 0.8rem; }
+.hb .step button { width: 36px; height: 32px; }
+.hb .step output { min-width: 52px; font-size: 0.95rem; }
 </style>
 </head>
 <body>
@@ -83,11 +92,9 @@
   </section>
 
   <section class="card" id="habitudes">
-    <div class="label">Habitudes</div>
-    <div class="set">
-      <span class="txt"><b>Couper les ongles</b><span class="hint">Tous les combien de jours, à partir de 6 semaines. Pour vos deux téléphones.</span></span>
-      <span class="step"><button type="button" id="nMinus" data-buzz aria-label="Un jour de moins">−</button><output id="nVal"></output><button type="button" id="nPlus" data-buzz aria-label="Un jour de plus">+</button></span>
-    </div>
+    <div class="label">Habitudes suivies</div>
+    <div id="habList"></div>
+    <p class="msg">Pour vos deux téléphones. Chaque jour : une case par moment dans l'écran Habitudes (matin, midi, soir) ; tous les N jours : sa propre ligne, à faire dès le Nième jour après la dernière fois. Les rappels suivent.</p>
   </section>
 
   <section class="card">
@@ -182,11 +189,52 @@ try { $("pictos").checked = localStorage.getItem(PICTOS) !== "0"; } catch (e) { 
 $("pictos").addEventListener("change", (e) => { try { localStorage.setItem(PICTOS, e.target.checked ? "1" : "0"); } catch (err) {} });
 
 // ---------- Nails: every N days (habits.js), shared ----------
-const nails = () => { const n = Math.round(Number(Prefs.get("ongles_jours", 10))); return n >= 3 && n <= 30 ? n : 10; };
-function renderNails() { const n = nails(); $("nVal").textContent = `${n} j`; $("nMinus").disabled = n <= 3; $("nPlus").disabled = n >= 30; }
-$("nMinus").addEventListener("click", () => Prefs.set("ongles_jours", nails() - 1));
-$("nPlus").addEventListener("click", () => Prefs.set("ongles_jours", nails() + 1));
-Prefs.on("ongles_jours", renderNails);
+// ---------- Habits followed (shared): on or off, every day at some moments, or every N days ----------
+const MOMENTS = [["matin", "Matin"], ["midi", "Midi"], ["soir", "Soir"]];
+const LE = { matin: "le matin", midi: "le midi", soir: "le soir" };
+const and = (l) => (l.length > 1 ? `${l.slice(0, -1).join(", ")} et ${l.at(-1)}` : l[0] || "");
+function habitSummary(h) {
+  if (!h.actif) return "Pas suivie";
+  if (h.rythme === "jour") return h.moments.length > 1 ? `Chaque jour : ${and(h.moments)}` : `Chaque jour, ${LE[h.moments[0]]}`;
+  return `Tous les ${h.tous} jours, ${LE[h.moment]}${h.depuis ? `, dès ${Math.round(h.depuis / 7)} semaines` : ""}`;
+}
+const chip = (attrs, label, on) => `<button type="button" class="chip sm" ${attrs} aria-pressed="${on}" data-buzz>${label}</button>`;
+function renderHabits() {
+  $("habList").innerHTML = Habits.habits().map((h) => `<div class="hb" data-id="${h.id}">
+    <div class="set"><span class="txt"><b>${h.nom}</b><span class="hint">${habitSummary(h)}</span></span>
+      <label class="switch"><input type="checkbox" data-act${h.actif ? " checked" : ""} aria-label="Suivre : ${h.nom}" data-buzz><span></span></label></div>
+    ${h.actif ? `<div class="hb-opts">
+      <div class="hb-row chips" role="radiogroup" aria-label="Rythme">${chip('data-r="jour"', "Chaque jour", h.rythme === "jour")}${chip('data-r="jours"', "Tous les N jours", h.rythme === "jours")}</div>
+      ${h.rythme === "jour"
+        ? `<div class="hb-row"><span class="k">Quand</span><span class="chips">${MOMENTS.map(([m, l]) => chip(`data-m="${m}"`, l, h.moments.includes(m))).join("")}</span></div>`
+        : `<div class="hb-row"><span class="k">Tous les</span><span class="step"><button type="button" data-n="-1" data-buzz aria-label="Un jour de moins"${h.tous <= Habits.EVERY_MIN ? " disabled" : ""}>−</button><output>${h.tous} j</output><button type="button" data-n="1" data-buzz aria-label="Un jour de plus"${h.tous >= Habits.EVERY_MAX ? " disabled" : ""}>+</button></span></div>
+           <div class="hb-row"><span class="k">Rappel</span><span class="chips" role="radiogroup">${MOMENTS.map(([m, l]) => chip(`data-one="${m}"`, l, h.moment === m)).join("")}</span></div>`}
+    </div>` : ""}
+  </div>`).join("");
+}
+// The whole set is saved as one shared setting
+function setHabit(id, change) {
+  const all = Object.fromEntries(Habits.habits().map((h) => [h.id, { actif: h.actif, rythme: h.rythme, moments: h.moments, tous: h.tous, moment: h.moment }]));
+  all[id] = { ...all[id], ...change(all[id]) };
+  Prefs.set("habitudes", all);
+}
+$("habList").addEventListener("change", (e) => {
+  const box = e.target.closest("[data-act]"); if (!box) return;
+  setHabit(box.closest(".hb").dataset.id, () => ({ actif: box.checked }));
+});
+$("habList").addEventListener("click", (e) => {
+  const b = e.target.closest("button"); if (!b || b.disabled) return;
+  const id = b.closest(".hb").dataset.id;
+  if (b.dataset.r) setHabit(id, () => ({ rythme: b.dataset.r }));
+  else if (b.dataset.m) setHabit(id, (h) => {
+    const on = h.moments.includes(b.dataset.m);
+    if (on && h.moments.length === 1) return {}; // at least one moment
+    return { moments: MOMENTS.map(([m]) => m).filter((m) => (m === b.dataset.m ? !on : h.moments.includes(m))) };
+  });
+  else if (b.dataset.one) setHabit(id, () => ({ moment: b.dataset.one }));
+  else if (b.dataset.n) setHabit(id, (h) => ({ tous: Math.min(Habits.EVERY_MAX, Math.max(Habits.EVERY_MIN, h.tous + Number(b.dataset.n))) }));
+});
+["habitudes", "ongles_jours", "famille"].forEach((k) => Prefs.on(k, renderHabits));
 
 // ---------- Room temperature ----------
 const temp = () => Math.min(30, Math.max(14, parseFloat(Prefs.get("temp_interieur", 21)) || 21));
@@ -257,7 +305,7 @@ $("update").addEventListener("click", async () => {
   } catch (e) { $("updateMsg").textContent = "Pas de réseau : réessaie plus tard."; }
 });
 
-renderNails(); renderTemp(); renderLait(); renderShare(); renderVersion(); renderFamille();
+renderHabits(); renderTemp(); renderLait(); renderShare(); renderVersion(); renderFamille();
 </script>
 <script src="app.js"></script>
 </body>
