@@ -48,7 +48,7 @@
 .bath { display: flex; align-items: center; gap: 12px; }
 .once .bath + .bath { padding-top: 10px; border-top: 1px solid var(--line); }
 .bath .txt { flex: 1; min-width: 0; }
-.bath b { display: block; }
+.bath .txt > b { display: block; }
 .bath .txt > span { color: var(--muted); font-size: 0.85rem; }
 .bath .txt > span a { color: var(--accent); font-weight: 700; text-decoration: none; }
 
@@ -203,6 +203,7 @@ const label = (d) => {
 const longDate = (d) => new Date(d + "T12:00:00").toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
 const plural = (n, w) => `${n} ${w}${n > 1 ? "s" : ""}`;
 const WHEN = { matin: "aujourd'hui", midi: "aujourd'hui", soir: "ce soir" };
+const LE = { matin: "le matin", midi: "le midi", soir: "le soir" };
 
 const buzz = () => window.buzz && window.buzz(); // tap feedback, from app.js
 
@@ -218,25 +219,28 @@ function render() {
   $("next").disabled = day >= t;
   $("prev").disabled = day <= Habits.addDays(t, -13);
 
-  // Every day: one row each, a box at each of its moments (the settings say which habits and when)
-  const daily = Habits.daily();
-  $("grid").innerHTML = !daily.length ? '<span class="none">Aucune habitude de tous les jours : <a href="reglages.html#habitudes">Réglages</a>.</span>'
-    : "<span></span>" + SLOTS.map(([s, name]) => `<span class="col${s === now ? " now" : ""}">${name}</span>`).join("")
+  // Several times a day: one row each, a box at each of its moments (the settings say which habits and when)
+  const daily = Habits.daily().filter((h) => h.moments.length > 1), active = Habits.active();
+  $("grid").hidden = !daily.length && !!active.length;
+  $("grid").innerHTML = !active.length ? '<span class="none">Aucune habitude suivie : <a href="reglages.html#habitudes">Réglages</a>.</span>'
+    : !daily.length ? "" : "<span></span>" + SLOTS.map(([s, name]) => `<span class="col${s === now ? " now" : ""}">${name}</span>`).join("")
     + daily.map((h) => `<span class="hab"><b>${h.court}</b></span>` + SLOTS.map(([s, sn]) => {
       const k = Habits.boxAt(h, s);
       return k ? `<button class="tick${s === now ? " now" : ""}" type="button" data-key="${k}" aria-pressed="${Habits.get(day, k)}"
         aria-label="${h.nom}, ${sn.toLowerCase()}">${CHECK}</button>` : "<span></span>";
     }).join("")).join("");
 
-  // Every N days: how long since the last time, due (from the Nth day) or in how many days; from their age on (the nails)
-  const some = Habits.active().filter((h) => h.rythme === "jours" && Habits.started(h, day));
+  // Once a day (the vitamin D), then every N days: how long since the last time, due (from the Nth day) or in how many days;
+  // from their age on (the nails)
+  const some = active.filter((h) => (h.rythme === "jour" && h.moments.length === 1) || (h.rythme === "jours" && Habits.started(h, day)));
   $("once").hidden = !some.length;
   $("once").innerHTML = some.map((h) => {
+    const tick = `<button class="tick" type="button" data-key="${h.id}" aria-pressed="${Habits.get(day, h.id)}" aria-label="${h.nom}, fait ce jour-là">${CHECK}</button>`;
+    if (h.rythme === "jour") return `<div class="bath"><span class="txt"><b>${h.court}</b><span><a href="reglages.html#habitudes">Chaque jour, ${LE[h.moments[0]]}</a></span></span>${tick}</div>`;
     const ago = Habits.ago(h), due = Habits.due(h);
     const since = ago === null ? "Pas noté" : ago === 0 ? "Aujourd'hui" : ago === 1 ? "Hier" : `Il y a ${ago} jours`;
     return `<div class="bath"><span class="txt"><b>${h.court}</b><span>${since}${due ? ` · <b>${WHEN[h.moment]}</b>` : ago ? ` · dans ${plural(h.tous - ago, "jour")}` : ""}`
-      + `<br><a href="reglages.html#habitudes">Tous les ${h.tous} jours</a></span></span>`
-      + `<button class="tick" type="button" data-key="${h.id}" aria-pressed="${Habits.get(day, h.id)}" aria-label="${h.nom}, fait ce jour-là">${CHECK}</button></div>`;
+      + `<br><a href="reglages.html#habitudes">Tous les ${h.tous} jours</a></span></span>${tick}</div>`;
   }).join("");
 
   // The last 7 days: the habits followed (every N days: once they've started)
